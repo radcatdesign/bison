@@ -1,16 +1,18 @@
+import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { startTrialAction, subscribeAction } from "@/app/(portal)/actions";
 import { ActionForm } from "@/components/ui/action-form";
-import { PageHeader, Row, Rows, Section } from "@/components/ui";
+import { Card, PageHeader } from "@/components/ui";
 import { CATALOG, formatPrice, isPaidItemKey, type Limits } from "@/config/catalog";
 import { may } from "@/config/roles";
 import { daysLeft } from "@/lib/access/entitlements";
 import { billingMode, demoMode } from "@/lib/env";
 import { formatInt } from "@/lib/format";
 import { getPortalContext } from "@/lib/portal";
+import s from "./billing.module.css";
 
 export const metadata: Metadata = { title: "Unlock" };
 
@@ -40,7 +42,11 @@ async function Billing({ searchParams }: { searchParams: Promise<{ item?: string
 
   return (
     <div data-testid="billing">
-      <PageHeader title={item.name} note={item.pitch} actions={<Link href="/settings#plan" className="btn">All modules and add-ons</Link>} />
+      <Link href="/settings#plan" className={s.back}>
+        <ArrowLeft aria-hidden="true" />
+        Plan
+      </Link>
+      <PageHeader title={item.name} note={item.pitch} />
 
       {params.done && !state.active && (
         <p className="notice notice-ok" style={{ marginBottom: 24 }}>
@@ -48,54 +54,66 @@ async function Billing({ searchParams }: { searchParams: Promise<{ item?: string
         </p>
       )}
 
-      <Section title="Price">
-        <p className="mono" style={{ fontSize: "var(--bo-text-xl)" }}>
-          {formatPrice(item.price)}
-        </p>
-        {item.price.placeholder && <p className="label">Placeholder price. Final pricing isn&apos;t set yet.</p>}
-        {limits.length > 0 && (
-          <Rows>
-            {limits.map(([k, v]) => (
-              <Row key={k} main={<span>{LIMIT_LABELS[k]}</span>} side={<span className="mono">{formatInt(v)}</span>} />
-            ))}
-          </Rows>
-        )}
-      </Section>
-
-      <Section title="Status">
-        {state.active ? (
-          <p data-testid="billing-status">
-            {state.via === "trial" && state.trialEndsAt ? `On as a trial. ${daysLeft(state.trialEndsAt)} days left.` : state.via === "grant" ? "On. Bison added this for you." : "On."}
-          </p>
-        ) : (
-          <p data-testid="billing-status">Off. Your data stays put whether it&apos;s on or off.</p>
-        )}
-
-        {!canBuy && <p className="notice">Only an owner can change the plan.</p>}
-
-        {canBuy && (
-          <div style={{ display: "grid", gap: 16 }}>
-            {!state.active && !state.trialUsed && item.trialDays > 0 && (
-              <ActionForm action={startTrialAction} submitLabel={`Start ${item.trialDays}-day trial`} pendingLabel="Starting" primary testId="start-trial">
-                <input type="hidden" name="item" value={key} />
-              </ActionForm>
-            )}
-            {state.via !== "subscription" && (
-              <ActionForm action={subscribeAction} submitLabel={`Subscribe to ${item.name}`} pendingLabel="Opening checkout" testId="subscribe">
-                <input type="hidden" name="item" value={key} />
-              </ActionForm>
-            )}
-            {demoMode() ? (
-              <p className="label">This is a demo, so trials and subscriptions aren&apos;t saved.</p>
-            ) : (
-              <>
-                {billingMode() === "fake" && <p className="label">Test billing is on. Subscribing turns the item on without charging a card.</p>}
-                {billingMode() === "not_set_up" && <p className="notice notice-error">Billing isn&apos;t set up yet, so subscribing won&apos;t work. Trials still do.</p>}
-              </>
-            )}
+      <div className={s.grid}>
+        <section className={`card ${s.price}`} aria-label="Price">
+          <div className={s.priceLine}>
+            <span className={`num ${s.amount}`}>{formatPrice(item.price)}</span>
+            {item.price.placeholder && <span className="pill">Placeholder price</span>}
           </div>
+          {item.price.placeholder && <p className="muted">Final pricing isn&apos;t set yet.</p>}
+
+          <div className={s.status}>
+            <span className={state.active ? "pill pill-good" : "pill"}>{state.via === "trial" ? "Trial" : state.active ? "On" : "Off"}</span>
+            <p data-testid="billing-status">
+              {state.active
+                ? state.via === "trial" && state.trialEndsAt
+                  ? `On as a trial. ${daysLeft(state.trialEndsAt)} days left.`
+                  : state.via === "grant"
+                    ? "On. Bison added this for you."
+                    : "On."
+                : "Your data stays put whether it's on or off."}
+            </p>
+          </div>
+
+          {!canBuy && <p className="notice">Only an owner can change the plan.</p>}
+
+          {canBuy && (
+            <div className={s.actions}>
+              {!state.active && !state.trialUsed && item.trialDays > 0 && (
+                <ActionForm action={startTrialAction} submitLabel={`Start ${item.trialDays}-day trial`} pendingLabel="Starting" primary testId="start-trial">
+                  <input type="hidden" name="item" value={key} />
+                </ActionForm>
+              )}
+              {state.via !== "subscription" && (
+                <ActionForm action={subscribeAction} submitLabel={`Subscribe to ${item.name}`} pendingLabel="Opening checkout" testId="subscribe">
+                  <input type="hidden" name="item" value={key} />
+                </ActionForm>
+              )}
+              {demoMode() ? (
+                <p className="label">This is a demo, so trials and subscriptions aren&apos;t saved.</p>
+              ) : (
+                <>
+                  {billingMode() === "fake" && <p className="label">Test billing is on. Subscribing turns the item on without charging a card.</p>}
+                  {billingMode() === "not_set_up" && <p className="notice notice-error">Billing isn&apos;t set up yet, so subscribing won&apos;t work. Trials still do.</p>}
+                </>
+              )}
+            </div>
+          )}
+        </section>
+
+        {limits.length > 0 && (
+          <Card title="What's included" flush>
+            <dl className={s.limits}>
+              {limits.map(([k, v]) => (
+                <div key={k}>
+                  <dt>{LIMIT_LABELS[k]}</dt>
+                  <dd className="num">{formatInt(v)}</dd>
+                </div>
+              ))}
+            </dl>
+          </Card>
         )}
-      </Section>
+      </div>
     </div>
   );
 }

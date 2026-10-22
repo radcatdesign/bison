@@ -1,71 +1,269 @@
-.page {
+/* Sign-in: brand panel on the left, the form on the right. One column on phones. */
+
+.split {
   min-height: 100dvh;
   display: grid;
-  align-content: center;
-  padding: var(--bo-s6) var(--bo-gutter);
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  background: var(--bo-canvas);
+}
+
+/* The brand panel stays dark in both themes. */
+.brand {
+  --bo-ink: #f3f4f6;
+  --bo-canvas: #08090b;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--bo-s6);
+  margin: 12px;
+  padding: 36px;
+  border-radius: 22px;
+  overflow: hidden;
+  color: #f3f4f6;
+  background:
+    radial-gradient(70% 55% at 85% 15%, color-mix(in oklab, var(--bo-accent) 45%, transparent), transparent 70%),
+    radial-gradient(50% 40% at 10% 100%, color-mix(in oklab, var(--bo-accent) 22%, transparent), transparent 70%),
+    linear-gradient(180deg, #0d0f13, #08090b);
+}
+
+/* A faint grid, like graph paper under the numbers */
+.brand::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(80% 70% at 60% 40%, black, transparent);
+  pointer-events: none;
+}
+
+.brandTop,
+.brandBody,
+.brandFoot {
+  position: relative;
+}
+
+.brandTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brandName {
+  font-weight: 680;
+  font-variation-settings: "wdth" 110;
+  letter-spacing: -0.01em;
+  font-size: var(--bo-text-lg);
+}
+
+.brandBody {
+  display: grid;
+  gap: var(--bo-s6);
+  max-width: 520px;
+}
+
+.pitch {
+  font-size: clamp(1.75rem, 3.2vw, 2.75rem);
+  font-weight: 640;
+  font-variation-settings: "wdth" 112;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.preview {
+  display: grid;
+  gap: 4px;
+  width: min(360px, 100%);
+  padding: 18px 18px 0;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 0.04);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.4);
+}
+
+.previewHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--bo-text-sm);
+  color: rgb(255 255 255 / 0.65);
+}
+
+.previewChip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgb(52 211 153 / 0.16);
+  color: #6ee7b7;
+  font-size: var(--bo-text-xs);
+  font-weight: 640;
+}
+
+.previewNum {
+  font-size: 2.25rem;
+  font-weight: 640;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.previewLine {
+  display: block;
+  width: 100%;
+  height: 80px;
+}
+
+.brandFoot {
+  font-size: var(--bo-text-xs);
+  color: rgb(255 255 255 / 0.5);
+}
+
+.formSide {
+  display: grid;
+  place-items: center;
+  padding: 40px 24px;
 }
 
 .card {
-  width: min(520px, 100%);
-  margin: 0 auto;
+  width: min(420px, 100%);
   display: grid;
   gap: var(--bo-s5);
 }
 
+.mobileBrand {
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.formHead {
+  display: grid;
+  gap: 6px;
+}
+
+.formTitle {
+  font-size: var(--bo-text-2xl);
+  font-weight: 680;
+  font-variation-settings: "wdth" 108;
+  letter-spacing: -0.028em;
+  line-height: 1.1;
+}
+
 .title {
-  font-weight: 800;
-  font-variation-settings: "wdth" 125;
-  font-size: var(--bo-text-3xl);
-  letter-spacing: -0.03em;
-  line-height: 1;
+  font-size: var(--bo-text-2xl);
+  font-weight: 680;
+  font-variation-settings: "wdth" 108;
+  letter-spacing: -0.028em;
 }
 
 .lede {
-  color: var(--bo-fg-2);
-  max-width: 44ch;
+  color: var(--bo-ink-2);
+  max-width: 46ch;
 }
 
 .people {
   display: grid;
-  gap: var(--bo-s4);
+  gap: var(--bo-s5);
 }
 
 .list {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: var(--bo-rule-w) solid var(--bo-rule);
-}
-
-.list li {
-  border-bottom: var(--bo-rule-w) solid var(--bo-rule);
+  display: grid;
+  gap: 8px;
 }
 
 .person {
   width: 100%;
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--bo-s4);
-  padding: var(--bo-s4) 0;
-  border: 0;
-  background: transparent;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--bo-line);
+  border-radius: 14px;
+  background: var(--bo-surface);
+  box-shadow: var(--bo-shadow-sm);
   text-align: left;
   cursor: pointer;
+  transition:
+    border-color var(--bo-fast) var(--bo-ease),
+    box-shadow var(--bo-fast) var(--bo-ease),
+    transform var(--bo-fast) var(--bo-ease);
 }
 
-.person:hover .personName {
-  text-shadow: var(--bo-text-glow);
+.person:hover {
+  border-color: var(--bo-accent-line);
+  box-shadow: var(--bo-shadow);
+}
+
+.person:hover .go {
+  color: var(--bo-accent-text);
+  transform: translateX(2px);
+}
+
+.avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--bo-accent-soft);
+  color: var(--bo-accent-text);
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.personText {
+  flex: 1;
+  display: grid;
+  min-width: 0;
 }
 
 .personName {
-  font-size: var(--bo-text-lg);
-  font-weight: 560;
+  font-weight: 620;
 }
 
-@media (max-width: 480px) {
-  .person {
-    flex-direction: column;
-    gap: 2px;
+.personRole {
+  font-size: var(--bo-text-sm);
+  color: var(--bo-ink-3);
+}
+
+.go {
+  width: 18px;
+  height: 18px;
+  color: var(--bo-ink-3);
+  transition:
+    color var(--bo-fast) var(--bo-ease),
+    transform var(--bo-fast) var(--bo-ease);
+}
+
+/* Onboarding uses the same form styles, centered on its own. */
+.page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 40px 24px;
+}
+
+@media (max-width: 860px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .brand {
+    display: none;
+  }
+
+  .mobileBrand {
+    display: flex;
+  }
+
+  .formSide {
+    place-items: start center;
+    padding: calc(32px + env(safe-area-inset-top)) 16px 32px;
   }
 }

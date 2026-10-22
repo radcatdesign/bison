@@ -1,0 +1,98 @@
+.figure {
+  margin: 0;
+  padding: 8px 20px 14px;
+}
+
+.plot {
+  position: relative;
+  height: 220px;
+}
+
+/* The line stops short of the right edge so the scale labels never sit on it. */
+.area {
+  position: absolute;
+  inset: 0 44px 0 0;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--bo-line);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.line {
+  fill: none;
+  stroke: var(--bo-accent-vivid);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: draw 900ms var(--bo-ease) both;
+}
+
+/* The one orchestrated moment: the line draws in on load. */
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line {
+    animation: none;
+  }
+}
+
+.endDot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--bo-accent-vivid);
+  box-shadow:
+    0 0 0 3px var(--bo-surface),
+    0 0 0 7px color-mix(in oklab, var(--bo-accent) 22%, transparent);
+}
+
+.yLabels span {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  font-size: var(--bo-text-xs);
+  color: var(--bo-ink-3);
+}
+
+.xLabels {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px 44px 0 0;
+  font-size: var(--bo-text-xs);
+  color: var(--bo-ink-3);
+}
+
+@media (max-width: 860px) {
+  .figure {
+    padding: 4px 16px 12px;
+  }
+
+  .plot {
+    height: 150px;
+  }
+
+  .area {
+    right: 34px;
+  }
+
+  .xLabels {
+    margin-right: 34px;
+  }
+}

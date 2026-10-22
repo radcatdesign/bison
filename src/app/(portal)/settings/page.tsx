@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { setAccent, setSampleData } from "@/app/(portal)/actions";
 import { ActionForm } from "@/components/ui/action-form";
-import { PageHeader, Row, Rows, Section } from "@/components/ui";
+import { Card, PageHeader, Row, Rows } from "@/components/ui";
 import { CATALOG, formatPrice, PAID_ITEMS, type PaidItemKey } from "@/config/catalog";
 import { may, ROLES } from "@/config/roles";
 import { daysLeft, type ItemState } from "@/lib/access/entitlements";
@@ -11,6 +11,7 @@ import { withTenant } from "@/lib/db";
 import { demoTeam } from "@/lib/demo";
 import { demoMode } from "@/lib/env";
 import { getPortalContext, scopeOf } from "@/lib/portal";
+import s from "./settings.module.css";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -20,13 +21,18 @@ const INTEGRATIONS = [
   { provider: "shipstation", name: "ShipStation", breaks: "Needed for live shipping rates and sending paid orders to fulfillment." },
 ];
 
-function itemStatus(state: ItemState, key: PaidItemKey): string {
+function itemStatus(state: ItemState, key: PaidItemKey): { label: string; tone: string } {
   const included = CATALOG[key].includedWith?.find((k) => k !== key);
-  if (state.via === "trial" && state.trialEndsAt) return `Trial, ${daysLeft(state.trialEndsAt)} days left`;
-  if (state.pastDue) return "On, payment failed";
-  if (state.active) return "On";
-  if (included) return `Off, or get it with ${CATALOG[included].name}`;
-  return "Off";
+  if (state.via === "trial" && state.trialEndsAt) return { label: `Trial, ${daysLeft(state.trialEndsAt)} days left`, tone: "pill pill-accent" };
+  if (state.pastDue) return { label: "On, payment failed", tone: "pill pill-bad" };
+  if (state.active) return { label: "On", tone: "pill pill-good" };
+  if (included) return { label: `Off, or get it with ${CATALOG[included].name}`, tone: "pill" };
+  return { label: "Off", tone: "pill" };
+}
+
+function initials(name: string, email: string) {
+  const parts = (name || email).split(/[\s@.]+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
 async function SettingsBody() {
@@ -44,99 +50,107 @@ async function SettingsBody() {
     <>
       <PageHeader title="Settings" note={`${ctx.tenant.name}. You're signed in as ${ROLES[ctx.member.role].label.toLowerCase()}.`} />
 
-      <Section title="Data" id="data">
-        <ActionForm action={setSampleData} autoSubmit testId="sample-form">
-          <label style={{ display: "flex", gap: 12, alignItems: "center", cursor: canManage ? "pointer" : "default" }}>
-            <input type="checkbox" name="sampleData" defaultChecked={ctx.settings.sampleData} disabled={!canManage} style={{ width: 18, height: 18, accentColor: "var(--bo-accent)" }} data-testid="sample-toggle" />
-            <span>Show sample data</span>
-          </label>
-        </ActionForm>
-        <p style={{ color: "var(--bo-fg-2)", maxWidth: "62ch" }}>
-          Sample data fills every screen with made-up numbers and contacts, so you can see how everything works before your own data arrives. Nothing you change is saved while it&apos;s on.
-          {demo ? " This demo always shows sample data." : !canManage && " Only owners and admins can turn it on or off."}
-        </p>
-      </Section>
+      <div className={s.stack}>
+        <Card title="Data" id="data" note="Sample data fills every screen with made-up numbers and contacts, so you can see how everything works before your own data arrives.">
+          <ActionForm action={setSampleData} autoSubmit testId="sample-form">
+            <label className={s.toggleRow} data-disabled={!canManage || undefined}>
+              <span>
+                <span className={s.toggleTitle}>Show sample data</span>
+                <span className={s.toggleNote}>
+                  Nothing you change is saved while it&apos;s on.
+                  {demo ? " This demo always shows sample data." : !canManage && " Only owners and admins can turn it on or off."}
+                </span>
+              </span>
+              <input type="checkbox" className="switch" name="sampleData" defaultChecked={ctx.settings.sampleData} disabled={!canManage} data-testid="sample-toggle" />
+            </label>
+          </ActionForm>
+        </Card>
 
-      <Section title="Plan" id="plan">
-        <Rows>
-          <Row main={<><strong>{CATALOG.base.name}</strong><span className="label">{CATALOG.base.pitch}</span></>} side={<span className="pill">Included</span>} />
-          {PAID_ITEMS.map((item) => {
-            const state = ctx.tenant.access.states[item.key];
-            return (
-              <Row
-                key={item.key}
-                testId={`plan-${item.key}`}
-                main={
-                  <>
+        <Card title="Plan" id="plan" note="Analytics is included. Turn on modules and add-ons as you need them; your data stays put either way." flush>
+          <div className={s.plan}>
+            <div className={s.planRow}>
+              <div className={s.planName}>
+                <strong>{CATALOG.base.name}</strong>
+                <span className="muted">Included with every account</span>
+              </div>
+              <span className="pill pill-good">On</span>
+            </div>
+            {PAID_ITEMS.map((item) => {
+              const state = ctx.tenant.access.states[item.key];
+              const status = itemStatus(state, item.key);
+              return (
+                <div key={item.key} className={s.planRow} data-testid={`plan-${item.key}`}>
+                  <div className={s.planName}>
                     <strong>{item.name}</strong>
-                    <span className="label">
-                      {formatPrice(item.price)}
-                      {item.price.placeholder ? " (placeholder)" : ""}
+                    <span className="muted">
+                      <span className="num">{formatPrice(item.price)}</span>
+                      {item.price.placeholder ? ", placeholder" : ""}
                     </span>
-                  </>
-                }
-                side={
-                  <>
-                    <span className={state.active ? "pill pill-lit" : "pill"}>{itemStatus(state, item.key)}</span>
+                  </div>
+                  <div className={s.planSide}>
+                    <span className={status.tone}>{status.label}</span>
                     <Link href={`/settings/billing?item=${encodeURIComponent(item.key)}`} className="btn">
                       {state.active ? "Details" : "Unlock"}
                     </Link>
-                  </>
-                }
-              />
-            );
-          })}
-        </Rows>
-      </Section>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
 
-      <Section title="Look" id="look">
-        <ActionForm action={setAccent} submitLabel="Save color">
-          <label className="label" htmlFor="accent">
-            Accent color
-          </label>
-          <input id="accent" name="accent" type="color" defaultValue={ctx.settings.accent} disabled={!canManage} style={{ width: 48, height: 40, padding: 0, border: "1px solid var(--bo-rule-strong)", background: "transparent" }} />
-        </ActionForm>
-      </Section>
+        <Card title="Appearance" id="look" note="Your accent color shows up across the dashboard for everyone on your team. Light or dark is set per person, in the sidebar.">
+          <ActionForm action={setAccent} submitLabel="Save color">
+            <label className={s.colorField} htmlFor="accent">
+              <input id="accent" name="accent" type="color" defaultValue={ctx.settings.accent} disabled={!canManage} className={s.color} />
+              <span className="mono">{ctx.settings.accent}</span>
+            </label>
+          </ActionForm>
+        </Card>
 
-      <Section title="Team" id="team">
-        <Rows>
-          {members.map((m) => (
-            <Row
-              key={m.id}
-              main={
-                <>
-                  <span>{m.name || m.email}</span>
-                  <span className="label">{m.email}</span>
-                </>
-              }
-              side={<span className="pill">{m.status === "invited" ? `${ROLES[m.role].label}, invited` : ROLES[m.role].label}</span>}
-            />
-          ))}
-        </Rows>
-        <p className="label">Inviting people and changing roles arrives in Phase 1.</p>
-      </Section>
+        <Card title="Team" id="team" note="Inviting people and changing roles arrives in Phase 1." flush>
+          <div className={s.plan}>
+            {members.map((m) => (
+              <div key={m.id} className={s.planRow}>
+                <div className={s.person}>
+                  <span className={s.avatar} aria-hidden="true">
+                    {initials(m.name, m.email)}
+                  </span>
+                  <div className={s.planName}>
+                    <strong>{m.name || m.email}</strong>
+                    <span className="muted">{m.email}</span>
+                  </div>
+                </div>
+                <span className="pill">{m.status === "invited" ? `${ROLES[m.role].label}, invited` : m.status === "pending" ? `${ROLES[m.role].label}, waiting for approval` : ROLES[m.role].label}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
 
-      <Section title="Connections" id="integrations">
-        <Rows>
-          {INTEGRATIONS.map((i) => {
-            const row = integrations.find((r) => r.provider === i.provider);
-            const status = row?.status ?? "not_set_up";
-            const label = status === "connected" ? "Connected" : status === "needs_attention" ? "Needs attention" : "Not set up";
-            return (
-              <Row
-                key={i.provider}
-                main={
-                  <>
-                    <span>{i.name}</span>
-                    <span className="label">{status === "connected" ? "Working." : row?.last_error || i.breaks}</span>
-                  </>
-                }
-                side={<span className={status === "connected" ? "pill pill-lit" : "pill"}>{label}</span>}
-              />
-            );
-          })}
-        </Rows>
-      </Section>
+        <Card title="Connections" id="integrations" flush>
+          <div className={s.plan}>
+            <Rows>
+              {INTEGRATIONS.map((i) => {
+                const row = integrations.find((r) => r.provider === i.provider);
+                const status = row?.status ?? "not_set_up";
+                const label = status === "connected" ? "Connected" : status === "needs_attention" ? "Needs attention" : "Not set up";
+                return (
+                  <Row
+                    key={i.provider}
+                    main={
+                      <>
+                        <strong>{i.name}</strong>
+                        <span className="muted">{status === "connected" ? "Working." : row?.last_error || i.breaks}</span>
+                      </>
+                    }
+                    side={<span className={status === "connected" ? "pill pill-good" : status === "needs_attention" ? "pill pill-warn" : "pill"}>{label}</span>}
+                  />
+                );
+              })}
+            </Rows>
+          </div>
+        </Card>
+      </div>
     </>
   );
 }

@@ -14,7 +14,7 @@ Two lists. The first is what I decided while building Phase 0 that the brief did
 8. **Sample data is on for new tenants, generated, never stored.** It's built from a seeded random generator keyed to the tenant, so it's stable and different for every company. Writes refuse while it's on.
 9. **Events are partitioned by month.** A daily cron keeps partitions two months ahead and drops data past each tenant's retention (`/api/cron/daily`, scheduled in `vercel.json`).
 10. **Webhooks are deduped in the same transaction as the work,** so a failed run can be retried by Stripe without double-processing.
-11. **Plain CSS with tokens, no Tailwind.** Brand values are custom properties in `src/app/tokens.css`, so white-label is a token swap. Fonts are Archivo (text) and Martian Mono (labels and numbers), self-hosted from npm, no Google Fonts request.
+11. **Plain CSS with tokens, no Tailwind.** Brand values are custom properties in `src/app/tokens.css`, so white-label is a token swap. The look is modern and light by default, with a full dark theme that follows the device or a per-person choice (Match my device, Light, Dark) saved in the browser and applied before the page paints. Fonts are Mona Sans (text and numbers, with tabular figures) and Geist Mono (paths and keys), self-hosted from npm. Icons are Lucide.
 12. **Last mode is remembered in a cookie set by the browser,** not by the server, so link prefetching can't change it.
 13. **Marketing and Sales show a short "being built" overview** when unlocked, until Phases 2 and 3 replace it.
 14. **Postgres 16** locally and in tests. Neon runs 16 and 17; nothing here depends on 17.
@@ -34,7 +34,7 @@ Two lists. The first is what I decided while building Phase 0 that the brief did
 | 4 | **Domains.** I assumed `bisonops.com`, `cdn.bisonops.com`, `api.bisonops.com` and a reply domain. | Confirm you own `bisonops.com`. Use `reply.bisonops.com` for email threads and `app.bisonops.com` for the dashboard. |
 | 5 | **Where AI Assistant screens live.** The brief has three modes and doesn't place Chats or coaching. | Chats and Insights under Analyze (every role sees Analyze, and Sales people need the leads). Coaching and the assistant's name and voice under Settings. |
 | 6 | **Sample data switching off.** Today the tenant turns it off. | When the first real page view arrives, show "Your own data is coming in. Switch to it?" with one button. Don't switch silently. |
-| 7 | **Default accent color.** Placeholder `#7df9ff`. Tenants can recolor. | Pick Bison Ops' own accent when the Bison brand is set. |
+| 7 | **Default accent color.** Now an electric cobalt, `#3b5bff`, chosen to read well in both light and dark. Tenants can recolor; text on the accent switches between white and black automatically. | Confirm, or swap in Bison's brand color when it's set. |
 | 8 | **Refunds for the Sales role.** Today Sales can issue refunds. | Keep it, but log every refund to the audit log and alert the owner. Turn it off per tenant in Phase 2 if anyone asks. |
 | 9 | **Extra seats.** Base includes 5 people. | $5 to $10 a seat after that, or unlimited seats on any paid module. Unlimited is simpler to sell. |
 | 10 | **Hosting region.** | Put Vercel functions and Neon in the same US region (Washington DC, `iad1` / `us-east-1`) for the lowest database latency. Revisit if EU tenants need data kept in the EU. |

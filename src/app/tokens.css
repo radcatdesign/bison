@@ -1,41 +1,60 @@
 /* Design tokens. Every brand value lives here so white-label is a token swap.
-   The tenant's accent is set per request on <body> as --bo-accent. */
+   Light is the base; dark applies when the system asks for it (unless the
+   person picked light) or when they pick dark. The tenant's accent is set per
+   request on the app root as --bo-accent. */
 
 :root {
-  /* Color */
-  --bo-black: #000;
-  --bo-white: #fff;
-  --bo-bg: var(--bo-black);
-  --bo-fg: var(--bo-white);
-  --bo-fg-2: rgb(255 255 255 / 0.66);
-  --bo-fg-3: rgb(255 255 255 / 0.44);
-  --bo-rule: rgb(255 255 255 / 0.16);
-  --bo-rule-strong: rgb(255 255 255 / 0.36);
-  --bo-hover: rgb(255 255 255 / 0.05);
-  --bo-scrim: rgb(0 0 0 / 0.72);
-  --bo-warn: #ffb547;
+  color-scheme: light;
 
-  /* The one accent. Used as light, not as fill. */
-  --bo-accent: #7df9ff;
-  --bo-accent-soft: color-mix(in srgb, var(--bo-accent) 22%, transparent);
-  --bo-glow: 0 0 0.5px var(--bo-accent), 0 0 10px color-mix(in srgb, var(--bo-accent) 55%, transparent),
-    0 0 26px color-mix(in srgb, var(--bo-accent) 22%, transparent);
-  --bo-text-glow: 0 0 10px color-mix(in srgb, var(--bo-accent) 65%, transparent);
+  /* Surfaces */
+  --bo-canvas: #f4f5f7;
+  --bo-surface: #ffffff;
+  --bo-raised: #f8f9fb;
+  --bo-sunken: #eef0f3;
+  --bo-line: #e4e7ec;
+  --bo-line-strong: #d0d5dd;
+
+  /* Ink */
+  --bo-ink: #0b0d10;
+  --bo-ink-2: #4a5260;
+  --bo-ink-3: #858c98;
+  --bo-ink-inverse: #ffffff;
+
+  /* Signals */
+  --bo-good: #0e9f6e;
+  --bo-bad: #e5484d;
+  --bo-warn: #c27803;
+
+  /* The one accent. Tenants can recolor it. */
+  --bo-accent: #3b5bff;
+  --bo-accent-ink: #ffffff;
+  --bo-accent-text: color-mix(in oklab, var(--bo-accent) 88%, var(--bo-ink));
+  /* For lines and dots on charts: full strength in light, lifted in dark */
+  --bo-accent-vivid: var(--bo-accent);
+  --bo-accent-soft: color-mix(in oklab, var(--bo-accent) 10%, var(--bo-surface));
+  --bo-accent-line: color-mix(in oklab, var(--bo-accent) 35%, var(--bo-line));
+  --bo-focus: 0 0 0 3px color-mix(in oklab, var(--bo-accent) 28%, transparent);
+
+  /* Depth: present in light, nearly gone in dark */
+  --bo-shadow-sm: 0 1px 2px rgb(16 24 40 / 0.05);
+  --bo-shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 2px 8px rgb(16 24 40 / 0.05);
+  --bo-shadow-lg: 0 12px 32px rgb(16 24 40 / 0.12), 0 2px 6px rgb(16 24 40 / 0.06);
+  --bo-scrim: rgb(10 12 16 / 0.36);
+  --bo-glass: rgb(255 255 255 / 0.9);
 
   /* Type */
-  --bo-font-sans: "Archivo Variable", "Archivo", system-ui, sans-serif;
-  --bo-font-mono: "Martian Mono Variable", "Martian Mono", ui-monospace, monospace;
-  --bo-mono-width: 87.5; /* Martian Mono wdth axis: a little narrower than default */
-  --bo-text-xs: 0.6875rem;
+  --bo-font-sans: "Mona Sans Variable", "Mona Sans", ui-sans-serif, system-ui, sans-serif;
+  --bo-font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, monospace;
+  --bo-text-xs: 0.75rem;
   --bo-text-sm: 0.8125rem;
-  --bo-text-md: 0.9375rem;
-  --bo-text-lg: 1.25rem;
-  --bo-text-xl: 1.75rem;
-  --bo-text-2xl: 2.5rem;
-  --bo-text-3xl: 3.5rem;
+  --bo-text-md: 0.875rem;
+  --bo-text-lg: 1rem;
+  --bo-text-xl: 1.375rem;
+  --bo-text-2xl: 1.875rem;
+  --bo-text-3xl: 3rem;
   --bo-leading: 1.5;
 
-  /* Space and shape */
+  /* Space */
   --bo-s1: 4px;
   --bo-s2: 8px;
   --bo-s3: 12px;
@@ -44,28 +63,87 @@
   --bo-s6: 32px;
   --bo-s7: 48px;
   --bo-s8: 72px;
-  --bo-radius-control: 2px;
-  --bo-radius-pill: 999px;
-  --bo-radius-dock: 20px;
-  --bo-rule-w: 1px;
+
+  /* Shape: bigger containers get rounder corners */
+  --bo-r-control: 9px;
+  --bo-r-card: 14px;
+  --bo-r-panel: 18px;
+  --bo-r-pill: 999px;
 
   /* Layout */
-  --bo-header-h: 56px;
-  --bo-rail-w: 216px;
-  --bo-content-max: 1180px;
+  --bo-sidebar-w: 256px;
+  --bo-topbar-h: 56px;
+  --bo-content-max: 1200px;
   --bo-dock-h: 64px;
-  --bo-gutter: var(--bo-s6);
+  --bo-gutter: 40px;
 
   /* Motion */
-  --bo-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-  --bo-fast: 140ms;
-  --bo-slow: 260ms;
+  --bo-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --bo-fast: 120ms;
+  --bo-slow: 240ms;
 }
 
-@media (max-width: 760px) {
+/* Dark: by system preference unless the person chose light, or by choice. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bo-canvas: #08090b;
+    --bo-surface: #0f1114;
+    --bo-raised: #15181c;
+    --bo-sunken: #0b0c0f;
+    --bo-line: #1f2329;
+    --bo-line-strong: #2e333b;
+    --bo-ink: #f3f4f6;
+    --bo-ink-2: #a1a8b3;
+    --bo-ink-3: #6b727d;
+    --bo-ink-inverse: #0b0d10;
+    --bo-good: #34d399;
+    --bo-bad: #ff6369;
+    --bo-warn: #f5b546;
+    --bo-accent-text: color-mix(in oklab, var(--bo-accent) 70%, white);
+    --bo-accent-vivid: color-mix(in oklab, var(--bo-accent) 82%, white);
+    --bo-accent-soft: color-mix(in oklab, var(--bo-accent) 16%, var(--bo-surface));
+    --bo-accent-line: color-mix(in oklab, var(--bo-accent) 45%, var(--bo-line));
+    --bo-focus: 0 0 0 3px color-mix(in oklab, var(--bo-accent) 40%, transparent);
+    --bo-shadow-sm: none;
+    --bo-shadow: 0 0 0 1px rgb(255 255 255 / 0.02);
+    --bo-shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55);
+    --bo-scrim: rgb(0 0 0 / 0.6);
+    --bo-glass: rgb(15 17 20 / 0.9);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bo-canvas: #08090b;
+  --bo-surface: #0f1114;
+  --bo-raised: #15181c;
+  --bo-sunken: #0b0c0f;
+  --bo-line: #1f2329;
+  --bo-line-strong: #2e333b;
+  --bo-ink: #f3f4f6;
+  --bo-ink-2: #a1a8b3;
+  --bo-ink-3: #6b727d;
+  --bo-ink-inverse: #0b0d10;
+  --bo-good: #34d399;
+  --bo-bad: #ff6369;
+  --bo-warn: #f5b546;
+  --bo-accent-text: color-mix(in oklab, var(--bo-accent) 70%, white);
+  --bo-accent-vivid: color-mix(in oklab, var(--bo-accent) 82%, white);
+  --bo-accent-soft: color-mix(in oklab, var(--bo-accent) 16%, var(--bo-surface));
+  --bo-accent-line: color-mix(in oklab, var(--bo-accent) 45%, var(--bo-line));
+  --bo-focus: 0 0 0 3px color-mix(in oklab, var(--bo-accent) 40%, transparent);
+  --bo-shadow-sm: none;
+  --bo-shadow: 0 0 0 1px rgb(255 255 255 / 0.02);
+  --bo-shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55);
+  --bo-scrim: rgb(0 0 0 / 0.6);
+  --bo-glass: rgb(15 17 20 / 0.9);
+}
+
+@media (max-width: 860px) {
   :root {
-    --bo-gutter: var(--bo-s4);
-    --bo-text-2xl: 2rem;
+    --bo-gutter: 16px;
+    --bo-text-2xl: 1.5rem;
     --bo-text-3xl: 2.5rem;
   }
 }

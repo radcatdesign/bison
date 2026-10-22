@@ -24,7 +24,7 @@ export function ActionForm({ action, children, submitLabel, pendingLabel = "Savi
       className={className}
       data-testid={testId}
       onChange={autoSubmit ? (e) => e.currentTarget.requestSubmit() : undefined}
-      style={{ display: "grid", gap: 12 }}
+      style={{ display: "grid" }}
     >
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
         {children}
@@ -36,7 +36,7 @@ export function ActionForm({ action, children, submitLabel, pendingLabel = "Savi
       </div>
       <div aria-live="polite">
         {state && (
-          <p className={`notice ${state.ok ? "notice-ok" : "notice-error"}`} data-testid="action-message">
+          <p className={`notice ${state.ok ? "notice-ok" : "notice-error"}`} style={{ marginTop: 12 }} data-testid="action-message">
             {state.message}
           </p>
         )}

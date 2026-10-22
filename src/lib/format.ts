@@ -47,3 +47,26 @@ export function formatAgo(date: Date, now = new Date()): string {
 export function formatDay(isoDate: string): string {
   return new Date(`${isoDate}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
+
+export type Change = {
+  label: string;
+  direction: "up" | "down" | "flat";
+  /** Whether the change is good news. Bounce rate going up is bad. */
+  tone: "good" | "bad" | "neutral";
+  sentence: string;
+};
+
+/** A change from the previous period, for the small up or down chip. Null when there's nothing to compare. */
+export function formatChange(current: number | null, previous: number | null, rangeDays: number, lowerIsBetter = false): Change | null {
+  const sentence = formatDelta(current, previous, rangeDays, lowerIsBetter);
+  if (current === null || previous === null || previous === 0 || !sentence) return null;
+  const change = (current - previous) / previous;
+  if (Math.abs(change) < 0.005) return { label: "0%", direction: "flat", tone: "neutral", sentence };
+  const up = change > 0;
+  return {
+    label: `${Math.abs(change * 100).toFixed(0)}%`,
+    direction: up ? "up" : "down",
+    tone: up !== lowerIsBetter ? "good" : "bad",
+    sentence,
+  };
+}

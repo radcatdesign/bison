@@ -123,7 +123,7 @@ test.describe("locked modules", () => {
 test.describe("roles", () => {
   test("a Sales person doesn't see Marketing", async ({ page }) => {
     await signIn(page, "dev_ben");
-    const nav = isPhone(page) ? page.locator("nav[aria-label='Modes']").last() : page.locator("header nav[aria-label='Modes']");
+    const nav = isPhone(page) ? page.locator("nav[aria-label='Modes']").last() : page.locator("aside nav[aria-label='Modes']");
     await expect(nav.getByRole("link", { name: /Sales/ })).toBeVisible();
     await expect(nav.getByRole("link", { name: /Marketing/ })).toHaveCount(0);
     await page.goto("/marketing");
@@ -157,7 +157,7 @@ test.describe("portal", () => {
       await page.getByRole("dialog", { name: "Menu" }).getByRole("link", { name: "Settings" }).click();
       await expect(page).toHaveURL(/\/settings/);
     } else {
-      await expect(page.locator("header nav[aria-label='Modes']")).toBeVisible();
+      await expect(page.locator("aside nav[aria-label='Modes']")).toBeVisible();
       await expect(page.getByRole("button", { name: "Menu" })).toBeHidden();
       await page.locator("aside").getByRole("link", { name: "Contacts" }).click();
       await expect(page).toHaveURL(/\/analyze\/contacts/);
@@ -172,10 +172,27 @@ test.describe("portal", () => {
     await expect(page).toHaveURL(/\/marketing$/);
   });
 
+  test("light and dark mode, remembered per person", async ({ page }) => {
+    await signIn(page, "dev_ada");
+    if (isPhone(page)) {
+      await page.getByRole("button", { name: "Menu" }).click();
+    }
+    const switcher = page.getByRole("radiogroup", { name: "Appearance" }).locator("visible=true");
+    await switcher.getByRole("radio", { name: "Dark" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    const canvas = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(canvas).toBe("rgb(8, 9, 11)");
+    if (isPhone(page)) await page.getByRole("button", { name: "Menu" }).click();
+    await page.getByRole("radiogroup", { name: "Appearance" }).locator("visible=true").getByRole("radio", { name: "Light" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  });
+
   test("doesn't zoom on double-tap and installs as an app", async ({ page, request }) => {
     await signIn(page, "dev_ada");
     await expect(page.locator("meta[name=viewport]")).toHaveAttribute("content", /maximum-scale=1/);
     const manifest = await (await request.get("/manifest.webmanifest")).json();
-    expect(manifest).toMatchObject({ display: "standalone", background_color: "#000000" });
+    expect(manifest).toMatchObject({ display: "standalone", background_color: "#f4f5f7" });
   });
 });

@@ -17,6 +17,7 @@ export const RELEASES: Release[] = [
       "Works as a home-screen app on your phone, with pull down to refresh.",
       "People who join your team without an invite wait for an owner or admin to approve them.",
       "A public demo with two made-up companies, for showing Bison Ops to anyone.",
+      "A new look, with light and dark mode. Pick Match my device, Light or Dark in the sidebar.",
     ],
   },
 ];

@@ -31,7 +31,7 @@ export async function ModulePage({ mode, title, note, planned }: { mode: ModeKey
           {status}
         </p>
       )}
-      <p className="label" style={{ marginBottom: 16 }}>
+      <p className="muted" style={{ marginBottom: 14, fontWeight: 560 }}>
         Being built now. Here&apos;s what&apos;s coming.
       </p>
       <Planned items={planned} />

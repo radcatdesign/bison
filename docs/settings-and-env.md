@@ -62,7 +62,8 @@ Copy `.env.example` to `.env.local` for local work. Tests use `.env.test` (commi
 | Setting | Where | Default | Notes |
 |---|---|---|---|
 | Sample data | Settings, Data | On | Generated, never stored. Writes refuse while on. |
-| Accent color | Settings, Look | `#7df9ff` | Recolors the one glow in the dashboard. |
+| Accent color | Settings, Appearance | `#3b5bff` | Recolors buttons, the active page, charts and highlights for the whole team. |
+| Light or dark | Sidebar (phone: Menu) | Match my device | Per person, saved in their browser. |
 | Time zone | `settings.timezone` | America/Los_Angeles | Day boundaries for charts. Editable in Phase 1. |
 | Retention | `tenants.retention_days` | 400 days | Daily job removes older events. |
 | Privacy rules | `settings.privacy` | Empty (defaults apply) | Filled in Phase 1 with the EU/UK and Global Privacy Control rules. |

@@ -52,7 +52,7 @@ export async function setAccent(_prev: ActionState, formData: FormData): Promise
   const { ctx, error } = await contextFor("settings.manage");
   if (error) return { ok: false, message: error };
   const accent = String(formData.get("accent") ?? "").toLowerCase();
-  if (!/^#[0-9a-f]{6}$/.test(accent)) return { ok: false, message: "Pick a color, or type one like #7df9ff." };
+  if (!/^#[0-9a-f]{6}$/.test(accent)) return { ok: false, message: "Pick a color, or type one like #3b5bff." };
   await withTenant(scopeOf(ctx), async (tx) => {
     await tx.updateTable("settings").set({ accent }).execute();
     await audit(tx, { action: "settings.accent", detail: { accent } });

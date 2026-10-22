@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 import { VisitorsChart } from "@/components/visitors-chart";
-import { Metric, MetricGrid, PageHeader, Row, Rows, SampleBanner, Section } from "@/components/ui";
-import { formatDecimal, formatDelta, formatDuration, formatInt, formatPercent } from "@/lib/format";
+import { Card, Metric, MetricStrip, PageHeader, SampleBanner, Segmented } from "@/components/ui";
 import { demoMode } from "@/lib/env";
+import { formatChange, formatDecimal, formatDuration, formatInt, formatPercent } from "@/lib/format";
 import { getPortalContext, scopeOf } from "@/lib/portal";
 import { getRepos } from "@/lib/repo";
+import s from "./overview.module.css";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -25,51 +25,54 @@ const HELP = {
     "Share of visits from browsers that have been here before. Browsers set to European or UK time, and browsers that ask not to be tracked, always count as new.",
 };
 
+function Ranges({ range }: { range: number }) {
+  return <Segmented label="Date range" items={RANGES.map((r) => ({ href: `/analyze?range=${r}`, label: `${r} days`, current: r === range }))} />;
+}
+
 async function Overview({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
   const ctx = await getPortalContext();
   const requested = Number((await searchParams).range);
   const range = (RANGES as readonly number[]).includes(requested) ? requested : 30;
   const repos = getRepos({ scope: scopeOf(ctx), tenant: ctx.tenant, sampleData: ctx.settings.sampleData, timezone: ctx.settings.timezone });
   const { current: c, previous: p, daily, topPages } = await repos.analytics.summary(range);
+  const topMax = Math.max(1, ...topPages.map((t) => t.views));
 
   return (
     <>
       {repos.mode === "sample" && <SampleBanner demo={demoMode()} />}
-      <PageHeader
-        title="Overview"
-        note={`Last ${range} days on ${ctx.sites[0]?.domain ?? "your site"}.`}
-        actions={
-          <nav aria-label="Date range" style={{ display: "flex", gap: 8 }}>
-            {RANGES.map((r) => (
-              <Link key={r} href={`/analyze?range=${r}`} className={r === range ? "btn btn-primary" : "btn"} aria-current={r === range ? "true" : undefined}>
-                {r} days
-              </Link>
-            ))}
-          </nav>
-        }
-      />
+      <PageHeader title="Overview" note={`Last ${range} days on ${ctx.sites[0]?.domain ?? "your site"}`} actions={<Ranges range={range} />} />
 
-      <Section title="Traffic">
-        <MetricGrid>
-          <Metric lead label="Visitors" value={formatInt(c.visitors)} delta={formatDelta(c.visitors, p.visitors, range)} help={HELP.visitors} testId="metric-visitors" />
-          <Metric label="Page views" value={formatInt(c.pageviews)} delta={formatDelta(c.pageviews, p.pageviews, range)} help={HELP.pageviews} />
-          <Metric label="Visits" value={formatInt(c.visits)} delta={formatDelta(c.visits, p.visits, range)} help={HELP.visits} />
-          <Metric label="Bounce rate" value={formatPercent(c.bounceRate)} delta={formatDelta(c.bounceRate, p.bounceRate, range, true)} help={HELP.bounce} />
-          <Metric label="Average active visit" value={formatDuration(c.avgActiveSeconds)} delta={formatDelta(c.avgActiveSeconds, p.avgActiveSeconds, range)} help={HELP.active} />
-          <Metric label="Pages per visit" value={formatDecimal(c.pagesPerVisit)} delta={formatDelta(c.pagesPerVisit, p.pagesPerVisit, range)} help={HELP.ppv} />
-          <Metric label="Returning" value={formatPercent(c.returningShare)} help={HELP.returning} />
-        </MetricGrid>
+      <section className={`card ${s.hero}`} aria-label="Traffic">
+        <div className={s.heroTop}>
+          <Metric size="hero" label="Visitors" value={formatInt(c.visitors)} change={formatChange(c.visitors, p.visitors, range)} help={HELP.visitors} testId="metric-visitors" />
+          <p className={s.heroNote}>Compared with the {range} days before</p>
+        </div>
         <VisitorsChart points={daily} />
-      </Section>
+        <MetricStrip>
+          <Metric label="Page views" value={formatInt(c.pageviews)} change={formatChange(c.pageviews, p.pageviews, range)} help={HELP.pageviews} />
+          <Metric label="Visits" value={formatInt(c.visits)} change={formatChange(c.visits, p.visits, range)} help={HELP.visits} />
+          <Metric label="Bounce rate" value={formatPercent(c.bounceRate)} change={formatChange(c.bounceRate, p.bounceRate, range, true)} help={HELP.bounce} />
+          <Metric label="Average active visit" value={formatDuration(c.avgActiveSeconds)} change={formatChange(c.avgActiveSeconds, p.avgActiveSeconds, range)} help={HELP.active} />
+          <Metric label="Pages per visit" value={formatDecimal(c.pagesPerVisit)} change={formatChange(c.pagesPerVisit, p.pagesPerVisit, range)} help={HELP.ppv} />
+          <Metric label="Returning" value={formatPercent(c.returningShare)} help={HELP.returning} />
+        </MetricStrip>
+      </section>
 
-      <Section title="Top pages">
-        <Rows>
-          {topPages.length === 0 && <Row main={<span>No page views in this range yet. Once the tracking script is on your site, pages show up here within a minute.</span>} />}
-          {topPages.map((page) => (
-            <Row key={page.path} main={<span className="mono">{page.path}</span>} side={<span className="mono">{formatInt(page.views)}</span>} testId="top-page" />
-          ))}
-        </Rows>
-      </Section>
+      <Card title="Top pages" aside={<span className="label">Page views</span>} flush>
+        {topPages.length === 0 ? (
+          <p className={s.empty}>No page views in this range yet. Once the tracking script is on your site, pages show up here within a minute.</p>
+        ) : (
+          <ol className={s.pages}>
+            {topPages.map((page) => (
+              <li key={page.path} className={s.pageRow} data-testid="top-page">
+                <span className={s.pageBar} style={{ width: `${(page.views / topMax) * 100}%` }} aria-hidden="true" />
+                <span className={`mono ${s.pagePath}`}>{page.path}</span>
+                <span className={`num ${s.pageViews}`}>{formatInt(page.views)}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </Card>
     </>
   );
 }

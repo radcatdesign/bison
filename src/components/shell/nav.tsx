@@ -1,12 +1,38 @@
 "use client";
 
+import {
+  ChartLine,
+  Inbox,
+  LayoutGrid,
+  Lock,
+  type LucideIcon,
+  Megaphone,
+  Menu,
+  Monitor,
+  Moon,
+  Receipt,
+  Settings,
+  ShoppingBag,
+  Sparkles,
+  Sun,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useSyncExternalStore } from "react";
+import { BRAND, THEME_STORAGE_KEY } from "@/config/brand";
 import { MODE_COOKIE, type ModeKey } from "@/config/modes";
 import s from "./shell.module.css";
 
 export type NavMode = { key: ModeKey; label: string; locked: boolean; pages: { href: string; label: string }[] };
+
+const MODE_ICONS: Record<ModeKey, LucideIcon> = { analyze: ChartLine, marketing: Megaphone, sales: ShoppingBag };
+const PAGE_ICONS: Record<string, LucideIcon> = {
+  "/analyze": LayoutGrid,
+  "/analyze/contacts": Inbox,
+  "/marketing": Megaphone,
+  "/sales": Receipt,
+};
 
 function activeMode(pathname: string, modes: NavMode[]): NavMode | undefined {
   return modes.find((m) => pathname === `/${m.key}` || pathname.startsWith(`/${m.key}/`));
@@ -17,24 +43,16 @@ function activePage(pathname: string, mode: NavMode | undefined) {
   return mode?.pages.filter((p) => pathname === p.href || pathname.startsWith(`${p.href}/`)).sort((a, b) => b.href.length - a.href.length)[0];
 }
 
-function Lock() {
-  return (
-    <svg className={s.lock} viewBox="0 0 9 11" aria-hidden="true">
-      <rect x="0.5" y="4.5" width="8" height="6" fill="none" stroke="currentColor" />
-      <path d="M2 4.5V3a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" />
-    </svg>
-  );
-}
-
-export function ModeTabs({ modes }: { modes: NavMode[] }) {
+/** The three modes as one segmented control. */
+export function ModeSwitch({ modes }: { modes: NavMode[] }) {
   const pathname = usePathname();
   const current = activeMode(pathname, modes);
   return (
-    <nav className={s.modes} aria-label="Modes">
+    <nav className={s.modeSwitch} aria-label="Modes" style={{ gridTemplateColumns: `repeat(${modes.length}, 1fr)` }}>
       {modes.map((m) => (
-        <Link key={m.key} href={`/${m.key}`} className={s.modeTab} aria-current={current?.key === m.key ? "page" : undefined}>
+        <Link key={m.key} href={`/${m.key}`} className={s.modeItem} aria-current={current?.key === m.key ? "page" : undefined}>
           {m.label}
-          {m.locked && <Lock />}
+          {m.locked && <Lock className={s.lock} aria-hidden="true" />}
           {m.locked && <span className="visually-hidden">(locked)</span>}
         </Link>
       ))}
@@ -42,17 +60,12 @@ export function ModeTabs({ modes }: { modes: NavMode[] }) {
   );
 }
 
-export function UtilityLinks() {
-  const pathname = usePathname();
+function NavLink({ href, icon: Icon, current, children, onClick }: { href: string; icon: LucideIcon; current: boolean; children: ReactNode; onClick?: () => void }) {
   return (
-    <>
-      <Link href="/updates" className={s.utilLink} aria-current={pathname.startsWith("/updates") ? "page" : undefined}>
-        Updates
-      </Link>
-      <Link href="/settings" className={s.utilLink} aria-current={pathname.startsWith("/settings") ? "page" : undefined}>
-        Settings
-      </Link>
-    </>
+    <Link href={href} className={s.navLink} aria-current={current ? "page" : undefined} onClick={onClick}>
+      <Icon className={s.navIcon} aria-hidden="true" />
+      {children}
+    </Link>
   );
 }
 
@@ -62,15 +75,87 @@ export function SideNav({ modes }: { modes: NavMode[] }) {
   const page = activePage(pathname, mode);
   if (!mode) return null;
   return (
-    <nav aria-label={`${mode.label} pages`}>
+    <nav aria-label={`${mode.label} pages`} className={s.navGroup}>
+      <span className={s.navHeading}>{mode.label}</span>
       {mode.pages.map((p) => (
-        <Link key={p.href} href={p.href} className={s.railLink} aria-current={page?.href === p.href ? "page" : undefined}>
+        <NavLink key={p.href} href={p.href} icon={PAGE_ICONS[p.href] ?? LayoutGrid} current={page?.href === p.href}>
           {p.label}
-        </Link>
+        </NavLink>
       ))}
     </nav>
   );
 }
+
+export function GeneralNav({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = usePathname();
+  return (
+    <nav aria-label="General" className={s.navGroup}>
+      <NavLink href="/updates" icon={Sparkles} current={pathname.startsWith("/updates")} onClick={onNavigate}>
+        Updates
+      </NavLink>
+      <NavLink href="/settings" icon={Settings} current={pathname.startsWith("/settings")} onClick={onNavigate}>
+        Settings
+      </NavLink>
+    </nav>
+  );
+}
+
+// ── Theme ────────────────────────────────────────────────────────────────────
+
+type ThemeChoice = "system" | "light" | "dark";
+const listeners = new Set<() => void>();
+
+function readTheme(): ThemeChoice {
+  try {
+    const t = localStorage.getItem(THEME_STORAGE_KEY);
+    return t === "light" || t === "dark" ? t : "system";
+  } catch {
+    return "system";
+  }
+}
+
+function setTheme(choice: ThemeChoice) {
+  const root = document.documentElement;
+  try {
+    if (choice === "system") localStorage.removeItem(THEME_STORAGE_KEY);
+    else localStorage.setItem(THEME_STORAGE_KEY, choice);
+  } catch {
+    // Private windows can refuse storage; the choice still applies to this page.
+  }
+  if (choice === "system") root.removeAttribute("data-theme");
+  else root.setAttribute("data-theme", choice);
+  const dark = choice === "dark" || (choice === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute("content", dark ? BRAND.themeDark : BRAND.themeLight));
+  listeners.forEach((l) => l());
+}
+
+const THEMES: { value: ThemeChoice; label: string; icon: LucideIcon }[] = [
+  { value: "system", label: "Match my device", icon: Monitor },
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+];
+
+export function ThemeSwitch() {
+  const theme = useSyncExternalStore(
+    (cb) => {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    readTheme,
+    () => "system" as ThemeChoice,
+  );
+  return (
+    <div className={s.themeSwitch} role="radiogroup" aria-label="Appearance">
+      {THEMES.map(({ value, label, icon: Icon }) => (
+        <button key={value} type="button" role="radio" aria-checked={theme === value} aria-label={label} title={label} className={s.themeItem} onClick={() => setTheme(value)}>
+          <Icon aria-hidden="true" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Phone dock and menu ──────────────────────────────────────────────────────
 
 export function Dock({ modes, signOut }: { modes: NavMode[]; signOut: () => Promise<void> }) {
   const pathname = usePathname();
@@ -81,45 +166,48 @@ export function Dock({ modes, signOut }: { modes: NavMode[]; signOut: () => Prom
 
   return (
     <>
-      <nav className={s.dock} aria-label="Modes">
-        {modes.map((m) => (
-          <Link key={m.key} href={`/${m.key}`} className={s.dockItem} aria-current={mode?.key === m.key ? "page" : undefined}>
-            <span className={s.dot} aria-hidden="true" />
-            {m.label}
-          </Link>
-        ))}
-        {Array.from({ length: Math.max(0, 3 - modes.length) }, (_, i) => (
-          <span key={`gap-${i}`} aria-hidden="true" />
-        ))}
+      <nav className={s.dock} aria-label="Modes" style={{ gridTemplateColumns: `repeat(${modes.length + 1}, 1fr)` }}>
+        {modes.map((m) => {
+          const Icon = MODE_ICONS[m.key];
+          return (
+            <Link key={m.key} href={`/${m.key}`} className={s.dockItem} aria-current={mode?.key === m.key ? "page" : undefined}>
+              <Icon aria-hidden="true" />
+              {m.label}
+            </Link>
+          );
+        })}
         <button type="button" className={s.dockItem} onClick={() => sheet.current?.showModal()} aria-haspopup="dialog">
-          <span className={s.dot} aria-hidden="true" />
+          <Menu aria-hidden="true" />
           Menu
         </button>
       </nav>
 
       <dialog ref={sheet} className={s.sheet} aria-label="Menu" onClick={(e) => e.target === sheet.current && close()}>
+        <div className={s.sheetGrab} aria-hidden="true" />
         <div className={s.sheetHead}>
-          <span className="label">{mode ? mode.label : "Menu"}</span>
-          <button type="button" className="btn" onClick={close}>
-            Close
+          <span className={s.navHeading}>{mode ? mode.label : "Menu"}</span>
+          <button type="button" className={s.iconButton} onClick={close} aria-label="Close menu">
+            <X aria-hidden="true" />
           </button>
         </div>
-        {mode?.pages.map((p) => (
-          <Link key={p.href} href={p.href} className={s.sheetLink} onClick={close} aria-current={page?.href === p.href ? "page" : undefined}>
-            {p.label}
-          </Link>
-        ))}
-        <Link href="/updates" className={s.sheetLink} onClick={close} aria-current={pathname.startsWith("/updates") ? "page" : undefined}>
-          Updates
-        </Link>
-        <Link href="/settings" className={s.sheetLink} onClick={close} aria-current={pathname.startsWith("/settings") ? "page" : undefined}>
-          Settings
-        </Link>
-        <form action={signOut}>
-          <button type="submit" className={`${s.sheetLink} ${s.menuButton}`}>
-            Sign out
-          </button>
-        </form>
+        {mode && (
+          <div className={s.navGroup}>
+            {mode.pages.map((p) => (
+              <NavLink key={p.href} href={p.href} icon={PAGE_ICONS[p.href] ?? LayoutGrid} current={page?.href === p.href} onClick={close}>
+                {p.label}
+              </NavLink>
+            ))}
+          </div>
+        )}
+        <GeneralNav onNavigate={close} />
+        <div className={s.sheetFoot}>
+          <ThemeSwitch />
+          <form action={signOut}>
+            <button type="submit" className="btn">
+              Sign out
+            </button>
+          </form>
+        </div>
       </dialog>
     </>
   );

@@ -1,22 +1,42 @@
+import { Check } from "lucide-react";
 import type { Metadata } from "next";
-import { PageHeader, Section } from "@/components/ui";
+import { PageHeader } from "@/components/ui";
 import { RELEASES } from "@/config/releases";
+import s from "./updates.module.css";
 
 export const metadata: Metadata = { title: "Updates" };
+
+function longDate(iso: string) {
+  return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
 
 export default function UpdatesPage() {
   return (
     <>
       <PageHeader title="Updates" note="What changed in Bison Ops, newest first." />
-      {RELEASES.map((r) => (
-        <Section key={r.version} title={r.title} aside={<span className="label">{`Version ${r.version}, ${new Date(`${r.date}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}`}</span>}>
-          <ul style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 8, maxWidth: "64ch" }}>
-            {r.changes.map((c) => (
-              <li key={c}>{c}</li>
-            ))}
-          </ul>
-        </Section>
-      ))}
+      <ol className={s.releases}>
+        {RELEASES.map((r) => (
+          <li key={r.version} className={s.release}>
+            <div className={s.meta}>
+              <span className="pill pill-accent num">v{r.version}</span>
+              <time dateTime={r.date} className="label">
+                {longDate(r.date)}
+              </time>
+            </div>
+            <article className={`card ${s.body}`}>
+              <h2 className={s.title}>{r.title}</h2>
+              <ul className={s.changes}>
+                {r.changes.map((c) => (
+                  <li key={c}>
+                    <Check aria-hidden="true" />
+                    <span>{c}</span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </li>
+        ))}
+      </ol>
     </>
   );
 }

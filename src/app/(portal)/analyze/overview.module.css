@@ -1,0 +1,68 @@
+.hero {
+  position: relative;
+  margin-bottom: var(--bo-s5);
+  border-radius: var(--bo-r-panel);
+  overflow: hidden;
+  background:
+    radial-gradient(80% 60% at 0% 0%, color-mix(in oklab, var(--bo-accent) 7%, transparent), transparent 70%),
+    var(--bo-surface);
+}
+
+.heroTop {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--bo-s3);
+  padding: 22px 20px 0;
+}
+
+.heroNote {
+  font-size: var(--bo-text-xs);
+  color: var(--bo-ink-3);
+}
+
+.empty {
+  padding: 20px;
+  color: var(--bo-ink-2);
+}
+
+.pages {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+}
+
+.pageRow {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--bo-s4);
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 9px;
+  isolation: isolate;
+}
+
+.pageRow + .pageRow {
+  margin-top: 4px;
+}
+
+.pageBar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  border-radius: 9px;
+  background: var(--bo-accent-soft);
+}
+
+.pagePath {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pageViews {
+  font-weight: 600;
+}

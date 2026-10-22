@@ -1,6 +1,7 @@
 import "server-only";
 // The public demo: made-up companies, no database, nothing saved.
 // Every screen reads sample data; every action answers DEMO_MESSAGE.
+import { BRAND } from "@/config/brand";
 import { type EntitlementRow, resolveAccess } from "@/lib/access/entitlements";
 import { DEV_PEOPLE, DEV_TENANTS } from "@/lib/auth/dev-people";
 import type { Identity } from "@/lib/auth/identity";
@@ -26,7 +27,7 @@ export function demoContext(identity: Identity, now = new Date()): PortalContext
   return {
     tenant: { id: tenant.id, name: tenant.name, slug: tenant.domain.split(".")[0], industry: tenant.industry, access: resolveAccess(demoEntitlements(tenant.id, now), now) },
     member: { id: `member-${person.userId}`, userId: person.userId, email: person.email, name: person.name, role: person.role },
-    settings: { sampleData: true, accent: "#7df9ff", timezone: "America/Los_Angeles" },
+    settings: { sampleData: true, accent: BRAND.defaultAccent, timezone: "America/Los_Angeles" },
     sites: [{ id: `site-${tenant.id.slice(0, 8)}`, domain: tenant.domain, siteKey: "site_demo", firstEventAt: null }],
   };
 }
