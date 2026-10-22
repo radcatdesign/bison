@@ -51,3 +51,10 @@ test("signed-out visitors land on the picker", async ({ page }) => {
   await expect(page).toHaveURL(/\/sign-in/);
   await expect(page.getByText("Two made-up companies")).toBeVisible();
 });
+
+test("landing pages preview made-up sites, never a real domain", async ({ page }) => {
+  await pick(page, "dev_cora");
+  await page.goto("/analyze/pages");
+  const frame = page.getByTestId("landing-page").first().locator("iframe");
+  await expect(frame).toHaveAttribute("src", /^\/sample-site\/coffee/);
+});

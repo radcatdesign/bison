@@ -14,7 +14,12 @@ What each part of Bison Ops does, what grants it, and how far it's built. Featur
 
 ## Analytics (Base, Phase 1)
 
-Cookie-free counting, live view, pages and heatmaps, audience, key actions, visitors and person pages, benchmarks. Built in Phase 0: the Overview screen (visitors, page views, visits, bounce rate, average active visit, pages per visit, returning share, daily chart, top pages) reading real `events` or sample data. Phase 1 adds the tracking script and everything else.
+Cookie-free counting, live view, pages and heatmaps, audience, key actions, visitors and person pages, benchmarks. Built so far:
+
+- **Overview:** visitors, page views, visits, bounce rate, average active visit, pages per visit, returning share, daily chart, top pages, reading real `events` or sample data.
+- **Landing pages** (`/analyze/pages`): every page people arrive on (the first page of a visit), with entries, share, bounce rate, average active time and form sends. Each page shows a live preview of the tenant's real page in a sandboxed frame, at desktop (1440), tablet (820) or phone (390) width. In sample mode the previews load made-up sample sites (`/sample-site/<industry>/...`) so nothing points at a real domain. Sites that refuse to be framed show blank until scheduled screenshots arrive with the tracking script; click, scroll and cursor heatmaps will paint over the same preview.
+
+Phase 1 adds the tracking script and everything else.
 
 ## Contacts (Base, Phase 1)
 

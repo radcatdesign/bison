@@ -1,7 +1,8 @@
 // Realistic, made-up data for a tenant. Same tenant, same data; different tenant,
 // different data. Never written to the database.
 import type { ContactStatus } from "@/lib/db/types";
-import type { AnalyticsSummary, ContactDetail, DailyPoint, Totals } from "@/lib/repo/types";
+import type { AnalyticsSummary, ContactDetail, DailyPoint, LandingPage, Totals } from "@/lib/repo/types";
+import { samplePageTitle } from "./sites";
 import { displayNameFor } from "@/lib/repo/types";
 import { presetFor } from "./industries";
 import { type Rand, seeded } from "./random";
@@ -113,4 +114,29 @@ export function sampleAnalytics(tenant: SampleTenant, rangeDays: number, now = n
     .slice(0, 6);
 
   return { rangeDays, current, previous, daily, topPages };
+}
+
+/** Landing pages for sample mode, consistent with the sample overview for the same range. */
+export function sampleLandingPages(tenant: SampleTenant, rangeDays: number, now = new Date()): LandingPage[] {
+  const { current } = sampleAnalytics(tenant, rangeDays, now);
+  const rand = seedFor(tenant, `landing:${rangeDays}`);
+  const preset = presetFor(tenant.industry);
+  // The home page takes most arrivals; deeper pages get search and ad traffic.
+  const weights = preset.pages.map((path, i) => (path === "/" ? 3.2 : 1.6 / (i + 0.8)) * (0.8 + rand.next() * 0.4));
+  const total = weights.reduce((a, b) => a + b, 0);
+  const pages = preset.pages.map((path, i) => {
+    const entries = Math.max(1, Math.round((current.visits * weights[i]) / total));
+    const intent = /quote|contact|wholesale|dealers|pricing/.test(path);
+    return {
+      path,
+      title: samplePageTitle(tenant.industry, path),
+      entries,
+      share: 0,
+      bounceRate: 0.22 + rand.next() * 0.4,
+      avgActiveSeconds: Math.round(28 + rand.next() * 120),
+      formRate: (intent ? 0.04 : 0.006) + rand.next() * (intent ? 0.05 : 0.015),
+    };
+  });
+  const sum = pages.reduce((a, p) => a + p.entries, 0);
+  return pages.map((p) => ({ ...p, share: p.entries / sum })).sort((a, b) => b.entries - a.entries);
 }

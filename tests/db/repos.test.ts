@@ -51,6 +51,21 @@ describe("live repositories", () => {
   });
 });
 
+describe("live landing pages", () => {
+  it("count each visit once, on the page it started on, for this tenant only", async () => {
+    const pages = await getRepos(ctxFor("ridgeline", false)).analytics.landingPages(30);
+    const summary = await getRepos(ctxFor("ridgeline", false)).analytics.summary(30);
+    expect(pages.length).toBeGreaterThan(0);
+    expect(pages.map((p) => p.path)).not.toContain("/glow-aggregate");
+    expect(pages.reduce((s, p) => s + p.entries, 0)).toBe(summary.current.visits);
+    expect(pages.reduce((s, p) => s + p.share, 0)).toBeCloseTo(1, 5);
+    for (const p of pages) {
+      expect(p.bounceRate).toBeGreaterThanOrEqual(0);
+      expect(p.bounceRate).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
 describe("sample repositories", () => {
   it("give each tenant its own stable data", async () => {
     const a1 = await getRepos(ctxFor("brightwater", true)).contacts.list();

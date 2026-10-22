@@ -12,6 +12,7 @@ import {
   type ContactsRepo,
   type DailyPoint,
   displayNameFor,
+  type LandingPage,
   NotFoundError,
   type Totals,
 } from "./types";
@@ -141,8 +142,56 @@ async function totals(scope: TenantScope, from: Date, to: Date, tz: string): Pro
   });
 }
 
+type LandingRow = { path: string; title: string | null; entries: string; bounces: string; avg_active_ms: string | null; form_visits: string };
+
+async function landingPages(scope: TenantScope, rangeDays: number): Promise<LandingPage[]> {
+  const to = new Date();
+  const from = new Date(to.getTime() - rangeDays * 86_400_000);
+  return withTenant(scope, async (tx) => {
+    const { rows } = await sql<LandingRow>`
+      with first_page as (
+        select distinct on (visit_id) visit_id, path, props ->> 'title' as title
+        from events
+        where type = 'pageview' and occurred_at >= ${from} and occurred_at < ${to}
+        order by visit_id, occurred_at
+      ),
+      v as (
+        select visit_id,
+          count(*) filter (where type = 'pageview') as pv,
+          count(*) filter (where type = 'action') as actions,
+          count(*) filter (where type = 'action' and name = 'form-sent') as forms,
+          sum(case when type = 'leave' and props ->> 'active_ms' ~ '^[0-9]{1,9}$' then (props ->> 'active_ms')::int else 0 end) as active_ms
+        from events
+        where occurred_at >= ${from} and occurred_at < ${to}
+        group by visit_id
+      )
+      select f.path, max(f.title) as title, count(*) as entries,
+        count(*) filter (where v.pv = 1 and v.actions = 0 and v.active_ms < 10000) as bounces,
+        avg(v.active_ms) filter (where v.active_ms > 0) as avg_active_ms,
+        count(*) filter (where v.forms > 0) as form_visits
+      from first_page f join v using (visit_id)
+      group by f.path
+      order by entries desc
+      limit 24`.execute(tx);
+    const total = rows.reduce((sum, r) => sum + Number(r.entries), 0);
+    return rows.map((r) => {
+      const entries = Number(r.entries);
+      return {
+        path: r.path,
+        title: r.title,
+        entries,
+        share: total ? entries / total : 0,
+        bounceRate: entries ? Number(r.bounces) / entries : null,
+        avgActiveSeconds: r.avg_active_ms === null ? null : Math.round(Number(r.avg_active_ms) / 1000),
+        formRate: entries ? Number(r.form_visits) / entries : null,
+      };
+    });
+  });
+}
+
 export function liveAnalytics(scope: TenantScope, timezone: string): AnalyticsRepo {
   return {
+    landingPages: (rangeDays) => landingPages(scope, rangeDays),
     async summary(rangeDays): Promise<AnalyticsSummary> {
       const to = new Date();
       const from = new Date(to.getTime() - rangeDays * 86_400_000);

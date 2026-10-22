@@ -62,3 +62,22 @@ describe("tenant input", () => {
     expect(slugify("Café Olé")).toBe("cafe-ole");
   });
 });
+
+describe("sample landing pages", () => {
+  it("cover every sample page, add up to all entries, and put the home page first", async () => {
+    const { sampleLandingPages } = await import("@/lib/sample/generate");
+    const pages = sampleLandingPages(pools, 30, now);
+    expect(pages.map((p) => p.path).sort()).toEqual(["/", "/blog/night-swim-lighting", "/dealers", "/gallery", "/glow-aggregate", "/mosaics", "/quote"]);
+    expect(pages[0].path).toBe("/");
+    expect(pages.reduce((s, p) => s + p.share, 0)).toBeCloseTo(1, 5);
+    for (const p of pages) expect(p.title).toBeTruthy();
+  });
+
+  it("have a made-up page to preview for every sample path", async () => {
+    const { INDUSTRIES } = await import("@/lib/sample/industries");
+    const { SAMPLE_SITES } = await import("@/lib/sample/sites");
+    for (const [key, preset] of Object.entries(INDUSTRIES)) {
+      for (const path of preset.pages) expect(SAMPLE_SITES[key].pages[path], `${key} ${path}`).toBeDefined();
+    }
+  });
+});

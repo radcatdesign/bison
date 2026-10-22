@@ -10,6 +10,7 @@ import {
   Menu,
   Monitor,
   Moon,
+  PanelsTopLeft,
   Receipt,
   Settings,
   ShoppingBag,
@@ -29,6 +30,7 @@ export type NavMode = { key: ModeKey; label: string; locked: boolean; pages: { h
 const MODE_ICONS: Record<ModeKey, LucideIcon> = { analyze: ChartLine, marketing: Megaphone, sales: ShoppingBag };
 const PAGE_ICONS: Record<string, LucideIcon> = {
   "/analyze": LayoutGrid,
+  "/analyze/pages": PanelsTopLeft,
   "/analyze/contacts": Inbox,
   "/marketing": Megaphone,
   "/sales": Receipt,

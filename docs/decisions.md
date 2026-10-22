@@ -23,6 +23,7 @@ Two lists. The first is what I decided while building Phase 0 that the brief did
 17. **Billing and dev sign-in fail closed.** Test billing and the dev sign-in refuse to run on Vercel production, and need an explicit flag in any other production build.
 18. **An independent security review** of tenancy, auth and billing ran before this was pushed. Every finding was fixed and has a test.
 19. **A public demo mode.** `DEMO_MODE=1` with no `DATABASE_URL` runs the portal with the made-up companies and people, sample data, and every save refused. It needs no database, Clerk or Stripe, so a Vercel deploy shows the product in a minute. It refuses to turn on if a database is configured.
+20. **Landing page previews load the real page in a sandboxed frame.** It's live and free, and it's what heatmaps will paint over. Some sites block framing; for those, scheduled screenshots (Phase 1) fill in. Sample mode previews made-up sample sites instead of whatever lives at the sample domain.
 
 ## Needed from you
 

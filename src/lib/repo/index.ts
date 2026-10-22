@@ -1,5 +1,5 @@
 // Picks the database or sample repositories for a tenant. Screens never know which.
-import { sampleAnalytics, sampleContacts, type SampleTenant } from "@/lib/sample/generate";
+import { sampleAnalytics, sampleContacts, sampleLandingPages, type SampleTenant } from "@/lib/sample/generate";
 import type { TenantScope } from "@/lib/db";
 import { liveAnalytics, liveContacts } from "./live";
 import { type AnalyticsRepo, type ContactsRepo, type DataMode, SampleModeError } from "./types";
@@ -32,6 +32,9 @@ function sampleRepos(tenant: SampleTenant): Repos {
     analytics: {
       async summary(rangeDays) {
         return sampleAnalytics(tenant, rangeDays);
+      },
+      async landingPages(rangeDays) {
+        return sampleLandingPages(tenant, rangeDays);
       },
     },
   };

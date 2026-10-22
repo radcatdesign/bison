@@ -120,6 +120,32 @@ test.describe("locked modules", () => {
   });
 });
 
+test.describe("landing pages", () => {
+  test("show every landing page with a preview, and open one at each device size", async ({ page }) => {
+    await signIn(page, "dev_ada");
+    await page.goto("/analyze/pages");
+    const tiles = page.getByTestId("landing-page");
+    await expect(tiles.first()).toBeVisible();
+    await expect(page.getByTestId("landing-pages")).toContainText("/glow-aggregate");
+    await page.getByTestId("landing-pages").getByText("/glow-aggregate").click();
+    const panel = page.getByTestId("page-panel");
+    await expect(panel).toBeVisible();
+    const frame = panel.frameLocator("iframe");
+    await expect(frame.getByRole("heading", { level: 1 })).toHaveText("Glow aggregate for plaster and pebble");
+    await expect(frame.getByText("Brightwater Pools").first()).toBeVisible();
+    await panel.getByTestId("device-phone").click();
+    await expect(panel.getByTestId("device-phone")).toHaveAttribute("aria-checked", "true");
+    await expect(panel.locator("iframe")).toHaveAttribute("width", "390");
+  });
+
+  test("a live tenant previews its own site and nobody else's", async ({ page }) => {
+    await signIn(page, "dev_cora");
+    await page.goto("/analyze/pages");
+    await expect(page.getByTestId("landing-pages")).not.toContainText("/glow-aggregate");
+    await expect(page.getByTestId("landing-page").first().locator("iframe")).toHaveAttribute("src", /^https:\/\/ridgelineroasters\.com\//);
+  });
+});
+
 test.describe("roles", () => {
   test("a Sales person doesn't see Marketing", async ({ page }) => {
     await signIn(page, "dev_ben");

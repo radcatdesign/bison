@@ -24,6 +24,7 @@ export const MODES: ModeSpec[] = [
     feature: "analytics",
     pages: [
       { href: "/analyze", label: "Overview", feature: "analytics" },
+      { href: "/analyze/pages", label: "Landing pages", feature: "analytics" },
       { href: "/analyze/contacts", label: "Contacts", feature: "contacts" },
     ],
   },

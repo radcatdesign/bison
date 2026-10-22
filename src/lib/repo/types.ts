@@ -46,8 +46,23 @@ export type AnalyticsSummary = {
   topPages: { path: string; views: number }[];
 };
 
+/** A page people arrive on: the first page of a visit. */
+export type LandingPage = {
+  path: string;
+  title: string | null;
+  /** Visits that started on this page. */
+  entries: number;
+  /** Share of all entries in the range, 0 to 1. */
+  share: number;
+  bounceRate: number | null;
+  avgActiveSeconds: number | null;
+  /** Share of visits starting here that sent a form, 0 to 1. */
+  formRate: number | null;
+};
+
 export interface AnalyticsRepo {
   summary(rangeDays: number): Promise<AnalyticsSummary>;
+  landingPages(rangeDays: number): Promise<LandingPage[]>;
 }
 
 export type DataMode = "sample" | "live";

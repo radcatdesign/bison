@@ -18,6 +18,7 @@ export const RELEASES: Release[] = [
       "People who join your team without an invite wait for an owner or admin to approve them.",
       "A public demo with two made-up companies, for showing Bison Ops to anyone.",
       "A new look, with light and dark mode. Pick Match my device, Light or Dark in the sidebar.",
+      "Landing pages: every page people arrive on, with a live preview at desktop, tablet and phone size, and how each one performs.",
     ],
   },
 ];

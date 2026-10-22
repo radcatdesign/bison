@@ -1,0 +1,133 @@
+.stage {
+  position: relative;
+  display: grid;
+  place-items: start center;
+  width: 100%;
+  overflow: hidden;
+}
+
+.device {
+  position: relative;
+  overflow: hidden;
+  background: var(--bo-sunken);
+}
+
+.device iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 0;
+  transform-origin: 0 0;
+  background: #fff;
+}
+
+.device[data-device="phone"],
+.device[data-device="tablet"] {
+  border-radius: 22px;
+  box-shadow:
+    0 0 0 8px var(--bo-ink),
+    0 18px 40px rgb(0 0 0 / 0.25);
+  margin: 8px 0;
+}
+
+/* Card thumbnail: a fixed 16:10 window onto the top of the page */
+.thumb {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--bo-sunken);
+}
+
+.thumb .stage {
+  height: auto !important;
+}
+
+.preview {
+  display: grid;
+  gap: 14px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.address {
+  flex: 1 1 260px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--bo-line);
+  border-radius: 10px;
+  background: var(--bo-raised);
+  color: var(--bo-ink-2);
+  font-family: var(--bo-font-mono);
+  font-size: var(--bo-text-xs);
+}
+
+.dots {
+  display: flex;
+  gap: 5px;
+}
+
+.dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bo-line-strong);
+}
+
+.url {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.devices {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--bo-line);
+  border-radius: 11px;
+  background: var(--bo-sunken);
+}
+
+.deviceButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bo-ink-2);
+  font-size: var(--bo-text-sm);
+  font-weight: 560;
+  cursor: pointer;
+}
+
+.deviceButton svg {
+  width: 15px;
+  height: 15px;
+}
+
+.deviceButton[aria-checked="true"] {
+  background: var(--bo-surface);
+  color: var(--bo-ink);
+  box-shadow:
+    0 1px 2px rgb(16 24 40 / 0.08),
+    0 0 0 1px var(--bo-line);
+}
+
+@media (max-width: 520px) {
+  .deviceButton span {
+    display: none;
+  }
+}

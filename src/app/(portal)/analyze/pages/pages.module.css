@@ -1,0 +1,257 @@
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--bo-s4);
+}
+
+.tile {
+  display: grid;
+  overflow: hidden;
+  transition:
+    border-color var(--bo-fast) var(--bo-ease),
+    box-shadow var(--bo-fast) var(--bo-ease),
+    transform var(--bo-fast) var(--bo-ease);
+}
+
+.tile:hover {
+  border-color: var(--bo-accent-line);
+  box-shadow: var(--bo-shadow-lg);
+  transform: translateY(-2px);
+}
+
+.tile[aria-current="true"] {
+  border-color: var(--bo-accent);
+}
+
+.thumbWrap {
+  position: relative;
+  border-bottom: 1px solid var(--bo-line);
+}
+
+.rank {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: var(--bo-r-pill);
+  background: var(--bo-glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--bo-line);
+  font-size: var(--bo-text-xs);
+  font-weight: 680;
+}
+
+.tileBody {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+
+.tileTitle {
+  display: grid;
+  min-width: 0;
+}
+
+.tileTitle strong {
+  font-weight: 640;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tileTitle span {
+  color: var(--bo-ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bo-sunken);
+  overflow: hidden;
+}
+
+.share span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--bo-accent-vivid);
+}
+
+.tileStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.tileStats dt {
+  font-size: var(--bo-text-xs);
+  color: var(--bo-ink-3);
+}
+
+.tileStats dd {
+  margin: 0;
+  font-weight: 620;
+}
+
+.empty {
+  display: grid;
+  gap: 6px;
+  padding: 28px;
+}
+
+.empty h2 {
+  font-size: var(--bo-text-lg);
+}
+
+/* ── Detail ──────────────────────────────────────────────────────────────── */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--bo-scrim);
+}
+
+.panel {
+  position: fixed;
+  z-index: 41;
+  inset: 10px;
+  max-width: 1320px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-r-panel);
+  background: var(--bo-surface);
+  box-shadow: var(--bo-shadow-lg);
+  overflow: hidden;
+  animation: rise var(--bo-slow) var(--bo-ease);
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--bo-line);
+}
+
+.panelTitle {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+}
+
+.panelTitle h2 {
+  font-size: var(--bo-text-xl);
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--bo-sunken);
+  color: var(--bo-ink-2);
+}
+
+.close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.panelBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 20px;
+  padding: 20px;
+  overflow-y: auto;
+  background: var(--bo-raised);
+}
+
+.previewCol {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-width: 0;
+}
+
+.hint {
+  font-size: var(--bo-text-xs);
+  color: var(--bo-ink-3);
+}
+
+.stats {
+  align-self: start;
+  display: grid;
+}
+
+.stats > * + * {
+  border-top: 1px solid var(--bo-line);
+}
+
+.soon {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 16px 20px 18px;
+  font-size: var(--bo-text-sm);
+  color: var(--bo-ink-2);
+}
+
+@media (max-width: 960px) {
+  .panelBody {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats > * + * {
+    border-top: 0;
+  }
+
+  .soon {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--bo-line) !important;
+  }
+}
+
+@media (max-width: 860px) {
+  .panel {
+    inset: auto 0 0 0;
+    height: 92dvh;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .panelBody {
+    padding: 14px;
+  }
+}
