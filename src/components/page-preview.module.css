@@ -18,16 +18,60 @@
   left: 0;
   border: 0;
   transform-origin: 0 0;
+  /* Pages without a background of their own expect white */
   background: #fff;
+  opacity: 0;
+  transition: opacity var(--bo-slow) var(--bo-ease);
+}
+
+.device[data-loaded] iframe {
+  opacity: 1;
+}
+
+/* Shown until the page has loaded, so a slow site reads as loading, not blank */
+.loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(100deg, transparent 35%, color-mix(in oklab, var(--bo-ink) 5%, transparent) 50%, transparent 65%) 0 0 / 250% 100%,
+    var(--bo-sunken);
+  animation: shimmer 1.6s linear infinite;
+}
+
+.loading span {
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-sm);
+}
+
+.thumb .loading span {
+  display: none;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0, 0 0;
+  }
+  to {
+    background-position: -150% 0, 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading {
+    animation: none;
+  }
 }
 
 .device[data-device="phone"],
 .device[data-device="tablet"] {
   border-radius: 22px;
   box-shadow:
-    0 0 0 8px var(--bo-ink),
+    0 0 0 8px var(--bo-bezel),
+    0 0 0 9px var(--bo-line-strong),
     0 18px 40px rgb(0 0 0 / 0.25);
-  margin: 8px 0;
+  margin: 9px 0;
 }
 
 /* Card thumbnail: a fixed 16:10 window onto the top of the page */

@@ -55,6 +55,8 @@ test("signed-out visitors land on the picker", async ({ page }) => {
 test("landing pages preview made-up sites, never a real domain", async ({ page }) => {
   await pick(page, "dev_cora");
   await page.goto("/analyze/pages");
-  const frame = page.getByTestId("landing-page").first().locator("iframe");
-  await expect(frame).toHaveAttribute("src", /^\/sample-site\/coffee/);
+  const tile = page.getByTestId("landing-page").first();
+  await expect(tile.locator("iframe")).toHaveAttribute("src", /^\/sample-site\/coffee/);
+  await expect(tile.getByTestId("preview-loading")).toHaveCount(0);
+  await expect(tile.frameLocator("iframe").getByText("Ridgeline Roasters").first()).toBeVisible();
 });

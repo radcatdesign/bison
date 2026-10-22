@@ -133,6 +133,9 @@ test.describe("landing pages", () => {
     const frame = panel.frameLocator("iframe");
     await expect(frame.getByRole("heading", { level: 1 })).toHaveText("Glow aggregate for plaster and pebble");
     await expect(frame.getByText("Brightwater Pools").first()).toBeVisible();
+    // Loading state clears and the page fades in once it has loaded
+    await expect(panel.getByTestId("preview-loading")).toHaveCount(0);
+    await expect(panel.locator("iframe")).toHaveCSS("opacity", "1");
     await panel.getByTestId("device-phone").click();
     await expect(panel.getByTestId("device-phone")).toHaveAttribute("aria-checked", "true");
     await expect(panel.locator("iframe")).toHaveAttribute("width", "390");

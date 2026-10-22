@@ -28,6 +28,9 @@ function useWidth<T extends HTMLElement>() {
 
 function Frame({ src, title, device, maxHeight, interactive }: { src: string; title: string; device: Device; maxHeight?: number; interactive: boolean }) {
   const [ref, width] = useWidth<HTMLDivElement>();
+  // Which src has finished loading. A new src shows the loading state again.
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const loaded = loadedSrc === src;
   const d = DEVICES[device];
   const scale = width ? Math.min(width / d.width, maxHeight ? maxHeight / d.height : Infinity, 1) : 0;
   const w = d.width * scale;
@@ -35,8 +38,14 @@ function Frame({ src, title, device, maxHeight, interactive }: { src: string; ti
   return (
     <div ref={ref} className={s.stage} style={{ height: maxHeight ? Math.min(maxHeight, h || maxHeight) : h || undefined, aspectRatio: maxHeight || h ? undefined : `${d.width} / ${d.height}` }}>
       {scale > 0 && (
-        <div className={s.device} data-device={device} style={{ width: w, height: h }}>
+        <div className={s.device} data-device={device} data-loaded={loaded || undefined} style={{ width: w, height: h }}>
+          {!loaded && (
+            <div className={s.loading} data-testid="preview-loading">
+              <span>Loading page</span>
+            </div>
+          )}
           <iframe
+            onLoad={() => setLoadedSrc(src)}
             src={src}
             title={title}
             width={d.width}

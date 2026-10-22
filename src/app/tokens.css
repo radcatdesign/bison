@@ -41,6 +41,8 @@
   --bo-shadow-lg: 0 12px 32px rgb(16 24 40 / 0.12), 0 2px 6px rgb(16 24 40 / 0.06);
   --bo-scrim: rgb(10 12 16 / 0.36);
   --bo-glass: rgb(255 255 255 / 0.9);
+  /* Phone and tablet frames around page previews: dark in both themes, like real hardware */
+  --bo-bezel: #16181d;
 
   /* Type */
   --bo-font-sans: "Mona Sans Variable", "Mona Sans", ui-sans-serif, system-ui, sans-serif;
@@ -110,6 +112,7 @@
     --bo-shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55);
     --bo-scrim: rgb(0 0 0 / 0.6);
     --bo-glass: rgb(15 17 20 / 0.9);
+    --bo-bezel: #2a2e36;
   }
 }
 
@@ -138,6 +141,7 @@
   --bo-shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55);
   --bo-scrim: rgb(0 0 0 / 0.6);
   --bo-glass: rgb(15 17 20 / 0.9);
+  --bo-bezel: #2a2e36;
 }
 
 @media (max-width: 860px) {
