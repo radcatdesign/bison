@@ -17,7 +17,8 @@
     "test:unit": "NODE_ENV=test vitest run --project unit",
     "test:db": "NODE_ENV=test vitest run --project db",
     "test:e2e": "NODE_ENV=test playwright test",
-    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e"
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e && pnpm test:e2e:demo",
+    "test:e2e:demo": "playwright test -c playwright.demo.config.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.19",

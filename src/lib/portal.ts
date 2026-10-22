@@ -5,6 +5,8 @@ import { type Access, loadAccess } from "@/lib/access/entitlements";
 import { getIdentity } from "@/lib/auth/identity";
 import { type TenantScope, withTenant } from "@/lib/db";
 import type { Role } from "@/lib/db/types";
+import { demoContext } from "@/lib/demo";
+import { demoMode } from "@/lib/env";
 
 export type PortalContext = {
   tenant: { id: string; name: string; slug: string; industry: string; access: Access };
@@ -23,6 +25,12 @@ export const getPortalContext = cache(async (): Promise<PortalContext> => {
   const identity = await getIdentity();
   if (!identity) redirect("/sign-in");
   if (!identity.tenantId) redirect(identity.provider === "clerk" ? "/onboarding" : "/sign-in");
+
+  if (demoMode()) {
+    const demo = demoContext(identity);
+    if (!demo) redirect("/sign-in");
+    return demo;
+  }
 
   const scope: TenantScope = { tenantId: identity.tenantId, userId: identity.userId };
   const ctx = await withTenant(scope, async (tx) => {

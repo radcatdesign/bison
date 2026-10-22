@@ -5,8 +5,18 @@ export type BillingProviderName = "stripe" | "fake";
 
 export class ConfigError extends Error {}
 
+/**
+ * Demo mode: a public, read-only showcase with made-up companies and no
+ * database. It only turns on when no DATABASE_URL is set, so it can't be
+ * switched on by mistake in a deployment that holds real data.
+ */
+export function demoMode(): boolean {
+  return process.env.DEMO_MODE === "1" && !process.env.DATABASE_URL;
+}
+
 /** True when Clerk is the auth provider. Never throws; safe at build time and in proxy. */
 export function clerkConfigured(): boolean {
+  if (demoMode()) return false;
   const explicit = process.env.AUTH_PROVIDER;
   return explicit === "clerk" || (explicit !== "dev" && Boolean(process.env.CLERK_SECRET_KEY));
 }
@@ -27,6 +37,8 @@ export function onVercel(): boolean {
  * data), and only runs under `next start` on your own machine when asked to.
  */
 export function assertDevAuthAllowed() {
+  // The demo has no database, so its made-up people can't reach anything real.
+  if (demoMode()) return;
   if (onVercel()) {
     throw new ConfigError("Dev sign-in never runs on Vercel. Set AUTH_PROVIDER=clerk and the Clerk keys.");
   }

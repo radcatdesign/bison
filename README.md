@@ -36,6 +36,10 @@ pnpm check                          # all of the above plus typecheck and lint
 
 Database tests connect as the real app role, so they test row-level security itself. The end-to-end tests use the dev sign-in and test billing, so they never touch Clerk or Stripe.
 
+## Demo deploy (no database)
+
+Set one environment variable on the Vercel project, `DEMO_MODE=1`, and leave `DATABASE_URL` unset. The site shows two made-up companies with sample data, a picker to sign in as any of four made-up people, and saves nothing. `pnpm test:e2e:demo` tests it.
+
 ## Deploy (Vercel + Neon)
 
 1. Create a Neon project. Use the owner connection string as `DATABASE_MIGRATE_URL`.

@@ -8,6 +8,8 @@ import { CATALOG, formatPrice, PAID_ITEMS, type PaidItemKey } from "@/config/cat
 import { may, ROLES } from "@/config/roles";
 import { daysLeft, type ItemState } from "@/lib/access/entitlements";
 import { withTenant } from "@/lib/db";
+import { demoTeam } from "@/lib/demo";
+import { demoMode } from "@/lib/env";
 import { getPortalContext, scopeOf } from "@/lib/portal";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -29,11 +31,14 @@ function itemStatus(state: ItemState, key: PaidItemKey): string {
 
 async function SettingsBody() {
   const ctx = await getPortalContext();
-  const canManage = may(ctx.member.role, "settings.manage");
-  const { members, integrations } = await withTenant(scopeOf(ctx), async (tx) => ({
-    members: await tx.selectFrom("members").select(["id", "name", "email", "role", "status"]).where("status", "!=", "removed").orderBy("created_at").execute(),
-    integrations: await tx.selectFrom("integrations").select(["provider", "status", "last_error"]).execute(),
-  }));
+  const demo = demoMode();
+  const canManage = may(ctx.member.role, "settings.manage") && !demo;
+  const { members, integrations } = demo
+    ? { members: demoTeam(ctx), integrations: [] as { provider: string; status: string; last_error: string | null }[] }
+    : await withTenant(scopeOf(ctx), async (tx) => ({
+        members: await tx.selectFrom("members").select(["id", "name", "email", "role", "status"]).where("status", "!=", "removed").orderBy("created_at").execute(),
+        integrations: await tx.selectFrom("integrations").select(["provider", "status", "last_error"]).execute(),
+      }));
 
   return (
     <>
@@ -48,7 +53,7 @@ async function SettingsBody() {
         </ActionForm>
         <p style={{ color: "var(--bo-fg-2)", maxWidth: "62ch" }}>
           Sample data fills every screen with made-up numbers and contacts, so you can see how everything works before your own data arrives. Nothing you change is saved while it&apos;s on.
-          {!canManage && " Only owners and admins can turn it on or off."}
+          {demo ? " This demo always shows sample data." : !canManage && " Only owners and admins can turn it on or off."}
         </p>
       </Section>
 

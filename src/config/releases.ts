@@ -16,6 +16,7 @@ export const RELEASES: Release[] = [
       "Every number has a ? that explains how it's measured.",
       "Works as a home-screen app on your phone, with pull down to refresh.",
       "People who join your team without an invite wait for an owner or admin to approve them.",
+      "A public demo with two made-up companies, for showing Bison Ops to anyone.",
     ],
   },
 ];

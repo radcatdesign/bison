@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDevSession, readDevSession } from "@/lib/auth/dev-session";
-import { authProvider, billingMode, billingProviderName, ConfigError } from "@/lib/env";
+import { authProvider, billingMode, billingProviderName, clerkConfigured, ConfigError, demoMode } from "@/lib/env";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -84,5 +84,43 @@ describe("billing provider", () => {
     vi.stubEnv("BILLING_PROVIDER", "");
     vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_x");
     expect(billingProviderName()).toBe("stripe");
+  });
+});
+
+describe("demo mode", () => {
+  it("only turns on when there's no database to reach", () => {
+    vi.stubEnv("DEMO_MODE", "1");
+    vi.stubEnv("DATABASE_URL", "postgres://bisonops_app:x@db/bisonops");
+    expect(demoMode()).toBe(false);
+    vi.stubEnv("DATABASE_URL", "");
+    expect(demoMode()).toBe(true);
+  });
+
+  it("uses the made-up people on Vercel, and never Clerk", () => {
+    vi.stubEnv("DEMO_MODE", "1");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_live_x");
+    expect(clerkConfigured()).toBe(false);
+    expect(authProvider()).toBe("dev");
+  });
+
+  it("leaves the dev sign-in off Vercel when demo mode is off", () => {
+    vi.stubEnv("DEMO_MODE", "1");
+    vi.stubEnv("DATABASE_URL", "postgres://bisonops_app:x@db/bisonops");
+    vi.stubEnv("AUTH_PROVIDER", "dev");
+    vi.stubEnv("VERCEL_ENV", "production");
+    expect(() => authProvider()).toThrow(ConfigError);
+  });
+});
+
+describe("demo sessions", () => {
+  it("work without DEV_AUTH_SECRET only in demo mode", () => {
+    vi.stubEnv("DEV_AUTH_SECRET", "");
+    vi.stubEnv("DEMO_MODE", "");
+    expect(() => createDevSession("dev_ada", "t")).toThrow("DEV_AUTH_SECRET");
+    vi.stubEnv("DEMO_MODE", "1");
+    vi.stubEnv("DATABASE_URL", "");
+    expect(readDevSession(createDevSession("dev_ada", "t").value)).toMatchObject({ u: "dev_ada" });
   });
 });

@@ -7,6 +7,7 @@ import { PageHeader, SampleBanner } from "@/components/ui";
 import { may } from "@/config/roles";
 import type { ContactStatus } from "@/lib/db/types";
 import { formatAgo } from "@/lib/format";
+import { demoMode } from "@/lib/env";
 import { getPortalContext, type PortalContext, scopeOf } from "@/lib/portal";
 import { getRepos, type Repos } from "@/lib/repo";
 import s from "./contacts.module.css";
@@ -103,7 +104,7 @@ async function Contacts({ searchParams }: { searchParams: Promise<{ c?: string }
 
   return (
     <>
-      {repos.mode === "sample" && <SampleBanner />}
+      {repos.mode === "sample" && <SampleBanner demo={demoMode()} />}
       <PageHeader title="Contacts" note="Everyone who sent a form on your site, newest first." />
       <div className={s.table} role="list" data-testid="contacts">
         <div className={`${s.row} ${s.head} label`} aria-hidden="true">

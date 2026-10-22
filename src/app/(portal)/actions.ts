@@ -13,7 +13,8 @@ import type { ContactStatus } from "@/lib/db/types";
 import { getPortalContext, type PortalContext, scopeOf } from "@/lib/portal";
 import { getRepos } from "@/lib/repo";
 import { NotFoundError, SampleModeError } from "@/lib/repo/types";
-import { ConfigError } from "@/lib/env";
+import { DEMO_MESSAGE } from "@/lib/demo";
+import { ConfigError, demoMode } from "@/lib/env";
 
 export type ActionState = { ok: boolean; message: string } | null;
 
@@ -30,7 +31,9 @@ const NOT_ALLOWED: Record<Action, string> = {
 
 async function contextFor(action: Action): Promise<{ ctx: PortalContext; error: null } | { ctx: PortalContext; error: string }> {
   const ctx = await getPortalContext();
-  return may(ctx.member.role, action) ? { ctx, error: null } : { ctx, error: NOT_ALLOWED[action] };
+  if (!may(ctx.member.role, action)) return { ctx, error: NOT_ALLOWED[action] };
+  if (demoMode()) return { ctx, error: DEMO_MESSAGE };
+  return { ctx, error: null };
 }
 
 export async function setSampleData(_prev: ActionState, formData: FormData): Promise<ActionState> {

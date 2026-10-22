@@ -1,16 +1,22 @@
 // Signed cookie for the dev sign-in. HMAC-SHA256 over a small JSON payload.
-// Only used when AUTH_PROVIDER=dev, which is refused in production (see lib/env.ts).
+// Only used for the made-up people: locally, in tests, and in the public demo.
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { demoMode } from "@/lib/env";
 
 export const DEV_SESSION_COOKIE = "bo_dev_session";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
 export type DevSession = { u: string; t: string; exp: number };
 
+// The demo has no database and only made-up people, so a forged demo cookie
+// reaches nothing. It works without DEV_AUTH_SECRET so DEMO_MODE=1 is the only setting needed.
+const DEMO_FALLBACK_SECRET = "bison-ops-public-demo-only";
+
 function secret(): string {
   const s = process.env.DEV_AUTH_SECRET;
-  if (!s || s.length < 16) throw new Error("DEV_AUTH_SECRET must be at least 16 characters.");
-  return s;
+  if (s && s.length >= 16) return s;
+  if (!s && demoMode()) return DEMO_FALLBACK_SECRET;
+  throw new Error("DEV_AUTH_SECRET must be at least 16 characters.");
 }
 
 function sign(body: string): string {

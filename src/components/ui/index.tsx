@@ -128,7 +128,15 @@ export function Planned({ items }: { items: { title: string; body: string }[] })
   );
 }
 
-export function SampleBanner() {
+export function SampleBanner({ demo = false }: { demo?: boolean }) {
+  if (demo) {
+    return (
+      <div className={s.banner} data-testid="sample-banner">
+        <span>This is a demo. The companies, people and numbers are made up, and nothing you change is saved.</span>
+        <Link href="/sign-in">Try another person</Link>
+      </div>
+    );
+  }
   return (
     <div className={s.banner} data-testid="sample-banner">
       <span>You&apos;re looking at sample data. Nothing you change here is saved.</span>

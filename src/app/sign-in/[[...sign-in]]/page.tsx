@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { BRAND } from "@/config/brand";
 import { ROLES } from "@/config/roles";
 import { DEV_PEOPLE, devTenantName } from "@/lib/auth/dev-people";
-import { authProvider, ConfigError } from "@/lib/env";
+import { authProvider, ConfigError, demoMode } from "@/lib/env";
 import { signInAsDevPerson } from "../actions";
 import s from "../sign-in.module.css";
 
@@ -27,10 +27,14 @@ async function ErrorNote({ searchParams }: { searchParams: Promise<Record<string
   ) : null;
 }
 
-function DevPicker() {
+function DevPicker({ demo }: { demo: boolean }) {
   return (
     <div className={s.people}>
-      <p className={s.lede}>Test sign-in. Pick a person to see Bison Ops the way they would. Real accounts use Clerk.</p>
+      <p className={s.lede}>
+        {demo
+          ? "Pick someone to see Bison Ops the way they would. Two made-up companies, four made-up people, nothing saved."
+          : "Test sign-in. Pick a person to see Bison Ops the way they would. Real accounts use Clerk."}
+      </p>
       <ul className={s.list}>
         {DEV_PEOPLE.map((p) => (
           <li key={p.userId}>
@@ -63,7 +67,7 @@ async function SignInBody() {
   }
 
   if (provider === "clerk") return <SignIn />;
-  if (provider === "dev") return <DevPicker />;
+  if (provider === "dev") return <DevPicker demo={demoMode()} />;
   return <p className="notice notice-error">{configMessage}</p>;
 }
 

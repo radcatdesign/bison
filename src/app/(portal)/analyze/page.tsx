@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { VisitorsChart } from "@/components/visitors-chart";
 import { Metric, MetricGrid, PageHeader, Row, Rows, SampleBanner, Section } from "@/components/ui";
 import { formatDecimal, formatDelta, formatDuration, formatInt, formatPercent } from "@/lib/format";
+import { demoMode } from "@/lib/env";
 import { getPortalContext, scopeOf } from "@/lib/portal";
 import { getRepos } from "@/lib/repo";
 
@@ -33,7 +34,7 @@ async function Overview({ searchParams }: { searchParams: Promise<{ range?: stri
 
   return (
     <>
-      {repos.mode === "sample" && <SampleBanner />}
+      {repos.mode === "sample" && <SampleBanner demo={demoMode()} />}
       <PageHeader
         title="Overview"
         note={`Last ${range} days on ${ctx.sites[0]?.domain ?? "your site"}.`}

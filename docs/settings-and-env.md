@@ -12,6 +12,12 @@ Copy `.env.example` to `.env.local` for local work. Tests use `.env.test` (commi
 | `DATABASE_MIGRATE_URL` | For migrations | Schema owner connection. Used by `pnpm db:migrate`, `db:setup` and `db:reset`. Never used by the running app. On Neon, the direct (unpooled) owner string. |
 | `DATABASE_POOL_MAX` | No | Connections per server instance. Default 5. |
 
+### Demo
+
+| Variable | Required | What it does |
+|---|---|---|
+| `DEMO_MODE` | For a demo deploy | `1` runs the public demo: two made-up companies, four made-up people, sample data everywhere, nothing saved. It only turns on when `DATABASE_URL` is **not** set, so it can't be switched on in a deployment that holds real data. No other variables are needed. |
+
 ### Auth
 
 | Variable | Required | What it does |

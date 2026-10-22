@@ -8,7 +8,7 @@ import { PageHeader, Row, Rows, Section } from "@/components/ui";
 import { CATALOG, formatPrice, isPaidItemKey, type Limits } from "@/config/catalog";
 import { may } from "@/config/roles";
 import { daysLeft } from "@/lib/access/entitlements";
-import { billingMode } from "@/lib/env";
+import { billingMode, demoMode } from "@/lib/env";
 import { formatInt } from "@/lib/format";
 import { getPortalContext } from "@/lib/portal";
 
@@ -85,8 +85,14 @@ async function Billing({ searchParams }: { searchParams: Promise<{ item?: string
                 <input type="hidden" name="item" value={key} />
               </ActionForm>
             )}
-            {billingMode() === "fake" && <p className="label">Test billing is on. Subscribing turns the item on without charging a card.</p>}
-            {billingMode() === "not_set_up" && <p className="notice notice-error">Billing isn&apos;t set up yet, so subscribing won&apos;t work. Trials still do.</p>}
+            {demoMode() ? (
+              <p className="label">This is a demo, so trials and subscriptions aren&apos;t saved.</p>
+            ) : (
+              <>
+                {billingMode() === "fake" && <p className="label">Test billing is on. Subscribing turns the item on without charging a card.</p>}
+                {billingMode() === "not_set_up" && <p className="notice notice-error">Billing isn&apos;t set up yet, so subscribing won&apos;t work. Trials still do.</p>}
+              </>
+            )}
           </div>
         )}
       </Section>
