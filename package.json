@@ -1,0 +1,55 @@
+{
+  "name": "bison-ops",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "db:setup": "tsx scripts/db-setup.ts",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:reset": "tsx scripts/db-reset.ts",
+    "db:check": "tsx scripts/db-check.ts",
+    "test": "NODE_ENV=test vitest run",
+    "test:unit": "NODE_ENV=test vitest run --project unit",
+    "test:db": "NODE_ENV=test vitest run --project db",
+    "test:e2e": "NODE_ENV=test playwright test",
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^7.9.19",
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource-variable/martian-mono": "^5.3.0",
+    "geist": "^1.8.2",
+    "kysely": "^0.29.7",
+    "next": "16.4.2",
+    "pg": "^8.23.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1",
+    "stripe": "^23.0.0",
+    "svix": "^2.8.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@next/env": "16.4.2",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^20",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.2",
+    "playwright-core": "^1.64.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.0.5"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  }
+}

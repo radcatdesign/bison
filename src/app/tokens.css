@@ -1,0 +1,78 @@
+/* Design tokens. Every brand value lives here so white-label is a token swap.
+   The tenant's accent is set per request on <body> as --bo-accent. */
+
+:root {
+  /* Color */
+  --bo-black: #000;
+  --bo-white: #fff;
+  --bo-bg: var(--bo-black);
+  --bo-fg: var(--bo-white);
+  --bo-fg-2: rgb(255 255 255 / 0.66);
+  --bo-fg-3: rgb(255 255 255 / 0.44);
+  --bo-rule: rgb(255 255 255 / 0.16);
+  --bo-rule-strong: rgb(255 255 255 / 0.36);
+  --bo-hover: rgb(255 255 255 / 0.05);
+  --bo-scrim: rgb(0 0 0 / 0.72);
+  --bo-warn: #ffb547;
+
+  /* The one accent. Used as light, not as fill. */
+  --bo-accent: #7df9ff;
+  --bo-accent-soft: color-mix(in srgb, var(--bo-accent) 22%, transparent);
+  --bo-glow: 0 0 0.5px var(--bo-accent), 0 0 10px color-mix(in srgb, var(--bo-accent) 55%, transparent),
+    0 0 26px color-mix(in srgb, var(--bo-accent) 22%, transparent);
+  --bo-text-glow: 0 0 10px color-mix(in srgb, var(--bo-accent) 65%, transparent);
+
+  /* Type */
+  --bo-font-sans: "Archivo Variable", "Archivo", system-ui, sans-serif;
+  --bo-font-mono: "Martian Mono Variable", "Martian Mono", ui-monospace, monospace;
+  --bo-mono-width: 87.5; /* Martian Mono wdth axis: a little narrower than default */
+  --bo-text-xs: 0.6875rem;
+  --bo-text-sm: 0.8125rem;
+  --bo-text-md: 0.9375rem;
+  --bo-text-lg: 1.25rem;
+  --bo-text-xl: 1.75rem;
+  --bo-text-2xl: 2.5rem;
+  --bo-text-3xl: 3.5rem;
+  --bo-leading: 1.5;
+
+  /* Space and shape */
+  --bo-s1: 4px;
+  --bo-s2: 8px;
+  --bo-s3: 12px;
+  --bo-s4: 16px;
+  --bo-s5: 24px;
+  --bo-s6: 32px;
+  --bo-s7: 48px;
+  --bo-s8: 72px;
+  --bo-radius-control: 2px;
+  --bo-radius-pill: 999px;
+  --bo-radius-dock: 20px;
+  --bo-rule-w: 1px;
+
+  /* Layout */
+  --bo-header-h: 56px;
+  --bo-rail-w: 216px;
+  --bo-content-max: 1180px;
+  --bo-dock-h: 64px;
+  --bo-gutter: var(--bo-s6);
+
+  /* Motion */
+  --bo-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --bo-fast: 140ms;
+  --bo-slow: 260ms;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --bo-gutter: var(--bo-s4);
+    --bo-text-2xl: 2rem;
+    --bo-text-3xl: 2.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --bo-fast: 0ms;
+    --bo-slow: 0ms;
+  }
+}

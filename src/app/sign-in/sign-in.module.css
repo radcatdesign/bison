@@ -1,0 +1,71 @@
+.page {
+  min-height: 100dvh;
+  display: grid;
+  align-content: center;
+  padding: var(--bo-s6) var(--bo-gutter);
+}
+
+.card {
+  width: min(520px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: var(--bo-s5);
+}
+
+.title {
+  font-weight: 800;
+  font-variation-settings: "wdth" 125;
+  font-size: var(--bo-text-3xl);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.lede {
+  color: var(--bo-fg-2);
+  max-width: 44ch;
+}
+
+.people {
+  display: grid;
+  gap: var(--bo-s4);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: var(--bo-rule-w) solid var(--bo-rule);
+}
+
+.list li {
+  border-bottom: var(--bo-rule-w) solid var(--bo-rule);
+}
+
+.person {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--bo-s4);
+  padding: var(--bo-s4) 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.person:hover .personName {
+  text-shadow: var(--bo-text-glow);
+}
+
+.personName {
+  font-size: var(--bo-text-lg);
+  font-weight: 560;
+}
+
+@media (max-width: 480px) {
+  .person {
+    flex-direction: column;
+    gap: 2px;
+  }
+}

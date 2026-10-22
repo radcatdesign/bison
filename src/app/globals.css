@@ -1,0 +1,178 @@
+@import "@fontsource-variable/archivo/wdth.css";
+@import "@fontsource-variable/martian-mono/wdth.css";
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bo-bg);
+  color-scheme: dark;
+  /* Our own pull to refresh replaces the browser's. */
+  overscroll-behavior-y: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--bo-bg);
+  color: var(--bo-fg);
+  font-family: var(--bo-font-sans);
+  font-size: var(--bo-text-md);
+  line-height: var(--bo-leading);
+  -webkit-font-smoothing: antialiased;
+  /* No zoom on double-tap. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--bo-rule-strong);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  text-decoration-color: var(--bo-fg);
+}
+
+:focus-visible {
+  outline: 1px solid var(--bo-accent);
+  outline-offset: 2px;
+  box-shadow: var(--bo-glow);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+.mono {
+  font-family: var(--bo-font-mono);
+  font-variation-settings: "wdth" var(--bo-mono-width);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.label {
+  font-family: var(--bo-font-mono);
+  font-variation-settings: "wdth" var(--bo-mono-width);
+  font-size: var(--bo-text-xs);
+  color: var(--bo-fg-3);
+  letter-spacing: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── Controls ─────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--bo-s2);
+  min-height: 40px;
+  padding: 0 var(--bo-s4);
+  border: var(--bo-rule-w) solid var(--bo-rule-strong);
+  border-radius: var(--bo-radius-control);
+  background: transparent;
+  color: var(--bo-fg);
+  font-weight: 560;
+  font-size: var(--bo-text-sm);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color var(--bo-fast) var(--bo-ease),
+    box-shadow var(--bo-fast) var(--bo-ease);
+}
+
+.btn:hover {
+  border-color: var(--bo-fg);
+}
+
+.btn[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--bo-fg);
+  border-color: var(--bo-fg);
+  color: var(--bo-black);
+}
+
+.btn-primary:hover {
+  box-shadow: var(--bo-glow);
+}
+
+.input,
+.select {
+  min-height: 40px;
+  padding: 0 var(--bo-s3);
+  border: var(--bo-rule-w) solid var(--bo-rule-strong);
+  border-radius: var(--bo-radius-control);
+  background: transparent;
+}
+
+.select option {
+  background: var(--bo-black);
+}
+
+/* Status and tag pills */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border: var(--bo-rule-w) solid var(--bo-rule-strong);
+  border-radius: var(--bo-radius-pill);
+  font-family: var(--bo-font-mono);
+  font-variation-settings: "wdth" var(--bo-mono-width);
+  font-size: 10px;
+  color: var(--bo-fg-2);
+  white-space: nowrap;
+}
+
+.pill-lit {
+  border-color: var(--bo-accent);
+  color: var(--bo-accent);
+  box-shadow: 0 0 8px var(--bo-accent-soft);
+}
+
+.notice {
+  padding: var(--bo-s3) var(--bo-s4);
+  border: var(--bo-rule-w) solid var(--bo-rule-strong);
+  font-size: var(--bo-text-sm);
+  color: var(--bo-fg-2);
+}
+
+.notice-ok {
+  border-color: var(--bo-accent);
+  color: var(--bo-fg);
+}
+
+.notice-error {
+  border-color: var(--bo-warn);
+  color: var(--bo-fg);
+}
