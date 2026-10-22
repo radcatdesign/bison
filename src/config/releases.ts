@@ -19,6 +19,7 @@ export const RELEASES: Release[] = [
       "A public demo with two made-up companies, for showing Bison Ops to anyone.",
       "A new look, with light and dark mode. Pick Match my device, Light or Dark in the sidebar.",
       "Landing pages: every page people arrive on, with a live preview at desktop, tablet and phone size, and how each one performs.",
+      "In the demo, owners can unlock Marketing, Sales and add-ons with a trial or subscription. It stays on in that browser until you reset it.",
     ],
   },
 ];

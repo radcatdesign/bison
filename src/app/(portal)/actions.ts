@@ -14,6 +14,7 @@ import { getPortalContext, type PortalContext, scopeOf } from "@/lib/portal";
 import { getRepos } from "@/lib/repo";
 import { NotFoundError, SampleModeError } from "@/lib/repo/types";
 import { DEMO_MESSAGE } from "@/lib/demo";
+import { demoReset, demoStartTrial, demoSubscribe } from "@/lib/demo-billing";
 import { ConfigError, demoMode } from "@/lib/env";
 
 export type ActionState = { ok: boolean; message: string } | null;
@@ -29,10 +30,11 @@ const NOT_ALLOWED: Record<Action, string> = {
   "data.delete": "Only owners and admins can delete data.",
 };
 
-async function contextFor(action: Action): Promise<{ ctx: PortalContext; error: null } | { ctx: PortalContext; error: string }> {
+/** Role check first. In the demo, only actions that opt in (turning things on) go ahead. */
+async function contextFor(action: Action, { demoAllowed = false } = {}): Promise<{ ctx: PortalContext; error: null } | { ctx: PortalContext; error: string }> {
   const ctx = await getPortalContext();
   if (!may(ctx.member.role, action)) return { ctx, error: NOT_ALLOWED[action] };
-  if (demoMode()) return { ctx, error: DEMO_MESSAGE };
+  if (demoMode() && !demoAllowed) return { ctx, error: DEMO_MESSAGE };
   return { ctx, error: null };
 }
 
@@ -62,20 +64,25 @@ export async function setAccent(_prev: ActionState, formData: FormData): Promise
 }
 
 export async function startTrialAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, error } = await contextFor("billing.manage");
+  const { ctx, error } = await contextFor("billing.manage", { demoAllowed: true });
   if (error) return { ok: false, message: error };
   const item = formData.get("item");
   if (!isPaidItemKey(item)) return { ok: false, message: "That isn't something you can turn on." };
-  const result = await startTrial(ctx, item);
+  const result = demoMode() ? await demoStartTrial(ctx, item) : await startTrial(ctx, item);
   if (result.ok) refresh();
   return { ok: result.ok, message: result.message };
 }
 
 export async function subscribeAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, error } = await contextFor("billing.manage");
+  const { ctx, error } = await contextFor("billing.manage", { demoAllowed: true });
   if (error) return { ok: false, message: error };
   const item = formData.get("item");
   if (!isPaidItemKey(item)) return { ok: false, message: "That isn't something you can subscribe to." };
+  if (demoMode()) {
+    const demo = await demoSubscribe(ctx, item);
+    if (demo.ok) refresh();
+    return demo;
+  }
   let result;
   try {
     result = await subscribe(ctx, item);
@@ -87,6 +94,16 @@ export async function subscribeAction(_prev: ActionState, formData: FormData): P
   if (result.ok && "redirectUrl" in result && result.redirectUrl) redirect(result.redirectUrl);
   if (result.ok) refresh();
   return { ok: result.ok, message: result.message };
+}
+
+/** Demo only: turns off everything this visitor turned on for their demo company. */
+export async function resetDemoAction(): Promise<ActionState> {
+  const { ctx, error } = await contextFor("billing.manage", { demoAllowed: true });
+  if (error) return { ok: false, message: error };
+  if (!demoMode()) return { ok: false, message: "Only the demo can be reset." };
+  const result = await demoReset(ctx);
+  refresh();
+  return result;
 }
 
 const STATUSES: ContactStatus[] = ["new", "contacted", "qualified", "won", "lost", "spam"];

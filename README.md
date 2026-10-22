@@ -38,7 +38,7 @@ Database tests connect as the real app role, so they test row-level security its
 
 ## Demo deploy (no database)
 
-Set one environment variable on the Vercel project, `DEMO_MODE=1`, and leave `DATABASE_URL` unset. The site shows two made-up companies with sample data, a picker to sign in as any of four made-up people, and saves nothing. `pnpm test:e2e:demo` tests it.
+Set one environment variable on the Vercel project, `DEMO_MODE=1`, and leave `DATABASE_URL` unset. The site shows two made-up companies with sample data, a picker to sign in as any of four made-up people, and saves nothing on the server. Owners can unlock Marketing, Sales and add-ons with a trial or subscription to see them open up; that stays in their own browser until they reset it. `pnpm test:e2e:demo` tests it.
 
 ## Deploy (Vercel + Neon)
 

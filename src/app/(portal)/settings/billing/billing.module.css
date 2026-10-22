@@ -94,3 +94,12 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.reset {
+  padding-top: var(--bo-s4);
+  border-top: 1px solid var(--bo-line);
+}
+
+.open {
+  justify-self: start;
+}

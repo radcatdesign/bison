@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { MODE_COOKIE, modeForPath } from "@/config/modes";
 import { DEV_PEOPLE } from "@/lib/auth/dev-people";
 import { createDevSession, DEV_SESSION_COOKIE } from "@/lib/auth/dev-session";
-import { assertDevAuthAllowed, authProvider } from "@/lib/env";
+import { assertDevAuthAllowed, authProvider, secureCookies } from "@/lib/env";
 
 export async function signInAsDevPerson(formData: FormData) {
   assertDevAuthAllowed();
@@ -16,7 +16,7 @@ export async function signInAsDevPerson(formData: FormData) {
   jar.set(DEV_SESSION_COOKIE, session.value, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production" && !process.env.APP_URL?.startsWith("http://"),
+    secure: secureCookies(),
     path: "/",
     maxAge: session.maxAge,
   });

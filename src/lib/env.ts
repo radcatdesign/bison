@@ -74,3 +74,8 @@ export function billingMode(): BillingProviderName | "not_set_up" {
 export function appUrl(): string {
   return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 }
+
+/** Cookies are Secure in production, except when testing a production build over plain http. */
+export function secureCookies(): boolean {
+  return process.env.NODE_ENV === "production" && !process.env.APP_URL?.startsWith("http://");
+}

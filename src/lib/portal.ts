@@ -6,6 +6,7 @@ import { getIdentity } from "@/lib/auth/identity";
 import { type TenantScope, withTenant } from "@/lib/db";
 import type { Role } from "@/lib/db/types";
 import { demoContext } from "@/lib/demo";
+import { readDemoUnlocks } from "@/lib/demo-billing";
 import { demoMode } from "@/lib/env";
 
 export type PortalContext = {
@@ -27,7 +28,7 @@ export const getPortalContext = cache(async (): Promise<PortalContext> => {
   if (!identity.tenantId) redirect(identity.provider === "clerk" ? "/onboarding" : "/sign-in");
 
   if (demoMode()) {
-    const demo = demoContext(identity);
+    const demo = demoContext(identity, new Date(), await readDemoUnlocks(identity.tenantId));
     if (!demo) redirect("/sign-in");
     return demo;
   }

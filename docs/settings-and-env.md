@@ -16,7 +16,7 @@ Copy `.env.example` to `.env.local` for local work. Tests use `.env.test` (commi
 
 | Variable | Required | What it does |
 |---|---|---|
-| `DEMO_MODE` | For a demo deploy | `1` runs the public demo: two made-up companies, four made-up people, sample data everywhere, nothing saved. It only turns on when `DATABASE_URL` is **not** set, so it can't be switched on in a deployment that holds real data. No other variables are needed. |
+| `DEMO_MODE` | For a demo deploy | `1` runs the public demo: two made-up companies, four made-up people, sample data everywhere, nothing saved on the server. Owners can still unlock modules with a trial or subscription; that's kept in the visitor's browser (`bo_demo_unlocks` cookie). It only turns on when `DATABASE_URL` is **not** set, so it can't be switched on in a deployment that holds real data. No other variables are needed. |
 
 ### Auth
 

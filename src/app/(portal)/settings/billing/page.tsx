@@ -1,14 +1,16 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { startTrialAction, subscribeAction } from "@/app/(portal)/actions";
+import { resetDemoAction, startTrialAction, subscribeAction } from "@/app/(portal)/actions";
 import { ActionForm } from "@/components/ui/action-form";
 import { Card, PageHeader } from "@/components/ui";
 import { CATALOG, formatPrice, isPaidItemKey, type Limits } from "@/config/catalog";
-import { may } from "@/config/roles";
+import { MODES } from "@/config/modes";
+import { may, seesMode } from "@/config/roles";
 import { daysLeft } from "@/lib/access/entitlements";
+import { readDemoUnlocks } from "@/lib/demo-billing";
 import { billingMode, demoMode } from "@/lib/env";
 import { formatInt } from "@/lib/format";
 import { getPortalContext } from "@/lib/portal";
@@ -39,6 +41,10 @@ async function Billing({ searchParams }: { searchParams: Promise<{ item?: string
   const state = ctx.tenant.access.states[key];
   const canBuy = may(ctx.member.role, "billing.manage");
   const limits = Object.entries(item.limits) as [keyof Limits, number][];
+  const demo = demoMode();
+  const demoChanged = demo && (await readDemoUnlocks(ctx.tenant.id)).length > 0;
+  // A module that opens a mode gets a way straight into it once it's on.
+  const mode = MODES.find((m) => m.item === key && seesMode(ctx.member.role, m.key));
 
   return (
     <div data-testid="billing">
@@ -75,6 +81,13 @@ async function Billing({ searchParams }: { searchParams: Promise<{ item?: string
             </p>
           </div>
 
+          {state.active && mode && (
+            <Link href={`/${mode.key}`} className={`btn btn-primary ${s.open}`} data-testid="open-mode">
+              Open {mode.label}
+              <ArrowRight aria-hidden="true" />
+            </Link>
+          )}
+
           {!canBuy && <p className="notice">Only an owner can change the plan.</p>}
 
           {canBuy && (
@@ -85,12 +98,12 @@ async function Billing({ searchParams }: { searchParams: Promise<{ item?: string
                 </ActionForm>
               )}
               {state.via !== "subscription" && (
-                <ActionForm action={subscribeAction} submitLabel={`Subscribe to ${item.name}`} pendingLabel="Opening checkout" testId="subscribe">
+                <ActionForm action={subscribeAction} submitLabel={`Subscribe to ${item.name}`} pendingLabel={demo ? "Turning on" : "Opening checkout"} testId="subscribe">
                   <input type="hidden" name="item" value={key} />
                 </ActionForm>
               )}
-              {demoMode() ? (
-                <p className="label">This is a demo, so trials and subscriptions aren&apos;t saved.</p>
+              {demo ? (
+                <p className="label">This is a demo. What you turn on stays on in this browser, and no card is charged.</p>
               ) : (
                 <>
                   {billingMode() === "fake" && <p className="label">Test billing is on. Subscribing turns the item on without charging a card.</p>}
@@ -98,6 +111,12 @@ async function Billing({ searchParams }: { searchParams: Promise<{ item?: string
                 </>
               )}
             </div>
+          )}
+
+          {canBuy && demoChanged && (
+            <ActionForm action={resetDemoAction} submitLabel="Reset the demo plan" pendingLabel="Resetting" testId="reset-demo" className={s.reset}>
+              <span className="label">Turns off everything you turned on here.</span>
+            </ActionForm>
           )}
         </section>
 
