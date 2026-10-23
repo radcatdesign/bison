@@ -13,7 +13,8 @@ export type Action =
   | "data.export"
   | "data.delete"
   | "pages.edit"
-  | "pages.publish";
+  | "pages.publish"
+  | "marketing.edit";
 
 type RoleSpec = { label: string; description: string; modes: readonly ModeKey[]; actions: readonly Action[] };
 
@@ -22,13 +23,13 @@ export const ROLES: Record<Role, RoleSpec> = {
     label: "Owner",
     description: "Everything, including billing and deleting the account.",
     modes: ["analyze", "marketing", "sales"],
-    actions: ["billing.manage", "members.manage", "settings.manage", "contacts.edit", "email.send", "refunds.issue", "data.export", "data.delete", "pages.edit", "pages.publish"],
+    actions: ["billing.manage", "members.manage", "settings.manage", "contacts.edit", "email.send", "refunds.issue", "data.export", "data.delete", "pages.edit", "pages.publish", "marketing.edit"],
   },
   admin: {
     label: "Admin",
     description: "Everything except billing.",
     modes: ["analyze", "marketing", "sales"],
-    actions: ["members.manage", "settings.manage", "contacts.edit", "email.send", "refunds.issue", "data.export", "data.delete", "pages.edit", "pages.publish"],
+    actions: ["members.manage", "settings.manage", "contacts.edit", "email.send", "refunds.issue", "data.export", "data.delete", "pages.edit", "pages.publish", "marketing.edit"],
   },
   sales: {
     label: "Sales",
@@ -38,9 +39,9 @@ export const ROLES: Record<Role, RoleSpec> = {
   },
   marketing: {
     label: "Marketing",
-    description: "Analyze and Marketing. Can work contacts, send email, and build and publish landing pages.",
+    description: "Analyze and Marketing. Can work contacts, build and send email, and build and publish landing pages.",
     modes: ["analyze", "marketing"],
-    actions: ["contacts.edit", "email.send", "pages.edit", "pages.publish"],
+    actions: ["contacts.edit", "email.send", "pages.edit", "pages.publish", "marketing.edit"],
   },
   viewer: {
     label: "Viewer",

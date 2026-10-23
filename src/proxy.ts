@@ -7,8 +7,9 @@ import { MODE_COOKIE, modeForPath } from "@/config/modes";
 import { DEV_SESSION_COOKIE } from "@/lib/auth/dev-session";
 import { clerkConfigured } from "@/lib/env";
 
-// "/p" is published landing pages. It never reads a session.
-const PUBLIC_PREFIXES = ["/sign-in", "/sign-up", "/sign-out", "/api/webhooks", "/api/health", "/api/cron", "/p", "/manifest.webmanifest", "/icon", "/apple-icon"];
+// "/p" is published landing pages, "/f" uploaded images (emails load them),
+// "/u" unsubscribe links. None of them read a session.
+const PUBLIC_PREFIXES = ["/sign-in", "/sign-up", "/sign-out", "/api/webhooks", "/api/health", "/api/cron", "/p", "/f", "/u", "/manifest.webmanifest", "/icon", "/apple-icon"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`) || pathname.startsWith(`${p}.`) || pathname.startsWith(`${p}?`));

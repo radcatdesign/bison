@@ -194,6 +194,193 @@ export interface WebhookEventsTable {
   received_at: Timestamp;
 }
 
+// ---- Marketing (0005) ----------------------------------------------------------
+
+export type SubscriberStatus = "subscribed" | "unsubscribed" | "bounced" | "complained";
+export type SubscriberSource = "manual" | "import" | "page" | "form";
+export type UnsubscribeReason = "link" | "one-click" | "team" | "complaint" | "bounce" | "suppressed";
+export type NewsletterStatus = "draft" | "scheduled" | "sending" | "sent" | "failed" | "canceled";
+export type SequenceTrigger = "joined" | "form" | "estimate" | "cart" | "manual";
+export type EmailSendKind = "newsletter" | "series" | "test";
+export type EmailSendStatus = "queued" | "sending" | "sent" | "delivered" | "bounced" | "complained" | "failed" | "canceled";
+
+export interface MarketingSettingsTable {
+  tenant_id: TenantId;
+  brand: Json<unknown>;
+  signup: Json<unknown>;
+  offer: Json<unknown>;
+  search: Json<unknown>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface FilesTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  kind: "logo" | "email-image";
+  content_type: "image/png" | "image/jpeg" | "image/gif";
+  bytes: Buffer;
+  width: number;
+  height: number;
+  name: Generated<string>;
+  created_by: Generated<string>;
+  created_at: Timestamp;
+}
+
+export interface SubscribersTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  email: string;
+  name: Generated<string>;
+  kind: Generated<string>;
+  status: Generated<SubscriberStatus>;
+  source: Generated<SubscriberSource>;
+  source_detail: Generated<string>;
+  subscribed_at: Timestamp;
+  unsubscribed_at: TimestampNullable;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface ListsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  name: string;
+  created_at: Timestamp;
+}
+
+export interface ListItemsTable {
+  tenant_id: TenantId;
+  list_id: string;
+  subscriber_id: string;
+  added_at: Timestamp;
+}
+
+export interface UnsubscribesTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  email: string;
+  reason: UnsubscribeReason;
+  detail: Generated<string>;
+  created_at: Timestamp;
+}
+
+export interface NewslettersTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  subject: Generated<string>;
+  preheader: Generated<string>;
+  doc: Json<unknown>;
+  status: Generated<NewsletterStatus>;
+  audience: Generated<"all" | "list">;
+  list_id: string | null;
+  audience_name: Generated<string>;
+  scheduled_for: TimestampNullable;
+  started_at: TimestampNullable;
+  sent_at: TimestampNullable;
+  recipients: Generated<number>;
+  error: string | null;
+  created_by: Generated<string>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface NewsletterTemplatesTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  name: string;
+  subject: Generated<string>;
+  preheader: Generated<string>;
+  doc: Json<unknown>;
+  created_by: Generated<string>;
+  created_at: Timestamp;
+}
+
+export interface SequencesTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  name: string;
+  trigger: SequenceTrigger;
+  trigger_detail: Generated<string>;
+  status: Generated<"on" | "off">;
+  paused_at: TimestampNullable;
+  starter: Generated<boolean>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface SequenceStepsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  sequence_id: string;
+  delay_days: number;
+  subject: Generated<string>;
+  preheader: Generated<string>;
+  doc: Json<unknown>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface SequenceRunsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  sequence_id: string;
+  subscriber_id: string | null;
+  email: string;
+  name: Generated<string>;
+  status: Generated<"active" | "done" | "stopped">;
+  started_at: Timestamp;
+  last_day: Generated<number>;
+  next_at: TimestampNullable;
+  locked_until: TimestampNullable;
+  stopped_reason: string | null;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface OfferCodesTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  code: string;
+  subscriber_id: string | null;
+  email: string;
+  discount_kind: "percent" | "amount";
+  discount: ColumnType<string, string | number, string | number>;
+  expires_at: TimestampNullable;
+  issued_at: Timestamp;
+  redeemed_at: TimestampNullable;
+  redeemed_note: Generated<string>;
+}
+
+export interface EmailSendsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  kind: EmailSendKind;
+  newsletter_id: string | null;
+  sequence_id: string | null;
+  step_id: string | null;
+  run_id: string | null;
+  subscriber_id: string | null;
+  email: string;
+  name: Generated<string>;
+  subject: Generated<string>;
+  status: Generated<EmailSendStatus>;
+  attempts: Generated<number>;
+  next_attempt_at: Timestamp;
+  locked_until: TimestampNullable;
+  provider_id: string | null;
+  error: string | null;
+  sent_at: TimestampNullable;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface WorkerRunsTable {
+  name: string;
+  last_run_at: Timestamp;
+  last_result: Json;
+}
+
 export interface DB {
   tenants: TenantsTable;
   sites: SitesTable;
@@ -210,6 +397,20 @@ export interface DB {
   page_revisions: PageRevisionsTable;
   page_agent_runs: PageAgentRunsTable;
   webhook_events: WebhookEventsTable;
+  marketing_settings: MarketingSettingsTable;
+  files: FilesTable;
+  subscribers: SubscribersTable;
+  lists: ListsTable;
+  list_items: ListItemsTable;
+  unsubscribes: UnsubscribesTable;
+  newsletters: NewslettersTable;
+  newsletter_templates: NewsletterTemplatesTable;
+  sequences: SequencesTable;
+  sequence_steps: SequenceStepsTable;
+  sequence_runs: SequenceRunsTable;
+  offer_codes: OfferCodesTable;
+  email_sends: EmailSendsTable;
+  worker_runs: WorkerRunsTable;
 }
 
 export type Tenant = Selectable<TenantsTable>;

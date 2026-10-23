@@ -6,6 +6,8 @@ export type IndustryPreset = {
   pages: string[];
   forms: { type: string; messages: string[] }[];
   referrers: string[];
+  /** Starting choices for "I am a..." on signup forms. Values are stable; labels can change. */
+  signupTypes: { value: string; label: string }[];
 };
 
 export const INDUSTRIES: Record<string, IndustryPreset> = {
@@ -19,6 +21,11 @@ export const INDUSTRIES: Record<string, IndustryPreset> = {
       { type: "Sample request", messages: ["Please send the aqua and green samples.", "Could I get a small bag of the blue to test under UV?"] },
     ],
     referrers: ["google.com", "instagram.com", "houzz.com", "youtube.com", "facebook.com", "bing.com"],
+    signupTypes: [
+      { value: "homeowner", label: "Homeowner" },
+      { value: "pool-builder", label: "Pool builder" },
+      { value: "dealer", label: "Dealer" },
+    ],
   },
   coffee: {
     label: "Coffee",
@@ -30,6 +37,11 @@ export const INDUSTRIES: Record<string, IndustryPreset> = {
       { type: "Office coffee", messages: ["Weekly delivery for about 40 people.", "Do you lease brewers for offices?"] },
     ],
     referrers: ["google.com", "instagram.com", "yelp.com", "tiktok.com", "reddit.com", "bing.com"],
+    signupTypes: [
+      { value: "home-brewer", label: "Home brewer" },
+      { value: "cafe", label: "Cafe or shop" },
+      { value: "office", label: "Office" },
+    ],
   },
   general: {
     label: "General",
@@ -40,6 +52,10 @@ export const INDUSTRIES: Record<string, IndustryPreset> = {
       { type: "Quote request", messages: ["Looking for a quote for a project starting in spring.", "Can you send rough numbers for our size?"] },
     ],
     referrers: ["google.com", "linkedin.com", "facebook.com", "bing.com", "duckduckgo.com"],
+    signupTypes: [
+      { value: "customer", label: "Customer" },
+      { value: "business", label: "Business" },
+    ],
   },
 };
 

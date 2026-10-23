@@ -35,7 +35,14 @@ export const MODES: ModeSpec[] = [
     feature: "marketing.newsletters",
     pages: [
       { href: "/marketing", label: "Overview", feature: "marketing.newsletters" },
+      { href: "/marketing/setup", label: "Setup", feature: "marketing.newsletters" },
+      { href: "/marketing/newsletters", label: "Newsletters", feature: "marketing.newsletters" },
+      { href: "/marketing/series", label: "Email series", feature: "marketing.sequences" },
+      { href: "/marketing/subscribers", label: "Subscribers", feature: "marketing.subscribers" },
       { href: "/marketing/pages", label: "Pages", feature: "marketing.pages" },
+      { href: "/marketing/brand", label: "Brand kit", feature: "marketing.brand-kit" },
+      { href: "/marketing/offer", label: "Welcome offer", feature: "marketing.welcome-offer" },
+      { href: "/marketing/search", label: "Search pack", feature: "marketing.seo" },
     ],
   },
   {

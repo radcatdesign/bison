@@ -21,6 +21,19 @@ export const TENANT_TABLES = [
   "pages",
   "page_revisions",
   "page_agent_runs",
+  "marketing_settings",
+  "files",
+  "subscribers",
+  "lists",
+  "list_items",
+  "unsubscribes",
+  "newsletters",
+  "newsletter_templates",
+  "sequences",
+  "sequence_steps",
+  "sequence_runs",
+  "offer_codes",
+  "email_sends",
 ] as const;
 
 let appDb: Database | null = null;

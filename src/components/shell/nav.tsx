@@ -2,6 +2,13 @@
 
 import {
   AppWindow,
+  BadgePercent,
+  ListChecks,
+  Mail,
+  Palette,
+  Repeat,
+  ScanSearch,
+  Users,
   ChartLine,
   Inbox,
   LayoutGrid,
@@ -34,7 +41,14 @@ const PAGE_ICONS: Record<string, LucideIcon> = {
   "/analyze/pages": PanelsTopLeft,
   "/analyze/contacts": Inbox,
   "/marketing": Megaphone,
+  "/marketing/setup": ListChecks,
+  "/marketing/newsletters": Mail,
+  "/marketing/series": Repeat,
+  "/marketing/subscribers": Users,
   "/marketing/pages": AppWindow,
+  "/marketing/brand": Palette,
+  "/marketing/offer": BadgePercent,
+  "/marketing/search": ScanSearch,
   "/sales": Receipt,
 };
 

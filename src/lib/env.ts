@@ -83,6 +83,23 @@ export function secureCookies(): boolean {
 }
 
 /**
+ * Who sends email. Resend when RESEND_API_KEY is set. EMAIL_PROVIDER=stand-in
+ * keeps every email in memory instead (tests and local work); it's refused on
+ * Vercel production, so real sends can never quietly go nowhere.
+ */
+export function emailProviderName(): "resend" | "stand-in" | "none" {
+  const explicit = process.env.EMAIL_PROVIDER;
+  if (explicit === "stand-in") return process.env.VERCEL_ENV === "production" ? "none" : "stand-in";
+  if (explicit === "resend" || process.env.RESEND_API_KEY) return process.env.RESEND_API_KEY ? "resend" : "none";
+  return "none";
+}
+
+/** The local outbox for the stand-in, for tests and local work. Never on Vercel. */
+export function devOutboxAllowed(): boolean {
+  return emailProviderName() === "stand-in" && !onVercel();
+}
+
+/**
  * Which page agent answers. Claude when ANTHROPIC_API_KEY is set, otherwise the
  * offline stand-in. PAGE_AGENT=stand-in forces the stand-in (tests use it).
  */
