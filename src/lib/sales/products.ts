@@ -73,15 +73,11 @@ export async function listProducts(tx: Tx, opts: { status?: ProductStatus | "all
   });
 }
 
-export async function getProduct(tx: Tx, idOrSlug: string): Promise<Product | null> {
-  const row = await tx
-    .selectFrom("products")
-    .selectAll()
-    .where(isUuid(idOrSlug) ? "id" : "slug", "=", idOrSlug)
-    .executeTakeFirst();
-  if (!row) return null;
+type ProductTableRow = { id: string; slug: string; name: string; description: string; status: ProductStatus; category: string; tax_code: string; options: unknown; photos: unknown; seo: unknown; source: ProductSource; source_id: string; updated_at: Date };
+type VariantTableRow = Parameters<typeof readVariant>[0] & { product_id: string };
+
+function readProduct(row: ProductTableRow, variants: VariantTableRow[]): Product {
   const options = arr<ProductOption>(row.options);
-  const variants = await tx.selectFrom("product_variants").select(VARIANT_COLUMNS).where("product_id", "=", row.id).orderBy("position").execute();
   return {
     id: row.id,
     slug: row.slug,
@@ -98,6 +94,17 @@ export async function getProduct(tx: Tx, idOrSlug: string): Promise<Product | nu
     variants: variants.map((v) => readVariant(v, options)),
     updatedAt: row.updated_at,
   };
+}
+
+export async function getProduct(tx: Tx, idOrSlug: string): Promise<Product | null> {
+  const row = await tx
+    .selectFrom("products")
+    .selectAll()
+    .where(isUuid(idOrSlug) ? "id" : "slug", "=", idOrSlug)
+    .executeTakeFirst();
+  if (!row) return null;
+  const variants = await tx.selectFrom("product_variants").select(VARIANT_COLUMNS).where("product_id", "=", row.id).orderBy("position").execute();
+  return readProduct(row, variants);
 }
 
 async function uniqueSlug(tx: Tx, wanted: string, exceptId: string | null): Promise<string> {
@@ -206,13 +213,16 @@ export async function variantsForPricing(tx: Tx, ids: string[]): Promise<Map<str
   return out;
 }
 
-/** Active products for the public shop, sitemap and search files, with their prices. */
+/** Active products for the public shop, sitemap and search files, with their prices. Two queries, whatever the size. */
 export async function publicProducts(tx: Tx, limit = 500): Promise<(Product & { minCents: number; maxCents: number })[]> {
-  const rows = await tx.selectFrom("products").select("id").where("status", "=", "active").orderBy("position").orderBy("name").limit(limit).execute();
+  const rows = await tx.selectFrom("products").selectAll().where("status", "=", "active").orderBy("position").orderBy("name").limit(limit).execute();
+  if (!rows.length) return [];
+  const variants = await tx.selectFrom("product_variants").select(VARIANT_COLUMNS).where("product_id", "in", rows.map((r) => r.id)).orderBy("position").execute();
+  const byProduct = new Map<string, VariantTableRow[]>();
+  for (const v of variants) byProduct.set(v.product_id, [...(byProduct.get(v.product_id) ?? []), v]);
   const out: (Product & { minCents: number; maxCents: number })[] = [];
   for (const r of rows) {
-    const p = await getProduct(tx, r.id);
-    if (!p) continue;
+    const p = readProduct(r, byProduct.get(r.id) ?? []);
     const range = priceRange(p.variants);
     if (range) out.push({ ...p, minCents: range.min, maxCents: range.max });
   }
