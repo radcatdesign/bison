@@ -17,6 +17,7 @@ import { can, loadAccess } from "@/lib/access/entitlements";
 import { audit } from "@/lib/audit";
 import { type Database, db, type Tx, withTenant } from "@/lib/db";
 import type { EmailSendKind } from "@/lib/db/types";
+import { emailProblems } from "@/lib/email/ops";
 import { emailProvider } from "@/lib/email/provider";
 import { emailsThisMonth } from "./people";
 import { compose, type Content, deliver, loadSendSetup, type OfferCode, readDoc, type SendSetup, sendBlocker } from "./send";
@@ -55,7 +56,10 @@ export async function startNewsletter(tx: Tx, newsletterId: string, setup: SendS
   const blocker = sendBlocker(setup);
   if (blocker) return fail(blocker);
   if (setup.info.sampleData) return fail("Sample data is on, so your list on screen is made up. Turn it off in Settings, then send again.");
-  if (!readDoc(n.doc)) return fail("This email didn't load correctly. Open it, check it, and send again.");
+  const doc = readDoc(n.doc);
+  if (!doc) return fail("This email didn't load correctly. Open it, check it, and send again.");
+  const problems = emailProblems(doc, n.subject, n.preheader);
+  if (problems.length) return fail(`Not sent: ${problems[0].text} Fix it and send again.`);
   if (n.audience === "list" && !n.list_id) return fail("The list this was going to was deleted. Pick who it goes to and send again.");
 
   const listName = n.audience === "list" && n.list_id ? ((await tx.selectFrom("lists").select("name").where("id", "=", n.list_id).executeTakeFirst())?.name ?? "") : "";
