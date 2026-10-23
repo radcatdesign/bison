@@ -191,65 +191,67 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
     <>
       <PageHeader title="Orders" note={NOTE} />
       {repo.sample && <SampleBanner demo={demoMode()} />}
-      <Segmented label="Show" items={FILTERS.map(([k, label]) => ({ href: k === "all" ? "/sales/orders" : `/sales/orders?status=${k}`, label, current: status === k }))} />
-      <Card title="Orders" flush testId="order-list">
-        <form className={m.toolbar} action="/sales/orders" style={{ padding: "14px 14px 0" }}>
-          {status !== "all" && <input type="hidden" name="status" value={status} />}
-          <input name="q" className="input" defaultValue={sp.q} placeholder="Search by name, email or #number" aria-label="Search orders" />
-          <button type="submit" className="btn">
-            Search
-          </button>
-        </form>
-        {rows.length === 0 ? (
-          <div className={m.empty}>
-            <strong>{sp.q || status !== "all" ? "Nothing matches that." : "No orders yet."}</strong>
-            <span>{sp.q || status !== "all" ? "Try another search or filter." : "Paid orders from your shop and from paid estimates show up here."}</span>
-          </div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className={m.table}>
-              <thead>
-                <tr>
-                  <th>Order</th>
-                  <th className={m.hideSm}>Where from</th>
-                  <th>Status</th>
-                  <th className={s.right}>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((o) => (
-                  <tr key={o.id} data-testid="order-row" aria-current={sp.id === o.id ? "true" : undefined}>
-                    <td>
-                      <Link href={qs({ id: o.id })} scroll={false} className={m.cellMain} style={{ color: "inherit", textDecoration: "none" }}>
-                        <strong>
-                          #{o.number} {o.name || o.email}
-                        </strong>
-                        <span>
-                          {fmt.format(o.paidAt)} · {o.itemCount} {o.itemCount === 1 ? "item" : "items"}
-                          {o.tradeCompany ? ` · ${o.tradeCompany}` : ""}
-                        </span>
-                      </Link>
-                    </td>
-                    <td className={`${m.hideSm} muted`}>{SOURCE[o.source] ?? o.source}</td>
-                    <td>
-                      <span className={pillClass(o.status === "paid" ? FULFILLMENT[o.fulfillment].tone : ORDER_STATUS[o.status].tone)}>{o.status === "paid" ? FULFILLMENT[o.fulfillment].label : ORDER_STATUS[o.status].label}</span>
-                    </td>
-                    <td className={`${s.money} ${s.right}`}>{formatMoney(o.totalCents, o.currency)}</td>
+      <div className={s.stack}>
+        <Segmented label="Show" items={FILTERS.map(([k, label]) => ({ href: k === "all" ? "/sales/orders" : `/sales/orders?status=${k}`, label, current: status === k }))} />
+        <Card title="Orders" flush testId="order-list">
+          <form className={m.toolbar} action="/sales/orders" style={{ padding: "14px 14px 0" }}>
+            {status !== "all" && <input type="hidden" name="status" value={status} />}
+            <input name="q" className="input" defaultValue={sp.q} placeholder="Search by name, email or #number" aria-label="Search orders" />
+            <button type="submit" className="btn">
+              Search
+            </button>
+          </form>
+          {rows.length === 0 ? (
+            <div className={m.empty}>
+              <strong>{sp.q || status !== "all" ? "Nothing matches that." : "No orders yet."}</strong>
+              <span>{sp.q || status !== "all" ? "Try another search or filter." : "Paid orders from your shop and from paid estimates show up here."}</span>
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table className={m.table}>
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th className={m.hideSm}>Where from</th>
+                    <th>Status</th>
+                    <th className={s.right}>Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows.map((o) => (
+                    <tr key={o.id} data-testid="order-row" aria-current={sp.id === o.id ? "true" : undefined}>
+                      <td>
+                        <Link href={qs({ id: o.id })} scroll={false} className={m.cellMain} style={{ color: "inherit", textDecoration: "none" }}>
+                          <strong>
+                            #{o.number} {o.name || o.email}
+                          </strong>
+                          <span>
+                            {fmt.format(o.paidAt)} · {o.itemCount} {o.itemCount === 1 ? "item" : "items"}
+                            {o.tradeCompany ? ` · ${o.tradeCompany}` : ""}
+                          </span>
+                        </Link>
+                      </td>
+                      <td className={`${m.hideSm} muted`}>{SOURCE[o.source] ?? o.source}</td>
+                      <td>
+                        <span className={pillClass(o.status === "paid" ? FULFILLMENT[o.fulfillment].tone : ORDER_STATUS[o.status].tone)}>{o.status === "paid" ? FULFILLMENT[o.fulfillment].label : ORDER_STATUS[o.status].label}</span>
+                      </td>
+                      <td className={`${s.money} ${s.right}`}>{formatMoney(o.totalCents, o.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className={m.pager}>
+            <span>
+              <span className="num">{rows.length.toLocaleString("en-US")}</span> {rows.length === 1 ? "order" : "orders"}, {formatMoney(total, rows[0]?.currency ?? "usd")}
+              <Help title="Orders total">
+                <p>What the orders in this list were paid, including shipping and tax, less anything refunded.</p>
+              </Help>
+            </span>
           </div>
-        )}
-        <div className={m.pager}>
-          <span>
-            <span className="num">{rows.length.toLocaleString("en-US")}</span> {rows.length === 1 ? "order" : "orders"}, {formatMoney(total, rows[0]?.currency ?? "usd")}
-            <Help title="Orders total">
-              <p>What the orders in this list were paid, including shipping and tax, less anything refunded.</p>
-            </Help>
-          </span>
-        </div>
-      </Card>
+        </Card>
+      </div>
       {sp.id && <Panel ctx={ctx} id={sp.id} back={qs({})} />}
     </>
   );

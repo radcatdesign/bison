@@ -58,55 +58,57 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
       />
       {repo.sample && <SampleBanner demo={demoMode()} />}
       <SalesSetupFor ctx={ctx} tool="estimates" />
-      <Segmented label="Show" items={FILTERS.map(([k, label]) => ({ href: `/sales/estimates?status=${k}`, label, current: status === k }))} />
-      <Card title={FILTERS.find(([k]) => k === status)?.[1] ?? ESTIMATE_STATUS[status]?.label ?? "Estimates"} flush testId="estimate-list">
-        {rows.length === 0 ? (
-          <div className={m.empty}>
-            <strong>{status === "open" ? "No open estimates." : "Nothing here."}</strong>
-            <span>{status === "open" ? "Start one, add lines from your catalog or by hand, and send it. Quote requests from the shop land here as drafts too." : "Try another filter."}</span>
-          </div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className={m.table}>
-              <thead>
-                <tr>
-                  <th>Estimate</th>
-                  <th>Status</th>
-                  <th className={m.hideSm}>Sent</th>
-                  <th className={s.right}>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id} data-testid="estimate-row">
-                    <td>
-                      <Link href={`/sales/estimates/${r.id}`} className={m.cellMain} style={{ color: "inherit", textDecoration: "none" }}>
-                        <strong>
-                          #{r.number} {r.client.company || r.client.name || r.client.email || "No client yet"}
-                        </strong>
-                        <span>{[r.title, r.source === "inquiry" ? "From the shop" : ""].filter(Boolean).join(" · ") || "Untitled"}</span>
-                      </Link>
-                    </td>
-                    <td>
-                      <span className={pillClass(ESTIMATE_STATUS[r.status].tone)}>{ESTIMATE_STATUS[r.status].label}</span>
-                    </td>
-                    <td className={`${m.hideSm} muted`}>{r.sentAt ? fmt.format(r.sentAt) : "Not sent"}</td>
-                    <td className={`${s.money} ${s.right}`}>{formatMoney(r.totalCents, r.currency)}</td>
+      <div className={s.stack}>
+        <Segmented label="Show" items={FILTERS.map(([k, label]) => ({ href: `/sales/estimates?status=${k}`, label, current: status === k }))} />
+        <Card title={FILTERS.find(([k]) => k === status)?.[1] ?? ESTIMATE_STATUS[status]?.label ?? "Estimates"} flush testId="estimate-list">
+          {rows.length === 0 ? (
+            <div className={m.empty}>
+              <strong>{status === "open" ? "No open estimates." : "Nothing here."}</strong>
+              <span>{status === "open" ? "Start one, add lines from your catalog or by hand, and send it. Quote requests from the shop land here as drafts too." : "Try another filter."}</span>
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table className={m.table}>
+                <thead>
+                  <tr>
+                    <th>Estimate</th>
+                    <th>Status</th>
+                    <th className={m.hideSm}>Sent</th>
+                    <th className={s.right}>Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} data-testid="estimate-row">
+                      <td>
+                        <Link href={`/sales/estimates/${r.id}`} className={m.cellMain} style={{ color: "inherit", textDecoration: "none" }}>
+                          <strong>
+                            #{r.number} {r.client.company || r.client.name || r.client.email || "No client yet"}
+                          </strong>
+                          <span>{[r.title, r.source === "inquiry" ? "From the shop" : ""].filter(Boolean).join(" · ") || "Untitled"}</span>
+                        </Link>
+                      </td>
+                      <td>
+                        <span className={pillClass(ESTIMATE_STATUS[r.status].tone)}>{ESTIMATE_STATUS[r.status].label}</span>
+                      </td>
+                      <td className={`${m.hideSm} muted`}>{r.sentAt ? fmt.format(r.sentAt) : "Not sent"}</td>
+                      <td className={`${s.money} ${s.right}`}>{formatMoney(r.totalCents, r.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className={m.pager}>
+            <span>
+              <span className="num">{rows.length.toLocaleString("en-US")}</span> {rows.length === 1 ? "estimate" : "estimates"}, {formatMoney(total, currency)}
+              <Help title="Estimate total">
+                <p>The totals of the estimates in this list added together: lines, less any discount, plus shipping. Tax is added on the invoice, so it isn&apos;t in here.</p>
+              </Help>
+            </span>
           </div>
-        )}
-        <div className={m.pager}>
-          <span>
-            <span className="num">{rows.length.toLocaleString("en-US")}</span> {rows.length === 1 ? "estimate" : "estimates"}, {formatMoney(total, currency)}
-            <Help title="Estimate total">
-              <p>The totals of the estimates in this list added together: lines, less any discount, plus shipping. Tax is added on the invoice, so it isn&apos;t in here.</p>
-            </Help>
-          </span>
-        </div>
-      </Card>
+        </Card>
+      </div>
     </>
   );
 }

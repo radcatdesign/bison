@@ -38,15 +38,24 @@
 
 .segmented {
   display: inline-flex;
+  justify-self: start;
   gap: 2px;
+  max-width: 100%;
   padding: 3px;
+  overflow-x: auto;
   border: 1px solid var(--bo-line);
   border-radius: 11px;
   background: var(--bo-sunken);
+  scrollbar-width: none;
+}
+
+.segmented::-webkit-scrollbar {
+  display: none;
 }
 
 .segment {
   display: inline-flex;
+  flex: none;
   align-items: center;
   height: 28px;
   padding: 0 12px;
