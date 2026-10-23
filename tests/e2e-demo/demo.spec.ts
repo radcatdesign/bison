@@ -124,6 +124,10 @@ test("pages: an example to open, the agent builds new ones, and they stay in thi
   // The example is finished, but the demo can't put it live.
   await page.getByTestId("page-card").click();
   await expect(page.getByTestId("page-editor")).toBeVisible();
+  // The preview really shows the page.
+  if ((page.viewportSize()?.width ?? 0) < 760) await page.getByTestId("tab-preview").click();
+  await expect(page.frameLocator('[data-testid="builder-frame"]').getByRole("heading", { level: 1 })).toHaveText("Your pool, lit from within");
+  if ((page.viewportSize()?.width ?? 0) < 760) await page.getByTestId("tab-agent").click();
   await page.getByTestId("publish").click();
   await expect(page.getByTestId("editor-notice")).toContainText("This is a demo, so pages can't go live");
 
