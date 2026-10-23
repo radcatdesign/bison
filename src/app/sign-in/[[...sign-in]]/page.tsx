@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { Mark } from "@/components/mark";
+import { Bison, Mark } from "@/components/mark";
 import { BRAND } from "@/config/brand";
 import { ROLES } from "@/config/roles";
 import { DEV_PEOPLE, devTenantName } from "@/lib/auth/dev-people";
@@ -96,7 +96,7 @@ export default function SignInPage({ searchParams }: PageProps<"/sign-in/[[...si
     <main className={s.split}>
       <section className={s.brand} aria-hidden="true">
         <div className={s.brandTop}>
-          <Mark size={30} />
+          <Bison width={40} />
           <span className={s.brandName}>{BRAND.productName}</span>
         </div>
         <div className={s.brandBody}>

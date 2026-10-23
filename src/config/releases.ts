@@ -13,6 +13,7 @@ export const RELEASES: Release[] = [
       "Preview every page at desktop, tablet and phone size.",
       "The agent never makes up prices, dates, reviews or numbers. It marks what only you know in yellow, and a page can't go live until those are filled in.",
       "Publish a page to its own address. Its form sends go straight to Contacts, with bots filtered out.",
+      "The Bison mark, in the sidebar, on sign-in and as the app icon.",
     ],
   },
   {
