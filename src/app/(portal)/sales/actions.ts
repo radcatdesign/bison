@@ -378,6 +378,7 @@ export async function disconnectPaymentsAction(): Promise<SalesResult> {
 export async function connectCarrierAction(key: "shipstation" | "ups", input: { apiKey?: string; clientId?: string; clientSecret?: string; accountNumber?: string; sandbox?: boolean }): Promise<SalesResult> {
   const { ctx, error } = await guard("settings.manage", "sales.checkout");
   if (error) return { ok: false, message: error };
+  if (key !== "shipstation" && key !== "ups") return { ok: false, message: "That didn't work." };
   let secret: string;
   let config: Record<string, unknown>;
   if (key === "shipstation") {

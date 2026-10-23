@@ -265,6 +265,8 @@ test.describe("sales", () => {
 
     const link = linkIn(await mailTo(page, "jo@cornercafe.example.com", /trade account with Ridgeline Roasters is approved/), /\/trade\/enter/);
     await page.goto(link);
+    await expect(page.getByTestId("trade-enter")).toContainText("Sign in as Corner Cafe");
+    await page.getByTestId("trade-enter-confirm").click();
     await page.waitForURL(/\/shop\?trade=1/);
     await expect(t(page, "trade-signed-in")).toContainText("Trade prices");
     await expect(page.locator("main").filter({ visible: true })).toContainText("Signed in as Corner Cafe.");

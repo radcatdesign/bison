@@ -129,6 +129,18 @@ export async function checkCode(tx: Tx, rawCode: string, c: CodeContext): Promis
   return { ok: false, message: "That code isn't valid.", code, discountId: null, offerCodeId: null };
 }
 
+/**
+ * Locks a code's row until the transaction ends, so checking how often it's
+ * been used and holding a use happen as one step. Two checkouts with the same
+ * single-use code wait for each other instead of both getting it.
+ */
+export async function lockCode(tx: Tx, rawCode: string): Promise<void> {
+  const code = normalizeCode(rawCode);
+  if (!code) return;
+  const d = await tx.selectFrom("discounts").select("id").where("code", "=", code).forUpdate().executeTakeFirst();
+  if (!d) await tx.selectFrom("offer_codes").select("id").where("code", "=", code).forUpdate().executeTakeFirst();
+}
+
 /** Holds a use of the code for this cart until the checkout ends. */
 export async function holdCode(tx: Tx, r: NonNullable<CodeResult>, h: { cartId: string; email: string | null; tradeAccountId: string | null; amountCents: number; until: Date }): Promise<void> {
   if (!r.ok) return;
@@ -139,10 +151,27 @@ export async function holdCode(tx: Tx, r: NonNullable<CodeResult>, h: { cartId: 
     .execute();
 }
 
-/** The paid order spends the held use. Welcome codes are marked used on their own row too. */
-export async function spendHeldCode(tx: Tx, cartId: string, orderId: string): Promise<void> {
+/**
+ * The paid order spends the held use. If there's no hold left (the checkout
+ * outlived it), the use is written anyway, so a paid code always counts.
+ * Welcome codes are marked used on their own row too.
+ */
+export async function spendHeldCode(tx: Tx, cartId: string, orderId: string, paid?: { code: string | null; email: string | null; tradeAccountId: string | null; amountCents: number }): Promise<void> {
   const rows = await tx.updateTable("discount_redemptions").set({ status: "used", order_id: orderId, reserved_until: null }).where("cart_id", "=", cartId).where("status", "=", "reserved").returning(["offer_code_id"]).execute();
-  for (const r of rows) if (r.offer_code_id) await tx.updateTable("offer_codes").set({ redeemed_at: new Date(), redeemed_note: "Used at checkout" }).where("id", "=", r.offer_code_id).where("redeemed_at", "is", null).execute();
+  let offerIds = rows.map((r) => r.offer_code_id);
+  if (!rows.length && paid?.code && paid.amountCents > 0) {
+    const code = normalizeCode(paid.code);
+    const already = await tx.selectFrom("discount_redemptions").select("id").where("order_id", "=", orderId).executeTakeFirst();
+    if (code && !already) {
+      const d = await tx.selectFrom("discounts").select("id").where("code", "=", code).executeTakeFirst();
+      const w = d ? undefined : await tx.selectFrom("offer_codes").select("id").where("code", "=", code).executeTakeFirst();
+      if (d || w) {
+        await tx.insertInto("discount_redemptions").values({ discount_id: d?.id ?? null, offer_code_id: w?.id ?? null, code, status: "used", reserved_until: null, email: paid.email, trade_account_id: paid.tradeAccountId, cart_id: cartId, order_id: orderId, amount_cents: paid.amountCents }).execute();
+        offerIds = [w?.id ?? null];
+      }
+    }
+  }
+  for (const id of offerIds) if (id) await tx.updateTable("offer_codes").set({ redeemed_at: new Date(), redeemed_note: "Used at checkout" }).where("id", "=", id).where("redeemed_at", "is", null).execute();
 }
 
 export async function releaseHeldCode(tx: Tx, cartId: string): Promise<void> {

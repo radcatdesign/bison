@@ -13,6 +13,12 @@ export async function GET(req: Request) {
   standInOnboard(account, { tax: url.searchParams.get("tax") === "1" ? true : undefined });
   await handleConnectEvent({ id: `evt_standin_acct_${Date.now()}`, type: "account.updated", account, objectId: account });
   const back = url.searchParams.get("return") ?? "";
-  const target = back.startsWith(appUrl()) ? back : `${appUrl()}/settings/payments?back=1`;
+  // Only back to this app: the same origin, not just an address that starts the same way.
+  let target = `${appUrl()}/settings/payments?back=1`;
+  try {
+    if (back && new URL(back).origin === new URL(appUrl()).origin) target = back;
+  } catch {
+    // Not an address; use the default.
+  }
   return Response.redirect(target, 303);
 }

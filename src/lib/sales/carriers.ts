@@ -303,7 +303,8 @@ export function standInCarrier(): Carrier {
   };
 }
 
-/** SHIPPING_PROVIDER=stand-in answers for every carrier (tests and local work). Never on Vercel. */
+/** SHIPPING_PROVIDER=stand-in answers for every carrier (tests and local work). Fails closed like the payments stand-in. */
 export function shippingStandIn(): boolean {
-  return process.env.SHIPPING_PROVIDER === "stand-in" && !onVercel();
+  if (process.env.SHIPPING_PROVIDER !== "stand-in" || onVercel()) return false;
+  return process.env.NODE_ENV !== "production" || process.env.ALLOW_FAKE_BILLING === "1";
 }

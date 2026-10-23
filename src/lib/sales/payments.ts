@@ -30,7 +30,7 @@ export type CheckoutParams = {
   currency: string;
   email: string;
   lines: CheckoutLine[];
-  discount: { label: string; amountCents: number } | null;
+  discount: { code: string; label: string; amountCents: number } | null;
   countries: string[];
   collectPhone: boolean;
   tax: boolean;
@@ -57,7 +57,13 @@ export type CheckoutState = {
   shippingLabel: string;
   paymentIntentId: string | null;
   cartId: string | null;
+  /** The code on this checkout, if any. */
+  code: string | null;
+  /** What Stripe charged for, line by line. Orders are built from this, never from the cart. */
+  lines: PaidLine[];
 };
+
+export type PaidLine = { variantId: string | null; name: string; qty: number; unitCents: number; amountCents: number };
 
 export type InvoiceParams = {
   estimateId: string;
@@ -228,7 +234,7 @@ export function stripePayments(client: Stripe = stripe()): PaymentsProvider {
             ...(coupon ? { discounts: [{ coupon }] } : {}),
             return_url: p.returnUrl,
             expires_at: Math.floor(p.expiresAt.getTime() / 1000),
-            metadata: { bison_cart: p.cartId },
+            metadata: { bison_cart: p.cartId, ...(p.discount ? { bison_code: p.discount.code } : {}) },
             payment_intent_data: { metadata: { bison_cart: p.cartId } },
           } as Stripe.Checkout.SessionCreateParams,
           { stripeAccount: accountId, idempotencyKey: `bison-checkout-${p.cartId}-${p.expiresAt.getTime()}` },
@@ -270,6 +276,12 @@ export function stripePayments(client: Stripe = stripe()): PaymentsProvider {
         const s = await client.checkout.sessions.retrieve(sessionId, { expand: ["shipping_cost.shipping_rate"] }, { stripeAccount: accountId });
         const ship = (s as unknown as { collected_information?: { shipping_details?: { name?: string; address?: Stripe.Address } } }).collected_information?.shipping_details;
         const rate = s.shipping_cost?.shipping_rate;
+        const items = s.status === "complete" ? await client.checkout.sessions.listLineItems(sessionId, { limit: 100, expand: ["data.price.product"] }, { stripeAccount: accountId }) : null;
+        const lines: PaidLine[] = (items?.data ?? []).map((li) => {
+          const product = li.price?.product;
+          const variant = product && typeof product !== "string" && !("deleted" in product && product.deleted) ? (product as Stripe.Product).metadata?.variant : undefined;
+          return { variantId: variant ?? null, name: li.description ?? "", qty: li.quantity ?? 0, unitCents: li.price?.unit_amount ?? 0, amountCents: li.amount_subtotal ?? 0 };
+        });
         return {
           sessionId: s.id,
           status: (s.status ?? "open") as CheckoutState["status"],
@@ -287,6 +299,8 @@ export function stripePayments(client: Stripe = stripe()): PaymentsProvider {
           shippingLabel: rate && typeof rate !== "string" ? rate.display_name ?? "" : "",
           paymentIntentId: idOf(s.payment_intent as string | null),
           cartId: s.metadata?.bison_cart ?? null,
+          code: s.metadata?.bison_code ?? null,
+          lines,
         };
       } catch (err) {
         wrap(err);
@@ -398,7 +412,7 @@ function store(): StandInStore {
 }
 
 function checkoutState(s: StandInCheckout): CheckoutState {
-  return { sessionId: s.sessionId, status: s.status, paid: s.paid, email: s.email, name: s.name, phone: s.phone, shipTo: s.shipTo, subtotalCents: s.subtotalCents, discountCents: s.discountCents, shippingCents: s.shippingCents, taxCents: s.taxCents, totalCents: s.totalCents, currency: s.currency, shippingLabel: s.shippingLabel, paymentIntentId: s.paymentIntentId, cartId: s.cartId };
+  return { sessionId: s.sessionId, status: s.status, paid: s.paid, email: s.email, name: s.name, phone: s.phone, shipTo: s.shipTo, subtotalCents: s.subtotalCents, discountCents: s.discountCents, shippingCents: s.shippingCents, taxCents: s.taxCents, totalCents: s.totalCents, currency: s.currency, shippingLabel: s.shippingLabel, paymentIntentId: s.paymentIntentId, cartId: s.cartId, code: s.code, lines: s.lines };
 }
 
 function invoiceState(i: StandInInvoice): InvoiceState {
@@ -458,6 +472,8 @@ export function standInPayments(): PaymentsProvider {
         shippingLabel: "",
         paymentIntentId: null,
         cartId: p.cartId,
+        code: p.discount?.code ?? null,
+        lines: p.lines.map((l) => ({ variantId: l.variantId, name: l.name, qty: l.qty, unitCents: l.unitCents, amountCents: l.unitCents * l.qty })),
       });
       return { sessionId, clientSecret: `${sessionId}_secret_standin` };
     },
@@ -550,9 +566,17 @@ export function standInOnboard(accountId: string, opts: { tax?: boolean } = {}) 
 
 // ---- Which one --------------------------------------------------------------------
 
+/**
+ * The stand-in fails closed, like test billing: never on any Vercel deployment,
+ * and in other production builds only with ALLOW_FAKE_BILLING=1 (local end-to-end tests).
+ */
+export function standInsAllowed(): boolean {
+  if (onVercel()) return false;
+  return process.env.NODE_ENV !== "production" || process.env.ALLOW_FAKE_BILLING === "1";
+}
+
 export function paymentsProviderName(): "stripe" | "stand-in" | "none" {
-  const explicit = process.env.PAYMENTS_PROVIDER;
-  if (explicit === "stand-in") return onVercel() && process.env.VERCEL_ENV === "production" ? "none" : "stand-in";
+  if (process.env.PAYMENTS_PROVIDER === "stand-in") return standInsAllowed() ? "stand-in" : "none";
   return process.env.STRIPE_SECRET_KEY ? "stripe" : "none";
 }
 
@@ -569,7 +593,7 @@ export function paymentsProvider(): PaymentsProvider | null {
 
 /** The dev pages that play Stripe only exist with the stand-in, never on Vercel. */
 export function devPaymentsAllowed(): boolean {
-  return paymentsProviderName() === "stand-in" && !onVercel();
+  return paymentsProviderName() === "stand-in" && standInsAllowed();
 }
 
 export const PAYMENTS_NOT_SET_UP = "Payments aren't switched on for this Bison Ops server yet (no STRIPE_SECRET_KEY).";

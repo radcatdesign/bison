@@ -9,7 +9,7 @@ const body = z.object({ cartId: z.string().max(4000), email: z.string().max(254)
 
 export async function POST(req: Request, { params }: { params: Promise<{ tenant: string }> }) {
   const { tenant } = await params;
-  const slow = limited(req, tenant, "free", 10, 500);
+  const slow = limited(req, "free", 10);
   if (slow) return slow;
   const parsed = body.safeParse(await readBody(req));
   if (!parsed.success) return json({ ok: false, message: "Couldn't read that. Reload the page and try again." }, 400);

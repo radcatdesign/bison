@@ -35,7 +35,7 @@ Copy `.env.example` to `.env.local` for local work. Tests use `.env.test` (commi
 | Variable | Required | What it does |
 |---|---|---|
 | `BILLING_PROVIDER` | No | `stripe` or `fake`. Defaults to `stripe` when `STRIPE_SECRET_KEY` is set. `fake` turns items on without charging, so it fails closed: refused on Vercel production, and in other production builds unless `ALLOW_FAKE_BILLING=1`. |
-| `ALLOW_FAKE_BILLING` | No | `1` allows test billing in a local production build (end-to-end tests) or a Vercel preview. |
+| `ALLOW_FAKE_BILLING` | No | `1` allows test billing in a local production build (end-to-end tests) or a Vercel preview, and the payments and shipping stand-ins in a local production build (never on Vercel). |
 | `STRIPE_SECRET_KEY` | With Stripe | Bison Ops' own Stripe account. |
 | `STRIPE_WEBHOOK_SECRET` | With Stripe | Signing secret for `/api/webhooks/stripe`. Listen for `customer.subscription.created`, `.updated` and `.deleted`. |
 | `STRIPE_PRICE_SALES`, `STRIPE_PRICE_MARKETING`, `STRIPE_PRICE_ASSISTANT` | With Stripe | Monthly price ids for the modules. |
@@ -74,8 +74,8 @@ Unsubscribe links are signed with `SECRETS_KEYS`. Keep old key versions in the l
 | `STRIPE_SECRET_KEY` | For Sales payments | The same Bison Ops Stripe key, with Connect turned on. Companies' accounts are made and used through it; their money never touches the Bison Ops balance. Without it, Sales still builds and saves, and checkout and invoices say payments aren't switched on yet. |
 | `STRIPE_PUBLISHABLE_KEY` | For Sales payments | Bison Ops' publishable key. The shop's checkout page loads Stripe's payment form with it, on the company's own account. |
 | `STRIPE_CONNECT_WEBHOOK_SECRET` | For Sales payments | Signing secret of a Connect webhook (events on connected accounts) at `/api/webhooks/stripe-connect`. Turn on `account.updated`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`, `invoice.paid` and `charge.refunded`. |
-| `PAYMENTS_PROVIDER` | No | `stand-in` plays Stripe in memory for tests and local work, with pages at `/api/dev/payments` for onboarding, paying a checkout and paying an invoice. Refused on Vercel production; its pages never run on any Vercel deployment. |
-| `SHIPPING_PROVIDER` | No | `stand-in` answers for ShipStation and UPS (rates and orders) in tests and local work. Never on Vercel. Real carrier keys are each company's own, entered in Settings, Shipping, and encrypted. |
+| `PAYMENTS_PROVIDER` | No | `stand-in` plays Stripe in memory for tests and local work, with pages at `/api/dev/payments` for onboarding, paying a checkout and paying an invoice. It fails closed: never on any Vercel deployment, and in other production builds only with `ALLOW_FAKE_BILLING=1`. |
+| `SHIPPING_PROVIDER` | No | `stand-in` answers for ShipStation and UPS (rates and orders) in tests and local work, under the same rule. Real carrier keys are each company's own, entered in Settings, Shipping, and encrypted. |
 
 Estimate links, trade sign-in links and shared contact links are signed with `SECRETS_KEYS`, like unsubscribe links.
 

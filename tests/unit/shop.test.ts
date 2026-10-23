@@ -114,3 +114,28 @@ describe("the demo shop", () => {
     expect(demoCart(s, "demo.not-base64!!", { op: "view" }).lines).toHaveLength(0);
   });
 });
+
+describe("the payments stand-in", () => {
+  it("fails closed: never on Vercel, and in production builds only when allowed", async () => {
+    const { standInsAllowed } = await import("@/lib/sales/payments");
+    const keep = { VERCEL: process.env.VERCEL, NODE_ENV: process.env.NODE_ENV, ALLOW_FAKE_BILLING: process.env.ALLOW_FAKE_BILLING };
+    const set = (k: string, v: string | undefined) => {
+      if (v === undefined) delete process.env[k];
+      else (process.env as Record<string, string>)[k] = v;
+    };
+    try {
+      set("VERCEL", undefined);
+      set("NODE_ENV", "test");
+      expect(standInsAllowed()).toBe(true);
+      set("NODE_ENV", "production");
+      set("ALLOW_FAKE_BILLING", undefined);
+      expect(standInsAllowed()).toBe(false);
+      set("ALLOW_FAKE_BILLING", "1");
+      expect(standInsAllowed()).toBe(true);
+      set("VERCEL", "1");
+      expect(standInsAllowed()).toBe(false);
+    } finally {
+      for (const [k, v] of Object.entries(keep)) set(k, v);
+    }
+  });
+});

@@ -10,7 +10,7 @@ const body = z.object({ sessionId: z.string().min(5).max(200), address: z.unknow
 
 export async function POST(req: Request, { params }: { params: Promise<{ tenant: string }> }) {
   const { tenant } = await params;
-  const slow = limited(req, tenant, "rates", 60, 3000);
+  const slow = limited(req, "rates", 60);
   if (slow) return slow;
   const parsed = body.safeParse(await readBody(req));
   if (!parsed.success) return json({ ok: false, message: "Couldn't read that address. Try again." }, 400);

@@ -4,6 +4,9 @@ import { Suspense } from "react";
 import { CheckoutFlow } from "@/components/shop/checkout";
 import { ShopFrame } from "@/components/shop/frame";
 import s from "@/components/shop/shop.module.css";
+import { demoMode } from "@/lib/env";
+import { formToken } from "@/lib/pages/form-token";
+import { inquiryFormKey } from "@/lib/sales/checkout";
 import { paymentsProviderName } from "@/lib/sales/payments";
 import { currentBuyer } from "@/lib/sales/shop";
 import { getShop } from "@/lib/sales/shop-load";
@@ -32,7 +35,7 @@ async function Checkout({ params }: { params: Params }) {
       <p className={s.lead}>
         <a href={`/p/${shop.slug}/shop`}>Back to the shop</a>
       </p>
-      <CheckoutFlow slug={shop.slug} accent={shop.accent} countries={shop.countries} collectPhone={shop.collectPhone} note={shop.checkoutNote} inquiryMessage={shop.inquiryMessage} testMode={paymentsProviderName() === "stand-in"} />
+      <CheckoutFlow slug={shop.slug} accent={shop.accent} countries={shop.countries} collectPhone={shop.collectPhone} note={shop.checkoutNote} inquiryMessage={shop.inquiryMessage} testMode={paymentsProviderName() === "stand-in"} inquiryToken={demoMode() ? "" : formToken(inquiryFormKey(shop.tenantId))} />
     </ShopFrame>
   );
 }

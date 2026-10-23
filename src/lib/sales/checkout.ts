@@ -11,12 +11,13 @@ import { appUrl } from "@/lib/env";
 import { startSeries } from "@/lib/marketing/people";
 import { tenantInfo } from "@/lib/marketing/store";
 import { type Carrier, CarrierError, type Rate } from "./carriers";
-import { checkCode, type CodeResult, holdCode, releaseHeldCode, spendHeldCode } from "./discount-codes";
+import { checkCode, type CodeResult, holdCode, lockCode, releaseHeldCode, spendHeldCode } from "./discount-codes";
 import { inquiryAlertEmail, salesSender, sendOne } from "./emails";
 import { afterOrderPaid, createOrder, nextEstimateNumber, upsertBuyer } from "./orders";
 import { pack, PackingError, type PackResult } from "./packing";
-import { type CheckoutState, PaymentsError, type PaymentsProvider, paymentsProvider } from "./payments";
+import { type CheckoutState, type PaidLine, PaymentsError, type PaymentsProvider, paymentsProvider } from "./payments";
 import { cleanItems, type CartItem, MAX_LINE_QTY, type PricedCart, priceCart } from "./pricing";
+import { variantLabel } from "./catalog";
 import { variantsForPricing } from "./products";
 import { addressComplete, type Address, addressSchema, type SalesSettings } from "./settings";
 import { type ShippingOption, shippingOptions } from "./shipping";
@@ -25,6 +26,9 @@ import { tradeBuyer } from "./trade";
 import type { OrderItem } from "./types";
 
 export const CHECKOUT_MINUTES = 60;
+
+/** What the quote request form's timing token is signed for. */
+export const inquiryFormKey = (tenantId: string) => `inquiry:${tenantId}`;
 
 export class CheckoutError extends Error {
   constructor(
@@ -179,6 +183,7 @@ export async function startCheckout(tenantId: string, slug: string, cartId: stri
   const email = input.email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 254) throw new CheckoutError("Enter your email so we can send your receipt.");
   const now = new Date();
+  const expiresAt = new Date(now.getTime() + CHECKOUT_MINUTES * 60_000);
   const prep = await withTenant(
     { tenantId, userId: "public:checkout" },
     async (tx) => {
@@ -186,22 +191,28 @@ export async function startCheckout(tenantId: string, slug: string, cartId: stri
       const cart = await loadCart(tx, cartId);
       if (!cart || cart.status === "ordered") throw new CheckoutError("That cart is empty. Add something first.", 404);
       const items = cleanItems(cart.items);
+      // Checking the code and holding a use of it happen under one lock, before Stripe is asked for anything.
+      await lockCode(tx, cart.discount_code);
       const { priced, code } = await priceFor(tx, items, { buyer, code: cart.discount_code, email, cartId: cart.id, settings, now });
       if (!priced.lines.length) throw new CheckoutError("That cart is empty. Add something first.");
       await tx.updateTable("carts").set({ email, name: input.name.trim().slice(0, 120), priced: JSON.stringify(priced), last_active_at: now }).where("id", "=", cart.id).execute();
       const conn = await readPayments(tx);
-      return { settings, cart, priced, code, conn };
+      const paying = !priced.inquiry && !priced.discountError && priced.merchandiseCents > 0 && Boolean(payments && conn.accountId && conn.chargesEnabled);
+      if (paying && code?.ok) await holdCode(tx, code, { cartId: cart.id, email, tradeAccountId: buyer.tradeAccountId, amountCents: priced.discount?.amountCents ?? 0, until: expiresAt });
+      // A checkout started earlier for this cart can't be paid once this one starts.
+      const earlier = cart.status === "checkout" ? cart.checkout_session_id : null;
+      return { settings, cart, priced, conn, earlier };
     },
     database,
   );
-  const { settings, priced, code, conn } = prep;
+  const { settings, priced, conn, earlier } = prep;
   const pub = toPublic(cartId, prep.cart.status, email, prep.cart.discount_code, priced, settings);
   if (priced.inquiry) return { kind: "inquiry", cart: pub };
   if (priced.discountError) throw new CheckoutError(priced.discountError);
   if (priced.merchandiseCents === 0) return { kind: "free", cart: pub };
   if (!payments || !conn.accountId || !conn.chargesEnabled) throw new CheckoutError("This shop isn't taking payments online yet. Contact them to order.", 409);
+  if (earlier) await payments.expireCheckout(conn.accountId, earlier);
 
-  const expiresAt = new Date(now.getTime() + CHECKOUT_MINUTES * 60_000);
   const tax = settings.store.checkout.tax && conn.tax === "active";
   let session: { sessionId: string; clientSecret: string };
   try {
@@ -210,7 +221,7 @@ export async function startCheckout(tenantId: string, slug: string, cartId: stri
       currency: settings.store.currency,
       email,
       lines: priced.lines.map((l) => ({ name: l.variant ? `${l.name} (${l.variant})` : l.name, qty: l.qty, unitCents: l.unitCents, taxCode: l.taxCode, variantId: l.variantId, image: l.photo?.startsWith("https://") ? l.photo : l.photo ? `${appUrl()}${l.photo}` : null })),
-      discount: priced.discount ? { label: priced.discount.label, amountCents: priced.discount.amountCents } : null,
+      discount: priced.discount ? { code: priced.discount.code, label: priced.discount.label, amountCents: priced.discount.amountCents } : null,
       countries: settings.store.checkout.countries,
       collectPhone: settings.store.checkout.collectPhone,
       tax,
@@ -218,16 +229,10 @@ export async function startCheckout(tenantId: string, slug: string, cartId: stri
       expiresAt,
     });
   } catch (err) {
+    await withTenant({ tenantId, userId: "public:checkout" }, (tx) => releaseHeldCode(tx, cartId), database);
     throw new CheckoutError(err instanceof PaymentsError ? "Checkout didn't start. Try again in a minute." : "Checkout didn't start.", 502);
   }
-  await withTenant(
-    { tenantId, userId: "public:checkout" },
-    async (tx) => {
-      await tx.updateTable("carts").set({ status: "checkout", checkout_session_id: session.sessionId, last_active_at: now }).where("id", "=", cartId).execute();
-      if (code?.ok) await holdCode(tx, code, { cartId, email, tradeAccountId: buyer.tradeAccountId, amountCents: priced.discount?.amountCents ?? 0, until: expiresAt });
-    },
-    database,
-  );
+  await withTenant({ tenantId, userId: "public:checkout" }, (tx) => tx.updateTable("carts").set({ status: "checkout", checkout_session_id: session.sessionId, last_active_at: now }).where("id", "=", cartId).execute(), database);
   if (payments.name === "stand-in") return { kind: "stand-in", ...session };
   return { kind: "stripe", ...session, publishableKey: payments.publishableKey ?? "", accountId: conn.accountId };
 }
@@ -300,6 +305,18 @@ function itemsOf(priced: PricedCart): OrderItem[] {
   return priced.lines.map((l) => ({ productId: l.productId, variantId: l.variantId, name: l.name, variant: l.variant, sku: l.sku, qty: l.qty, unitCents: l.unitCents, lineCents: l.lineCents }));
 }
 
+/** The order's items from what Stripe charged for, filled in from the catalog. The cart may have changed since. */
+async function paidItems(tx: Tx, lines: PaidLine[]): Promise<OrderItem[]> {
+  const variants = await variantsForPricing(
+    tx,
+    lines.map((l) => l.variantId).filter((x): x is string => Boolean(x && isUuid(x))),
+  );
+  return lines.map((l) => {
+    const v = l.variantId ? variants.get(l.variantId) : undefined;
+    return { productId: v?.productId ?? null, variantId: v?.variantId ?? null, name: v?.productName ?? l.name, variant: v ? variantLabel(v.options, v.productOptions) : "", sku: v?.sku ?? "", qty: l.qty, unitCents: l.unitCents, lineCents: l.amountCents };
+  });
+}
+
 /** Turns a completed, paid checkout into an order. Safe to call more than once. */
 export async function recordCheckout(tenantId: string, sessionId: string, database: Database = db(), payments: PaymentsProvider | null = paymentsProvider(), run: "after" | "now" | "skip" = "now"): Promise<{ orderId: string; number: number; created: boolean } | null> {
   if (!payments) return null;
@@ -316,20 +333,22 @@ export async function recordCheckout(tenantId: string, sessionId: string, databa
         (state.cartId && isUuid(state.cartId) ? await tx.selectFrom("carts").select(["id", "priced", "trade_account_id", "discount_code"]).where("id", "=", state.cartId).executeTakeFirst() : undefined);
       if (!cart) return null;
       const priced = cart.priced as PricedCart;
+      const items = state.lines.length ? await paidItems(tx, state.lines) : itemsOf(priced);
+      const code = state.discountCents > 0 ? (state.code ?? priced.discount?.code ?? "") : "";
       const order = await createOrder(tx, {
         source: "checkout",
         email: state.email || "unknown@example.com",
         name: state.name,
         phone: state.phone,
         shipTo: state.shipTo ?? {},
-        items: itemsOf(priced),
+        items,
         subtotalCents: state.subtotalCents,
         discountCents: state.discountCents,
         shippingCents: state.shippingCents,
         taxCents: state.taxCents,
         totalCents: state.totalCents,
         currency: state.currency,
-        discountCode: priced.discount?.code ?? "",
+        discountCode: code,
         shippingService: state.shippingLabel,
         cartId: cart.id,
         tradeAccountId: priced.trade ? cart.trade_account_id : null,
@@ -340,7 +359,7 @@ export async function recordCheckout(tenantId: string, sessionId: string, databa
       });
       if (order.created) {
         await tx.updateTable("carts").set({ status: "ordered", order_id: order.id }).where("id", "=", cart.id).execute();
-        await spendHeldCode(tx, cart.id, order.id);
+        await spendHeldCode(tx, cart.id, order.id, { code: code || null, email: state.email || null, tradeAccountId: priced.trade ? cart.trade_account_id : null, amountCents: state.discountCents });
       }
       return { orderId: order.id, number: order.number, created: order.created };
     },
@@ -389,6 +408,7 @@ export async function placeFreeOrder(tenantId: string, cartId: string, input: { 
       const cart = await loadCart(tx, cartId);
       if (!cart || cart.status === "ordered") throw new CheckoutError("That cart is empty.", 404);
       const items = cleanItems(cart.items);
+      await lockCode(tx, cart.discount_code);
       const { priced, code } = await priceFor(tx, items, { buyer, code: cart.discount_code, email, cartId: cart.id, settings });
       if (!priced.lines.length) throw new CheckoutError("That cart is empty.");
       if (priced.merchandiseCents !== 0 || !code?.ok) throw new CheckoutError("This order needs payment. Go back and check out.");

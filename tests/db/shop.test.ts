@@ -12,14 +12,14 @@ import { onboardingUrl, refreshPayments } from "@/lib/sales/connect";
 import { activeShares, createShare, openShare, revokeShare, salesForContact, ShareError } from "@/lib/sales/contact-share";
 import { parseEstimate } from "@/lib/sales/estimate-input";
 import { clientReply, createEstimate, getEstimate, markEstimatePaid, sendEstimate } from "@/lib/sales/estimates";
-import { placeFreeOrder, updateCart } from "@/lib/sales/checkout";
+import { CheckoutError, placeFreeOrder, quoteCheckout, recordCheckout, startCheckout, updateCart } from "@/lib/sales/checkout";
 import { saveDiscount } from "@/lib/sales/discount-codes";
 import { parseDiscount } from "@/lib/sales/discounts";
-import { paymentsProvider, standInOnboard, standInStore } from "@/lib/sales/payments";
+import { paymentsProvider, standInOnboard, standInPay, standInStore } from "@/lib/sales/payments";
 import { getProduct, saveProduct } from "@/lib/sales/products";
 import { feedProducts, loadShop, shopItem, shopItems } from "@/lib/sales/shop";
 import { decideTrade } from "@/lib/sales/trade";
-import { enterTrade, LINK_SENT, requestTradeLink, submitTradeApplication, tradeFormKey } from "@/lib/sales/trade-public";
+import { APPLIED, enterTrade, LINK_SENT, requestTradeLink, submitTradeApplication, tradeFormKey, tradeLinkCompany } from "@/lib/sales/trade-public";
 import { createTenant } from "@/lib/tenants";
 import { app, B } from "./helpers";
 
@@ -69,13 +69,13 @@ describe("trade from the shop", () => {
   const form = (token: string, email = "kai@coastbuild.example.com") => ({ token, company: "Coast Build", name: "Kai Moss", email, phone: "", website: "https://coastbuild.example.com", type: "Builder", resale: "", volume: "", message: "Ten pools a year" });
 
   it("takes an application once the form has been open a moment, and tells the team", async () => {
-    expect(await submitTradeApplication(T, form(formToken(tradeFormKey(T))), app())).toMatchObject({ ok: false, message: expect.stringContaining("That was quick") });
-    expect(await submitTradeApplication(T, form(formToken(randomUUID(), Date.now() - 5000)), app())).toMatchObject({ ok: false, message: expect.stringContaining("timed out") });
+    expect(await submitTradeApplication(T, SLUG, form(formToken(tradeFormKey(T))), app())).toMatchObject({ ok: false, message: expect.stringContaining("That was quick") });
+    expect(await submitTradeApplication(T, SLUG, form(formToken(randomUUID(), Date.now() - 5000)), app())).toMatchObject({ ok: false, message: expect.stringContaining("timed out") });
     clearOutbox();
-    expect(await submitTradeApplication(T, form(formToken(tradeFormKey(T), Date.now() - 5000)), app())).toMatchObject({ ok: true });
+    expect(await submitTradeApplication(T, SLUG, form(formToken(tradeFormKey(T), Date.now() - 5000)), app())).toMatchObject({ ok: true });
     expect(readOutbox().map((m) => m.subject)).toContain("Trade application from Coast Build");
     // Bots fill the hidden field; they're told it worked and nothing is saved.
-    expect(await submitTradeApplication(T, { ...form(formToken(tradeFormKey(T), Date.now() - 5000), "bot@example.com"), trap: "x" }, app())).toMatchObject({ ok: true });
+    expect(await submitTradeApplication(T, SLUG, { ...form(formToken(tradeFormKey(T), Date.now() - 5000), "bot@example.com"), trap: "x" }, app())).toMatchObject({ ok: true });
     expect(await tx((t) => t.selectFrom("trade_accounts").select("email").execute())).toEqual([{ email: "kai@coastbuild.example.com" }]);
   });
 
@@ -91,6 +91,11 @@ describe("trade from the shop", () => {
     const mail = readOutbox().find((m) => m.to === "kai@coastbuild.example.com")!;
     const link = new URL(/https?:\/\/\S+\/trade\/enter\?t=\S+/.exec(mail.text)![0]);
     expect(link.pathname).toBe(`/p/${SLUG}/trade/enter`);
+    expect(await tradeLinkCompany(T, link.searchParams.get("t"), app())).toBe("Coast Build");
+    // Applying again with an approved email says the same thing as ever, and sends that inbox a sign-in link.
+    clearOutbox();
+    expect(await submitTradeApplication(T, SLUG, form(formToken(tradeFormKey(T), Date.now() - 5000)), app())).toEqual({ ok: true, message: APPLIED });
+    expect(readOutbox().map((m) => m.to)).toEqual(["kai@coastbuild.example.com"]);
     const session = await enterTrade(T, link.searchParams.get("t"), app());
     expect(session).toMatch(/^\d+\.[0-9a-f-]{36}\./);
     expect(await enterTrade(T, "1.not-a-token", app())).toBeNull();
@@ -145,5 +150,53 @@ describe("estimates paid by hand", () => {
 
     expect(await markEstimatePaid(T, e.id, "test_owner", "Bank transfer", app(), pay)).toMatchObject({ ok: true });
     expect(standInStore().invoices.get(invoiceId)?.status).toBe("void");
+  });
+});
+
+describe("checkout when the cart changes", () => {
+  const buyer = { tradeAccountId: null };
+  const to = { name: "Zed Ames", company: "", phone: "", line1: "9 Bay St", line2: "", city: "Tampa", state: "FL", postal: "33606", country: "US" };
+  const paid = (id: string) => tx((t) => t.selectFrom("orders").select(["items", "total_cents"]).where("stripe_checkout_session_id", "=", id).executeTakeFirst());
+
+  it("ends an earlier checkout when a new one starts, and when the cart changes", async () => {
+    const pay = paymentsProvider()!;
+    const cart = await updateCart(T, null, { op: "add", variantId: kit, qty: 1 }, buyer, app());
+    const a = await startCheckout(T, SLUG, cart.cartId, { email: "zed@example.com", name: "Zed" }, buyer, app(), pay);
+    if (a.kind !== "stand-in") throw new Error(`Expected the stand-in, got ${a.kind}`);
+    const b = await startCheckout(T, SLUG, cart.cartId, { email: "zed@example.com", name: "Zed" }, buyer, app(), pay);
+    if (b.kind !== "stand-in") throw new Error("Expected the stand-in");
+    expect(standInStore().checkouts.get(a.sessionId)?.status).toBe("expired");
+    await updateCart(T, cart.cartId, { op: "add", variantId: kit, qty: 50 }, buyer, app());
+    expect(standInStore().checkouts.get(b.sessionId)?.status).toBe("expired");
+  });
+
+  it("records what was paid for, even if the cart changed before Stripe's message arrived", async () => {
+    const pay = paymentsProvider()!;
+    const cart = await updateCart(T, null, { op: "add", variantId: kit, qty: 1 }, buyer, app());
+    const c = await startCheckout(T, SLUG, cart.cartId, { email: "zed@example.com", name: "Zed" }, buyer, app(), pay);
+    if (c.kind !== "stand-in") throw new Error("Expected the stand-in");
+    expect(await quoteCheckout(T, c.sessionId, to, app(), pay)).toMatchObject({ ok: true });
+    standInPay(c.sessionId, null);
+    await updateCart(T, cart.cartId, { op: "add", variantId: kit, qty: 50 }, buyer, app());
+    await recordCheckout(T, c.sessionId, app(), pay, "skip");
+    const order = await paid(c.sessionId);
+    expect(order?.items).toEqual([expect.objectContaining({ qty: 1, unitCents: 2500, sku: "TSK", name: "Tile sample kit" })]);
+    expect(order?.total_cents).toBe(2500);
+  });
+
+  it("never lets two checkouts spend a single-use code", async () => {
+    const pay = paymentsProvider()!;
+    await tx((t) => saveDiscount(t, parseDiscount({ code: "ONLYONE", kind: "percent", value: 10, usage: "single_use" }), null, "test_owner"));
+    const carts = await Promise.all(
+      [1, 2, 3].map(async () => {
+        const c = await updateCart(T, null, { op: "add", variantId: kit, qty: 1 }, buyer, app());
+        return updateCart(T, c.cartId, { op: "code", code: "ONLYONE" }, buyer, app());
+      }),
+    );
+    const results = await Promise.allSettled(carts.map((c, i) => startCheckout(T, SLUG, c.cartId, { email: `racer${i}@example.com`, name: "" }, buyer, app(), pay)));
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    for (const r of results) if (r.status === "rejected") expect(r.reason).toBeInstanceOf(CheckoutError);
+    const holds = await tx((t) => t.selectFrom("discount_redemptions").select("status").where("code", "=", "ONLYONE").execute());
+    expect(holds.filter((h) => h.status === "reserved")).toHaveLength(1);
   });
 });

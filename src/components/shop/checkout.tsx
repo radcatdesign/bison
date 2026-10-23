@@ -17,7 +17,7 @@ type Address = { name: string; company: string; phone: string; line1: string; li
 type Extra = { shippingCents: number | null; taxCents: number | null; totalCents: number | null };
 type Stage = { kind: "details" } | { kind: "stripe"; start: Extract<CheckoutStart, { kind: "stripe" }> } | { kind: "stand-in"; start: Extract<CheckoutStart, { kind: "stand-in" }> } | { kind: "free" } | { kind: "inquiry" } | { kind: "done"; title: string; message: string };
 
-export type CheckoutProps = { slug: string; accent: string; countries: string[]; collectPhone: boolean; note: string; inquiryMessage: string; testMode: boolean };
+export type CheckoutProps = { slug: string; accent: string; countries: string[]; collectPhone: boolean; note: string; inquiryMessage: string; testMode: boolean; inquiryToken: string };
 
 const NO_EXTRA: Extra = { shippingCents: null, taxCents: null, totalCents: null };
 
@@ -131,7 +131,7 @@ export function CheckoutFlow(props: CheckoutProps) {
         {stage.kind === "stripe" && <StripePay key={stage.start.sessionId} start={stage.start} accent={props.accent} collectPhone={props.collectPhone} slug={slug} onTotals={setExtra} />}
         {stage.kind === "stand-in" && cart && <StandInPay start={stage.start} props={props} money={money} onTotals={setExtra} subtotal={cart.merchandiseCents} />}
         {stage.kind === "free" && cart && <FreeOrder props={props} cartId={cart.cartId} email={email} name={name} onDone={(n) => finish(`Order #${n} is placed`, `A code covered the whole order, so there's nothing to pay. We'll email ${email} when it ships.`)} />}
-        {stage.kind === "inquiry" && cart && <Inquiry slug={slug} cartId={cart.cartId} email={email} name={name} onDone={(m) => finish("Request sent", m)} />}
+        {stage.kind === "inquiry" && cart && <Inquiry slug={slug} cartId={cart.cartId} email={email} name={name} token={props.inquiryToken} onDone={(m) => finish("Request sent", m)} />}
         {props.note && <p className={s.note}>{props.note}</p>}
       </div>
 
@@ -501,9 +501,10 @@ function FreeOrder({ props, cartId, email, name, onDone }: { props: CheckoutProp
   );
 }
 
-function Inquiry({ slug, cartId, email, name, onDone }: { slug: string; cartId: string; email: string; name: string; onDone: (message: string) => void }) {
+function Inquiry({ slug, cartId, email, name, token, onDone }: { slug: string; cartId: string; email: string; name: string; token: string; onDone: (message: string) => void }) {
   const [phone, setPhone] = useState("");
   const [text, setText] = useState("");
+  const [trap, setTrap] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   return (
@@ -514,7 +515,7 @@ function Inquiry({ slug, cartId, email, name, onDone }: { slug: string; cartId: 
         e.preventDefault();
         setBusy(true);
         setMessage(null);
-        void post(`/p/${slug}/checkout/inquiry`, { cartId, email, name, phone, message: text }).then((r) => {
+        void post(`/p/${slug}/checkout/inquiry`, { cartId, email, name, phone, message: text, token, trap }).then((r) => {
           setBusy(false);
           if (r.ok) onDone(r.message ?? "We have your request.");
           else setMessage(r.message ?? "That didn't send. Try again.");
@@ -530,6 +531,8 @@ function Inquiry({ slug, cartId, email, name, onDone }: { slug: string; cartId: 
         Anything we should know? <span>Delivery dates, the job, where it&apos;s going</span>
         <textarea className={s.input} value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} />
       </label>
+      {/* People never see this field. Bots fill it in. */}
+      <input type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" className={s.trap} value={trap} onChange={(e) => setTrap(e.target.value)} />
       {message && (
         <p className={s.message} data-tone="error" role="alert">
           {message}

@@ -267,7 +267,8 @@ export async function clientReply(tenantId: string, estimateId: string, reply: C
       const e = await tx.selectFrom("estimates").selectAll().where("id", "=", estimateId).forUpdate().executeTakeFirst();
       if (!e || e.status === "draft" || e.status === "void") return { ok: false, message: "This estimate isn't open anymore." } as const;
       if (!OPEN.includes(e.status)) return { ok: false, message: e.status === "declined" ? "You declined this estimate. Ask them for a new one if you've changed your mind." : "This estimate was already approved." } as const;
-      if (new Date(reply.seen).getTime() + 1000 < e.updated_at.getTime()) return { ok: false, message: "This estimate changed while you had it open. Look it over again, then answer.", changed: true } as const;
+      const seen = new Date(reply.seen).getTime();
+      if (!Number.isFinite(seen) || seen + 1000 < e.updated_at.getTime()) return { ok: false, message: "This estimate changed while you had it open. Look it over again, then answer.", changed: true } as const;
       if (e.valid_until && dateOnly(e.valid_until)! < now.toISOString().slice(0, 10) && reply.kind === "approve") return { ok: false, message: "This estimate has expired. Ask for an updated one." } as const;
       if (reply.kind === "approve") {
         const name = reply.name.trim();
