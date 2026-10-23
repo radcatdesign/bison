@@ -17,10 +17,12 @@ export function SearchBusinessScreen(props: Props) {
   const demo = useDemoMarketing(props.tenantId);
   const client = useIsClient();
   const initial = props.storage === "browser" ? (demo.search ?? props.initial) : props.initial;
-  return <BusinessForm key={props.storage === "browser" && client ? "b" : "s"} {...props} initial={initial} />;
+  // In the demo the form starts over from this browser's saved details once the page runs.
+  const ready = props.storage !== "browser" || client;
+  return <BusinessForm key={ready ? "ready" : "first"} {...props} initial={initial} ready={ready} />;
 }
 
-function BusinessForm({ initial, storage, tenantId, canEdit }: Props) {
+function BusinessForm({ initial, storage, tenantId, canEdit, ready }: Props & { ready: boolean }) {
   const [v, setV] = useState<SearchSettings>(initial);
   const [offering, setOffering] = useState("");
   const [profile, setProfile] = useState("");
@@ -40,7 +42,7 @@ function BusinessForm({ initial, storage, tenantId, canEdit }: Props) {
     });
 
   return (
-    <fieldset className={s.group} id="business" disabled={!canEdit} data-testid="search-business">
+    <fieldset className={s.group} id="business" disabled={!canEdit} data-testid="search-business" data-ready={ready || undefined}>
       <legend>Your business, for search and AI</legend>
       <div className={s.field}>
         <label htmlFor="search-description" className={s.fieldLabel}>

@@ -1,6 +1,6 @@
 # Bison Ops architecture
 
-Status: Phase 0 (foundation) built. This document covers the whole platform so later phases fit the same frame. Sections marked **Planned** are designed but not built yet.
+Status: Phase 0 (foundation) and Marketing (Phase 3) built. This document covers the whole platform so later phases fit the same frame. Sections marked **Planned** are designed but not built yet.
 
 ## The shape of it
 
@@ -66,7 +66,7 @@ When a feature is locked, the page renders the module's pitch with an Unlock but
 
 ## Data model
 
-Built in Phase 0 (all with RLS):
+Built so far (all with RLS):
 
 | Table | Purpose | Key columns |
 |---|---|---|
@@ -85,8 +85,20 @@ Built in Phase 0 (all with RLS):
 | `pages` | Landing pages built in Marketing > Pages | `slug` (unique per tenant), `title`, `doc` (draft, json), `published_doc`, `published_at` |
 | `page_revisions` | Every agent change and every publish | `page_id`, `source` (agent, publish), `doc`, `instruction`, `reply`, `actor` |
 | `page_agent_runs` | One row per agent request, for the plan limit (insert and read only, no link to pages) | `page_id`, `actor`, `created_at` |
+| `marketing_settings` | One row per tenant, each column a JSON document checked by `src/lib/marketing/settings.ts` | `brand`, `signup` ("I am a..." choices), `offer`, `search` |
+| `files` | Uploaded logos and email images, re-encoded by sharp (no update grant) | `kind`, `content_type`, `bytes` (2 MB max), `width`, `height` |
+| `subscribers` | One per email per tenant | `email`, `name`, `kind` (the "I am a..." choice), `status`, `source`, `source_detail`, `subscribed_at`, `unsubscribed_at` |
+| `lists`, `list_items` | Lists to send to on their own | `name`; `list_id`, `subscriber_id`, `added_at` |
+| `unsubscribes` | The do-not-email list, checked by every send | `email`, `reason` (link, one-click, team, complaint, bounce, suppressed), `detail` |
+| `newsletters` | One email to send | `doc` (json), `subject`, `preheader`, `status`, `audience`, `list_id`, `scheduled_for`, `sent_at`, `recipients` |
+| `newsletter_templates` | Saved by a team from its own newsletters | `name`, `subject`, `preheader`, `doc` |
+| `sequences`, `sequence_steps` | Email series and their emails | `trigger`, `trigger_detail`, `status`, `paused_at`, `starter`; `delay_days`, `subject`, `doc` |
+| `sequence_runs` | One person in one series, ever (unique per sequence and email) | `email`, `subscriber_id`, `status`, `last_day`, `next_at`, `locked_until`, `stopped_reason` |
+| `offer_codes` | Welcome codes, one per email ever | `code`, `email`, `discount_kind`, `discount`, `expires_at`, `redeemed_at`, `redeemed_note` |
+| `email_sends` | Every email to one person, and the send queue (no delete grant) | `kind` (newsletter, series, test), `status`, `attempts`, `next_attempt_at`, `locked_until`, `provider_id` |
+| `worker_runs` | System table: when each background job last ran | `name`, `last_run_at`, `last_result` |
 
-**Planned**, added in the phase that needs them, each with the same RLS pattern: `visits`, `heat_points`, `lists`, `list_items`, `messages`, `files` (Phase 1); `products`, `estimates`, `orders`, `discounts`, `trade_accounts` (Phase 2); `newsletters`, `newsletter_sends`, `sequences`, `sequence_steps`, `sequence_runs`, `subscribers`, `unsubscribes` (Phase 3); `assistant_chats`, `assistant_lessons`, `usage_counters` (Phase 4); `translations`, `push_subscriptions` (Phase 5); `jobs` (queue table, Phase 1).
+**Planned**, added in the phase that needs them, each with the same RLS pattern: `visits`, `heat_points`, contact lists, `messages` (Phase 1); `products`, `estimates`, `orders`, `discounts`, `trade_accounts` (Phase 2); `assistant_chats`, `assistant_lessons`, `usage_counters` (Phase 4); `translations`, `push_subscriptions` (Phase 5); `jobs` (queue table, Phase 1).
 
 ## SDK contract (Planned, Phase 1)
 
@@ -170,6 +182,27 @@ A page is a small JSON document (`src/lib/pages/schema.ts`): a theme, search det
 - **Forms**: `POST /p/<tenant>/<page>/submit` accepts only the fields that page's form has, upserts a contact and records a submission (`form_type = landing-page`). The page carries a server-signed token (HMAC with the `SECRETS_KEYS` active key) saying when the form was shown; a filled hidden field, a missing or forged token, or a send under 1.5 seconds is kept as spam with no contact. A public send fills in a contact's name and phone only when they're empty. Bodies are capped at 20 KB as they're read, and sends are rate-limited per visitor and per page (in memory per server instance for now).
 - **Framing**: every route sends `frame-ancestors 'self'`, so no other site can frame the dashboard or a published page.
 - **Sample mode doesn't apply**: pages are content a company makes, not data it measures, so they save whether sample data is on or off. The public demo keeps pages in the visitor's browser instead.
+
+## Marketing email
+
+One Resend account sends for every tenant; each tenant sends From its own verified domain. The provider sits behind an `EmailProvider` interface (`src/lib/email/provider.ts`) with a Resend version (REST, batch of up to 100, `Idempotency-Key`, Domains API) and an in-memory stand-in for tests and local work (`EMAIL_PROVIDER=stand-in`, outbox at `/api/dev/outbox`, refused on Vercel).
+
+- **Emails are documents.** A newsletter or series email is JSON (`src/lib/email/schema.ts`): up to 30 sections of nine types (header, text, image, button, two columns, divider, spacer, social, welcome offer code), edited through one set of ops (`ops.ts`) and checked against the schema after every change. Links allow http(s), mailto and tel only; images are the tenant's own uploads or https. `[Add ...]` placeholders block sending.
+- **Rendering** (`render.ts`) is pure string building: table-based HTML with inline styles that holds up in Outlook, Gmail and Apple Mail, plus a plain-text version. Everything from a tenant or subscriber is escaped. Merge tags (`{first name}`, `{business name}`) fall back to a friendly word. Links to the tenant's own domain get utm tags. The builder renders the same HTML into a script-free iframe, so what you see is what's sent.
+- **Domains.** Settings, Email sending creates the domain in Resend, stores its id and records in the tenant's `integrations` row (`provider = resend`, nothing secret), and rechecks it while the page is open. Sending refuses until it's verified and the brand kit has a postal address.
+- **The queue is `email_sends`.** Send now or a due schedule expands the audience into one queued row per address (unique per newsletter and email), skipping anyone on `unsubscribes`. Due series runs get their next step queued (unique per run and step). The job (`src/lib/marketing/worker.ts`) claims rows with a 5-minute lease, renders each email with its own unsubscribe link and offer code, sends in batches of 100 with an idempotency key from the row ids, and retries failures after 2, 4 and 8 minutes. Rows more than 3 days late are canceled rather than sent stale. Network calls happen between short transactions, never inside one. `due_marketing_tenants()` (SECURITY DEFINER) lists only tenants with something due.
+- **When it runs.** `after()` runs the job for that tenant right after Send now, a signup or "start for a list" responds. `/api/cron/email` runs it for every tenant (every 5 minutes where the plan allows, see Needed 21), and the daily cron runs it as a backstop.
+- **Limits.** The monthly count is the number of `email_sends` rows this month, tests included; the app role has no delete grant, so it can't be lowered. Imports and adding by hand stop at the subscriber limit; signups don't.
+- **Unsubscribing.** Every email carries a signed link (`/u/<token>`, HMAC over the send id and time with `SECRETS_KEYS`; no email address in the URL) in its footer and in `List-Unsubscribe` with `List-Unsubscribe-Post: List-Unsubscribe=One-Click`. GET shows a page and never unsubscribes on its own; POST does. `resolve_email_send()` finds the tenant from the send id. Unsubscribing adds the email to `unsubscribes`, marks the subscriber, ends every series run and cancels queued sends.
+- **Webhooks.** `POST /api/webhooks/resend` checks the Svix signature with `RESEND_WEBHOOK_SECRET`, dedupes in `webhook_events`, finds the tenant with `resolve_email_provider_id()`, and updates the send. Hard bounces, complaints and suppressions go on the do-not-email list.
+- **Series.** `sequence_runs` holds each person's place: `last_day` and `next_at`. Starting is idempotent (one run per sequence and email, ever). Turning a series off stamps `sequences.paused_at`; turning it on shifts every run's `next_at` by the time it was off. Steps are matched by `delay_days`, so editing a series moves everyone to the right next email.
+- **Signups.** A landing page form with "Add to email list" on calls `signUp()` inside the same submit: subscriber upsert, lists, welcome code if the offer is on, and the "joined" series. A person on the do-not-email list who signs up again is taken off it, since they asked.
+- **Images** are served at `/f/<id>` by `resolve_public_file()`, with a one-year immutable cache header and `nosniff`.
+- **Sample mode** covers subscribers, codes and results (`src/lib/sample/marketing.ts`); content and settings save either way, and sending to a list is refused while sample data is on.
+
+## Search pack
+
+Published pages get `generateMetadata` (title, description, canonical, Open Graph and Twitter cards), an `opengraph-image` drawn per page, and LocalBusiness and FAQ structured data from the business details. Per tenant, `/p/<tenant>/sitemap.xml`, `/llms.txt` and `/llms-full.txt` are route handlers built live from published pages and `marketing_settings.search`, found with `resolve_marketing_tenant()` (active tenants with Marketing only). The dashboard's `robots.txt` allows `/p/` only and disallows each AI crawler for the pages of tenants that turned AI off (`ai_blocked_tenant_slugs()`).
 
 ## Billing flow
 

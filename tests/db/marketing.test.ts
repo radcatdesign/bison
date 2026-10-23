@@ -6,7 +6,7 @@ import { sql } from "kysely";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { withTenant } from "@/lib/db";
 import { clearOutbox, readOutbox } from "@/lib/email/provider";
-import { EMAIL_DOC_VERSION } from "@/lib/email/schema";
+import { EMAIL_DOC_VERSION, type EmailDoc } from "@/lib/email/schema";
 import { checkUnsubscribeToken } from "@/lib/email/tokens";
 import { createNewsletter, getNewsletter, scheduleNewsletter } from "@/lib/marketing/newsletters";
 import { emailsThisMonth, importPeople, issueOfferCode, signUp, unsubscribeEmail } from "@/lib/marketing/people";
@@ -23,7 +23,7 @@ import { A, app, B, rawAsApp } from "./helpers";
 const T = randomUUID();
 const scope = { tenantId: T, userId: "test_owner" };
 const tx = <R>(fn: Parameters<typeof withTenant<R>>[1]) => withTenant(scope, fn, app());
-const letter = (body: string) => ({ version: EMAIL_DOC_VERSION, signOff: true, fallbackName: "there", sections: [{ id: "t", type: "text" as const, body, align: "left" as const }] });
+const letter = (body: string): EmailDoc => ({ version: EMAIL_DOC_VERSION, signOff: true, fallbackName: "there", sections: [{ id: "t", type: "text" as const, body, align: "left" as const }] });
 
 beforeAll(async () => {
   await createTenant({ id: T, name: "Larkspur Floral", domain: "larkspurfloral.com", sampleData: false, owner: { userId: "test_owner", email: "owner@larkspurfloral.com", name: "Lee Owner" } }, app());

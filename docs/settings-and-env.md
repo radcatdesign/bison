@@ -56,11 +56,22 @@ Copy `.env.example` to `.env.local` for local work. Tests use `.env.test` (commi
 | `ANTHROPIC_MODEL` | No | Defaults to `claude-sonnet-5-5`. |
 | `PAGE_AGENT` | No | `stand-in` forces the offline helper even when a key is set. Tests use it so they never call Claude. |
 
+### Email (Marketing)
+
+| Variable | Required | What it does |
+|---|---|---|
+| `RESEND_API_KEY` | To send email | One Resend account sends for every company, each From its own verified domain. Without it, nothing sends: Marketing still builds and saves, and sending screens say email isn't set up yet. |
+| `RESEND_WEBHOOK_SECRET` | With Resend | The signing secret (`whsec_...`) of the Resend webhook pointed at `/api/webhooks/resend`. Turn on `email.delivered`, `email.bounced`, `email.complained` and `email.suppressed`. Bounces and complaints go on the do-not-email list from these. |
+| `EMAIL_FALLBACK_FROM` | No | A From address on a domain verified in Bison Ops' own Resend account, like `Bison Ops <test@mail.bisonops.com>`. Lets companies send themselves a test before their own domain is verified. Only tests ever use it. |
+| `EMAIL_PROVIDER` | No | `stand-in` keeps every email in memory and shows it at `/api/dev/outbox` (tests and local work). Refused on Vercel production, so real email can never quietly go nowhere. |
+
+Unsubscribe links are signed with `SECRETS_KEYS`. Keep old key versions in the list after rotating, or unsubscribe links in emails already sent stop working.
+
 ### Jobs and app
 
 | Variable | Required | What it does |
 |---|---|---|
-| `CRON_SECRET` | On Vercel | Vercel Cron sends it as a bearer token to `/api/cron/daily`. The job briefly locks the events table while it adds or drops a month, so it runs at 2:17 AM Pacific. |
+| `CRON_SECRET` | On Vercel | Vercel Cron sends it as a bearer token to `/api/cron/daily` and `/api/cron/email`. The daily job briefly locks the events table while it adds or drops a month, so it runs at 2:17 AM Pacific; it runs the email job too, as a backstop. `/api/cron/email` sends scheduled newsletters and series emails and should run every 5 minutes: on Vercel Pro add it to `vercel.json`, on the free plan point an outside scheduler at it with the same bearer token. |
 | `APP_URL` | Yes | The dashboard's public URL, used in Stripe return links and in published page addresses (`/p/<company>/<page>`). |
 | `PW_CHROMIUM_PATH` | No | Points Playwright at a Chromium other than its own download. |
 | `E2E_PORT` | No | Port for the end-to-end test server. Default 3100. |
@@ -75,6 +86,12 @@ Copy `.env.example` to `.env.local` for local work. Tests use `.env.test` (commi
 | Time zone | `settings.timezone` | America/Los_Angeles | Day boundaries for charts. Editable in Phase 1. |
 | Retention | `tenants.retention_days` | 400 days | Daily job removes older events. |
 | Privacy rules | `settings.privacy` | Empty (defaults apply) | Filled in Phase 1 with the EU/UK and Global Privacy Control rules. |
+| Email sending | Settings, Email sending | None | The company's own sending domain (a subdomain is suggested), its From name and address, and Reply-To. Owners and admins. Stored in the `integrations` row for `resend` (nothing secret: the Resend key is Bison Ops' own). Reply-To and From name are in the brand kit. |
+| Brand kit | Marketing, Brand kit | Accent color, Arial | Logo, colors, email fonts, button shape, footer address and social links. Every email and new page uses it. The address is required before anything sends. |
+| Subscriber types | Marketing, Subscribers | Three per industry | The "I am a..." question and its choices on signup forms. |
+| Welcome offer | Marketing, Welcome offer | Off | Percent or amount off, days it lasts, code prefix and fine print. Codes go out in the welcome email. |
+| Search pack | Marketing, Search pack | Built from business details | Business summary, services, areas served, contact details, and whether AI crawlers may read the pages. |
+| Setup progress | Worked out on each visit | Nothing done | Every step ticks off from what's saved or verified. The one exception, submitting the sitemap to Google and Bing, is a "Mark as done" saved in `marketing_settings.search`. |
 
 ## Product config (in code, no deploy needed to read, one deploy to change)
 
@@ -85,5 +102,7 @@ Copy `.env.example` to `.env.local` for local work. Tests use `.env.test` (commi
 | `src/config/roles.ts` | What each role sees and may do. |
 | `src/config/modes.ts` | The three modes and their pages. |
 | `src/config/releases.ts` | The Updates page. |
+| `src/lib/marketing/setup-steps.ts` | Every Marketing setup step, its words and what marks it done. |
+| `src/lib/email/templates.ts` | Newsletter and series templates. |
 | `src/config/brand.ts` | Product name and default colors, for white-label later. |
 | `src/lib/sample/industries.ts` | What sample data looks like per industry. |

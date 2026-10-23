@@ -34,10 +34,11 @@ export function BrandKitScreen(props: Props) {
   const client = useIsClient();
   const initial = props.storage === "browser" ? (demo.brand ?? props.initial) : props.initial;
   // In the demo the saved kit is read once the page runs in the browser; start the form from it.
-  return <BrandKitEditor key={props.storage === "browser" && client ? "browser" : "first"} {...props} initial={initial} />;
+  const ready = props.storage !== "browser" || client;
+  return <BrandKitEditor key={ready ? "ready" : "first"} {...props} initial={initial} ready={ready} />;
 }
 
-function BrandKitEditor({ initial, defaults, storage, tenantId, canEdit, baseUrl }: Props) {
+function BrandKitEditor({ initial, defaults, storage, tenantId, canEdit, baseUrl, ready }: Props & { ready: boolean }) {
   const [kit, setKit] = useState<BrandKit>(initial);
   const [savedJson, setSavedJson] = useState(JSON.stringify(initial));
   const [device, setDevice] = useState<EmailDevice>("desktop");
@@ -84,7 +85,7 @@ function BrandKitEditor({ initial, defaults, storage, tenantId, canEdit, baseUrl
   };
 
   return (
-    <div className={s.split} data-testid="brand-kit">
+    <div className={s.split} data-testid="brand-kit" data-ready={ready || undefined}>
       <div className={s.formCol}>
         <fieldset className={s.group} id="name" disabled={!canEdit}>
           <legend>Name</legend>

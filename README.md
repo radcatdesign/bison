@@ -2,7 +2,7 @@
 
 A multi-tenant platform from Bison (by RADCAT) that plugs into any company's website: analytics, a contacts inbox, and paid modules for sales, marketing and an AI assistant.
 
-**Status:** Phase 0 (foundation) is built and tested. See `docs/architecture.md` for how it fits together and `docs/decisions.md` for open questions.
+**Status:** Phase 0 (foundation) and the Marketing module are built and tested. See `docs/architecture.md` for how it fits together and `docs/decisions.md` for open questions.
 
 ## Run it locally
 
@@ -34,11 +34,11 @@ pnpm test:e2e                       # builds, starts and tests at 390 px and 144
 pnpm check                          # all of the above plus typecheck and lint
 ```
 
-Database tests connect as the real app role, so they test row-level security itself. The end-to-end tests use the dev sign-in and test billing, so they never touch Clerk or Stripe.
+Database tests connect as the real app role, so they test row-level security itself. The end-to-end tests use the dev sign-in, test billing, the offline page agent and an in-memory email outbox, so they never touch Clerk, Stripe, Claude or Resend.
 
 ## Demo deploy (no database)
 
-Set one environment variable on the Vercel project, `DEMO_MODE=1`, and leave `DATABASE_URL` unset. The site shows two made-up companies with sample data, a picker to sign in as any of four made-up people, and saves nothing on the server. Owners can unlock Marketing, Sales and add-ons with a trial or subscription to see them open up, and build landing pages in Marketing > Pages; both stay in their own browser. Add `ANTHROPIC_API_KEY` (with a spend limit) to let the demo's page agent use Claude. `pnpm test:e2e:demo` tests it.
+Set one environment variable on the Vercel project, `DEMO_MODE=1`, and leave `DATABASE_URL` unset. The site shows two made-up companies with sample data, a picker to sign in as any of four made-up people, and saves nothing on the server. Owners can unlock Marketing, Sales and add-ons with a trial or subscription to see them open up, and set up all of Marketing: brand kit, newsletters, email series, welcome offer, search pack and landing pages. It all stays in their own browser, and sending is pretend. Add `ANTHROPIC_API_KEY` (with a spend limit) to let the demo's page agent use Claude. `pnpm test:e2e:demo` tests it.
 
 ## Deploy (Vercel + Neon)
 
@@ -48,6 +48,8 @@ Set one environment variable on the Vercel project, `DEMO_MODE=1`, and leave `DA
 4. In Stripe, create a monthly price for each module and add-on, set the `STRIPE_PRICE_*` variables, and add a webhook to `/api/webhooks/stripe` for `customer.subscription.created`, `.updated` and `.deleted`.
 5. Set `SECRETS_KEYS`, `SECRETS_ACTIVE_KEY`, `CRON_SECRET` and `APP_URL`. Every variable is explained in `docs/settings-and-env.md`.
 6. For the page agent in Marketing > Pages, set `ANTHROPIC_API_KEY`. Without it, an offline helper answers instead.
+7. For Marketing email, make one Resend account, set `RESEND_API_KEY`, and add a webhook to `/api/webhooks/resend` for `email.delivered`, `email.bounced`, `email.complained` and `email.suppressed` with its secret in `RESEND_WEBHOOK_SECRET`. Each company verifies its own domain from Settings, Email sending.
+8. Run `/api/cron/email` every 5 minutes for scheduled newsletters and series: add it to `vercel.json` on Vercel Pro, or point an outside scheduler at it with `Authorization: Bearer <CRON_SECRET>`. The daily cron covers it once a day until then.
 
 ## Where things are
 
@@ -60,6 +62,9 @@ src/lib/access/       can(tenant, feature)
 src/lib/billing/      trials, subscriptions, Stripe webhook sync
 src/lib/repo/         what screens read: database and sample versions
 src/lib/sample/       sample data generator
+src/lib/email/        email documents, rendering, provider (Resend or stand-in), signed links
+src/lib/marketing/    subscribers, sending, the email job, series, offer, search pack, setup steps
+src/lib/pages/        landing page documents, templates and the page agent
 src/app/(portal)/     the dashboard
 src/proxy.ts          sign-in gate (Next 16's name for middleware)
 tests/unit|db|e2e     tests

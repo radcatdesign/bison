@@ -20,10 +20,12 @@ export function OfferSettingsScreen(props: Props) {
   const client = useIsClient();
   const initial = props.storage === "browser" ? (demo.offer ?? props.initial) : props.initial;
   const inEmail = props.storage === "browser" ? Boolean(demo.series?.some((x) => x.steps.some((st) => st.doc.sections.some((y) => y.type === "offer")))) || !demo.series : props.inEmail;
-  return <OfferForm key={props.storage === "browser" && client ? "b" : "s"} {...props} initial={initial} inEmail={inEmail} />;
+  // In the demo the form starts over from this browser's saved offer once the page runs.
+  const ready = props.storage !== "browser" || client;
+  return <OfferForm key={ready ? "ready" : "first"} {...props} initial={initial} inEmail={inEmail} ready={ready} />;
 }
 
-function OfferForm({ initial, storage, tenantId, canEdit, brand, baseUrl, timeZone, inEmail, now }: Props) {
+function OfferForm({ initial, storage, tenantId, canEdit, brand, baseUrl, timeZone, inEmail, now, ready }: Props & { ready: boolean }) {
   const [o, setO] = useState<OfferSettings>(initial);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [pending, start] = useTransition();
@@ -53,7 +55,7 @@ function OfferForm({ initial, storage, tenantId, canEdit, brand, baseUrl, timeZo
     });
 
   return (
-    <div className={s.split} data-testid="offer-settings">
+    <div className={s.split} data-testid="offer-settings" data-ready={ready || undefined}>
       <div className={s.formCol}>
         <fieldset className={s.group} disabled={!canEdit}>
           <legend>The offer</legend>

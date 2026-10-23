@@ -160,3 +160,94 @@ test("pages: start from a template in the demo", async ({ page }) => {
   await page.goto("/marketing/pages");
   await expect(page.getByTestId("page-card")).toHaveCount(2);
 });
+
+test("marketing: set up step by step, all in this browser", async ({ page, browser }) => {
+  await pick(page, "dev_ada");
+  await page.goto("/marketing/setup");
+  await expect(page.getByTestId("setup-progress")).toContainText("of 17 steps done");
+  await expect(page.getByTestId("step-sending.domain")).toHaveAttribute("data-next", "true");
+  // Sample subscribers count, so bringing people in is already done.
+  await expect(page.getByTestId("step-subscribers.add")).toHaveAttribute("data-done", "true");
+
+  // Sending: the domain and records are pretend, and say so.
+  await page.goto("/settings/email");
+  await page.getByTestId("add-domain").click();
+  await expect(page.getByTestId("dns-records")).toBeVisible();
+  await page.getByTestId("check-domain").click();
+  await expect(page.getByTestId("records-notice")).toContainText("In the demo the records count as added");
+  await page.getByTestId("send-setup-test").click();
+  await expect(page.getByTestId("test-notice")).toContainText("This is a demo, so nothing was sent.");
+
+  // Brand kit: the address saves in this browser.
+  await page.goto("/marketing/brand");
+  // The form starts over from this browser's saved kit once the page is running.
+  await expect(page.getByTestId("brand-kit")).toHaveAttribute("data-ready", "true");
+  await page.locator("#bk-address").fill("12 Cove Road, Tampa, FL 33602");
+  await page.getByTestId("save-brand").click();
+  await expect(page.getByTestId("brand-notice")).toContainText("Saved in this browser.");
+
+  await page.goto("/marketing/setup");
+  for (const step of ["sending.domain", "sending.verify", "sending.test", "brand.look", "brand.address"]) {
+    await expect(page.getByTestId(`step-${step}`)).toHaveAttribute("data-done", "true");
+  }
+
+  // The search pack's one manual step can be marked done.
+  await page.getByTestId("step-search.submit").getByRole("button", { name: "Mark as done" }).click();
+  await expect(page.getByTestId("step-search.submit")).toHaveAttribute("data-done", "true");
+
+  // Someone else's browser starts over.
+  const other = await browser.newPage({ baseURL: test.info().project.use.baseURL });
+  await pick(other, "dev_ada");
+  await other.goto("/marketing/setup");
+  await expect(other.getByTestId("step-sending.domain")).toHaveAttribute("data-next", "true");
+  await other.close();
+});
+
+test("marketing: build a newsletter from a template and pretend to send it", async ({ page }) => {
+  await pick(page, "dev_ada");
+  await page.goto("/marketing/newsletters");
+  await expect(page.getByTestId("newsletter-row")).toHaveCount(1);
+  await page.getByTestId("newsletter-template-t-letter").click();
+  await page.waitForURL(/\/marketing\/newsletters\/(?!$).+/);
+  await expect(page.getByTestId("problem-count")).toHaveText("2 to fix");
+  await page.getByTestId("btab-email").click();
+  await page.locator("#email-subject").fill("Pool season, {first name}");
+  await page.getByTestId("btab-sections").click();
+  await page.getByTestId("email-section").first().locator("button").first().click();
+  await page.getByTestId("email-section-form-text").getByLabel("Text", { exact: true }).fill("Hi {first name},\n\nOpening day is booking up. [Book yours](https://brightwaterpools.com/book).");
+  await expect(page.getByTestId("problem-count")).toHaveCount(0);
+  await expect(page.getByTestId("save-state")).toHaveText("Saved in this browser");
+
+  await page.getByTestId("open-send").click();
+  await page.getByTestId("confirm-send").click();
+  // Marked as sent in this browser, then back to the list.
+  await page.waitForURL(/\/marketing\/newsletters$/);
+  await expect(page.getByTestId("newsletter-row")).toHaveCount(2);
+  await expect(page.getByTestId("newsletter-row").first()).toContainText("Pool season");
+  await expect(page.getByTestId("newsletter-row").first()).toContainText("Sent");
+  await page.getByTestId("newsletter-row").first().click();
+  await expect(page.getByTestId("demo-sent")).toContainText("This one went out.");
+});
+
+test("marketing: subscribers, series, offer and search pack show sample data and their steps", async ({ page }) => {
+  await pick(page, "dev_ada");
+  await page.goto("/marketing/subscribers");
+  await expect(page.getByTestId("subscriber-row").first()).toBeVisible();
+  await expect(page.getByTestId("setup-subscribers")).toBeVisible();
+  await page.goto("/marketing/series");
+  await expect(page.getByTestId("series-card").first()).toBeVisible();
+  await page.goto("/marketing/offer");
+  await expect(page.getByTestId("code-row").first()).toBeVisible();
+  await page.goto("/marketing/search");
+  await expect(page.getByTestId("file-sitemap.xml")).toBeVisible();
+  await expect(page.getByTestId("robots-lines")).toBeVisible();
+
+  // Business details save in this browser and tick off their steps.
+  await expect(page.getByTestId("search-business")).toHaveAttribute("data-ready", "true");
+  await page.locator("#search-description").fill("We build and light pools around Tampa Bay.");
+  await page.locator("#search-phone").fill("+1 813 555 0100");
+  await page.getByTestId("save-search").click();
+  await expect(page.getByTestId("search-message")).toHaveText("Saved in this browser.");
+  await expect(page.getByTestId("step-search.describe")).toHaveAttribute("data-done", "true");
+  await expect(page.getByTestId("step-search.contact")).toHaveAttribute("data-done", "true");
+});
