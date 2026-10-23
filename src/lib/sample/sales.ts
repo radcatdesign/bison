@@ -146,7 +146,7 @@ const CATALOGS: Record<string, SampleProduct[]> = {
       options: [{ name: "Classes", values: ["5 classes", "10 classes", "20 classes"] }],
       variants: [v({ Classes: "5 classes" }, 11000, "PACK-5", 0, "", { flatShipCents: 0 }), v({ Classes: "10 classes" }, 20000, "PACK-10", 0, "", { flatShipCents: 0 }), v({ Classes: "20 classes" }, 36000, "PACK-20", 0, "", { flatShipCents: 0, compareAtCents: 40000 })],
     },
-    { slug: "unlimited-monthly", name: "Unlimited monthly", category: "Memberships", color: "#d9480f", description: "Every ride and every HIIT class, as many as you can book. Renews each month.", options: [], variants: [v({}, 18900, "UNL-MONTH", 0, "", { flatShipCents: 0 })] },
+    { slug: "unlimited-monthly", name: "Unlimited monthly", category: "Memberships", color: "#d9480f", description: "A month of every ride and every HIIT class, as many as you can book.", options: [], variants: [v({}, 18900, "UNL-MONTH", 0, "", { flatShipCents: 0 })] },
     { slug: "shoe-rental", name: "Shoe rental", category: "Add-ons", color: "#fd7e14", description: "Clip-in cycling shoes for one class. Free with your first ride.", options: [], variants: [v({}, 300, "SHOE-1", 0, "", { flatShipCents: 0 })] },
     {
       slug: "grip-socks",

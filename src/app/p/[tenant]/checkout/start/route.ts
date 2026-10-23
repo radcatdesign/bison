@@ -2,7 +2,7 @@ import { z } from "zod";
 import { demoMode } from "@/lib/env";
 import { startCheckout } from "@/lib/sales/checkout";
 import { currentBuyer, loadShop } from "@/lib/sales/shop";
-import { DEMO_CHECKOUT } from "@/lib/sales/shop-demo";
+import { demoCheckoutNote, demoShop } from "@/lib/sales/shop-demo";
 import { failure, json, limited, readBody } from "@/lib/sales/shop-http";
 
 // Starts paying for a cart. Public. Answers with what the checkout page shows
@@ -16,7 +16,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ tenant:
   if (slow) return slow;
   const parsed = body.safeParse(await readBody(req));
   if (!parsed.success) return json({ ok: false, message: "Couldn't read that. Reload the page and try again." }, 400);
-  if (demoMode()) return json({ ok: false, message: DEMO_CHECKOUT }, 409);
+  if (demoMode()) return json({ ok: false, message: demoCheckoutNote(demoShop(tenant)?.edition ?? "bison") }, 409);
   try {
     const shop = await loadShop(tenant);
     if (!shop) return json({ ok: false, message: "This shop isn't open." }, 404);

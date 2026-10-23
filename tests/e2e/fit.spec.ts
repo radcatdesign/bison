@@ -16,11 +16,15 @@ async function signIn(page: Page, userId: "dev_maya" | "dev_theo" | "dev_jo" | "
 async function navLabels(page: Page): Promise<string[]> {
   if (isPhone(page)) {
     await page.getByRole("button", { name: "Menu" }).click();
-    const labels = await page.getByRole("dialog", { name: "Menu" }).getByRole("link").allTextContents();
+    const sheet = page.getByRole("dialog", { name: "Menu" });
+    await sheet.getByRole("link").first().waitFor();
+    const labels = await sheet.getByRole("link").allTextContents();
     await page.getByRole("button", { name: "Close menu" }).click();
     return labels.map((l) => l.trim());
   }
-  return (await page.getByRole("navigation", { name: /pages$/ }).getByRole("link").allTextContents()).map((l) => l.trim());
+  const nav = page.getByRole("navigation", { name: /pages$/ }).filter({ visible: true });
+  await nav.getByRole("link").first().waitFor();
+  return (await nav.getByRole("link").allTextContents()).map((l) => l.trim());
 }
 
 test.describe("Fit Funnels", () => {
@@ -45,9 +49,9 @@ test.describe("Fit Funnels", () => {
   test("a club sees its own name, mark, color and words", async ({ page }) => {
     await signIn(page, "dev_maya");
     await expect(page).toHaveTitle(/· Fit Funnels$/);
-    await expect(t(page, "tenant-name")).toHaveText("Summit Strength Club");
+    await expect(page.getByText("Summit Strength Club").filter({ visible: true }).first()).toBeVisible();
     await expect(page.locator('[data-edition="fit"]').first()).toBeVisible();
-    await expect(page.locator('[data-mark="fit"]').first()).toBeVisible();
+    await expect(page.locator('[data-mark="fit"]').filter({ visible: true }).first()).toBeVisible();
     const accent = await page.locator('[data-edition="fit"]').first().evaluate((el) => getComputedStyle(el).getPropertyValue("--bo-accent").trim());
     expect(accent).toBe("#f76b15");
     const icon = await page.locator('link[rel="icon"]').first().getAttribute("href");
@@ -73,12 +77,60 @@ test.describe("Fit Funnels", () => {
     await expect(page).toHaveURL(/\/sign-in\?edition=fit/);
   });
 
+  test("a studio unlocks Marketing, publishes a funnel page, and its form lands in Leads", async ({ page, browser, baseURL }) => {
+    await signIn(page, "dev_jo");
+    await page.goto("/marketing");
+    await t(page, "unlock").click();
+    await t(page, "start-trial").getByRole("button").click();
+    await expect(t(page, "billing-status")).toHaveText("On as a trial. 14 days left.");
+
+    // The club's own templates.
+    await page.goto("/marketing/pages");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Funnel pages");
+    await expect(t(page, "template-free-pass")).toBeVisible();
+    await expect(t(page, "template-quote")).toHaveCount(0);
+    await t(page, "template-tour").click();
+    await t(page, "use-template").click();
+    await page.waitForURL(/\/marketing\/pages\/[0-9a-f-]{36}$/);
+    await t(page, "publish").click();
+    await expect(t(page, "page-status")).toHaveText("Live");
+    const href = await t(page, "editor-notice").getByRole("link").getAttribute("href");
+    const live = new URL(href!).pathname;
+    expect(live).toMatch(/^\/p\/pulse-cycle-studio\//);
+
+    // A visitor books a tour.
+    const visitor = await browser.newContext({ baseURL });
+    const v = await visitor.newPage();
+    await v.goto(live);
+    await expect(v.getByRole("heading", { level: 1 })).toHaveText("Come see the club");
+    const email = `rider-${Date.now()}@example.com`;
+    const form = v.getByTestId("page-form");
+    await form.getByLabel("Name", { exact: true }).fill("Rae Rider");
+    await form.getByLabel("Email", { exact: true }).fill(email);
+    await v.waitForTimeout(1600);
+    await form.getByRole("button").click();
+    await expect(v.getByTestId("page-form-done")).toHaveText("Thanks. We'll get back to you soon.");
+    await visitor.close();
+
+    await page.goto("/analyze/contacts");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Leads");
+    await expect(t(page, "contacts")).toContainText(email);
+
+    // Membership sales, in the club's words.
+    await page.goto("/sales");
+    await t(page, "unlock").click();
+    await t(page, "start-trial").getByRole("button").click();
+    await expect(t(page, "billing-status")).toHaveText("On as a trial. 14 days left.");
+    await page.goto("/sales/products");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Memberships");
+  });
+
   test("Bison Ops companies are unchanged", async ({ page }) => {
     await page.goto("/sign-in");
     await page.getByTestId("sign-in-dev_ada").click();
     await page.waitForURL(/\/(analyze|marketing|sales)/);
     await expect(page).toHaveTitle(/· Bison Ops$/);
-    await expect(page.locator('[data-mark="bison"]').first()).toBeVisible();
+    await expect(page.locator('[data-mark="bison"]').filter({ visible: true }).first()).toBeVisible();
     await page.goto("/sales");
     expect(await navLabels(page)).toEqual(expect.arrayContaining(["Estimates", "Orders", "Products", "Discount codes", "Trade accounts", "Carts"]));
   });

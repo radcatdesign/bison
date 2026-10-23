@@ -74,9 +74,9 @@ export async function saveProductAction(id: string | null, input: unknown): Prom
   const say = sayOf(ctx);
   if (id !== null && !isUuid(id)) return { ok: false, message: say("That product isn't here anymore.", "That membership isn't here anymore.") };
   try {
-    const product = parseProduct(input);
+    const product = parseProduct(input, ctx.tenant.edition);
     const saved = await withTenant(scopeOf(ctx), async (tx) => {
-      const pid = await saveProduct(tx, product, { id });
+      const pid = await saveProduct(tx, product, { id, edition: ctx.tenant.edition });
       await audit(tx, { action: id ? "product.updated" : "product.created", targetType: "product", targetId: pid, detail: { name: product.name, status: product.status } });
       return pid;
     });
@@ -142,7 +142,7 @@ export async function importProductsAction(formData: FormData): Promise<SalesRes
       if (!(file instanceof File) || !file.size) return { ok: false, message: "Pick a file to import." };
       if (file.size > MAX_IMPORT_BYTES) return { ok: false, message: "That file is over 5 MB. Split it into smaller files." };
       const text = await file.text();
-      result = /\.(xml|tsv|txt)$/i.test(file.name) || text.trimStart().startsWith("<") ? importFeed(text) : importCsv(text);
+      result = /\.(xml|tsv|txt)$/i.test(file.name) || text.trimStart().startsWith("<") ? importFeed(text) : importCsv(text, ctx.tenant.edition);
     }
     if (!result.products.length) return { ok: false, message: result.skipped.length ? `Nothing could be imported. ${result.skipped.slice(0, 3).join(" ")}` : say("No products found in that.", "Nothing to import in that.") };
     const source = result.format === "csv" ? "csv" : result.format === "feed" ? "feed" : "shopify";

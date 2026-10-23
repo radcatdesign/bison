@@ -3,7 +3,7 @@ import "server-only";
 // catalog, and a cart that lives entirely in its own id (the items are packed
 // into it), so adding, changing and codes all work without saving anything.
 // Checkout stops with a plain note.
-import { editionFor } from "@/config/editions";
+import { type EditionKey, editionFor, sayFor } from "@/config/editions";
 import { DEV_TENANTS } from "@/lib/auth/dev-people";
 import { appUrl } from "@/lib/env";
 import { sampleCatalog, sampleUuid } from "@/lib/sample/sales";
@@ -14,6 +14,9 @@ import type { Shop } from "./shop";
 import { type ShopItem, toShopItem } from "./shop-view";
 
 export const DEMO_CHECKOUT = "This is a demo, so checkout stops here. In your own shop, this is where Stripe takes the payment.";
+
+/** The demo checkout's note in this edition's words. */
+export const demoCheckoutNote = (edition: EditionKey) => sayFor(edition)(DEMO_CHECKOUT, "This is a demo, so checkout stops here. In your club's online store, this is where Stripe takes the payment.");
 
 const tenantFor = (slug: string) => Object.values(DEV_TENANTS).find((t) => t.domain.split(".")[0] === slug) ?? null;
 

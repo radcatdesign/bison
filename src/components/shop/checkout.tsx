@@ -7,7 +7,7 @@
 import { loadStripe, type StripeCheckoutLoadActionsSuccess, type StripeCheckoutSession } from "@stripe/stripe-js";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { useEditionKey, useSay } from "@/components/edition";
+import { useEdition, useEditionKey, useSay } from "@/components/edition";
 import type { Say } from "@/config/editions";
 import type { CheckoutStart } from "@/lib/sales/checkout";
 import { formatMoney } from "@/lib/sales/money";
@@ -264,6 +264,7 @@ function AddressFields({ value, onChange, countries, phone, disabled }: { value:
 function StripePay({ start, accent, collectPhone, slug, onTotals }: { start: Extract<CheckoutStart, { kind: "stripe" }>; accent: string; collectPhone: boolean; slug: string; onTotals: (e: Extra) => void }) {
   const say = useSay();
   const club = useEditionKey() === "fit";
+  const fallbackAccent = useEdition().defaultAccent;
   const shipRef = useRef<HTMLDivElement>(null);
   const payRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<StripeCheckoutLoadActionsSuccess | null>(null);
@@ -286,7 +287,7 @@ function StripePay({ start, accent, collectPhone, slug, onTotals }: { start: Ext
       if (!stripe || cancelled) return;
       const checkout = stripe.initCheckoutElementsSdk({
         clientSecret: start.clientSecret,
-        elementsOptions: { appearance: { theme: "stripe", variables: { colorPrimary: /^#[0-9a-f]{6}$/i.test(accent) ? accent : "#3b5bff", borderRadius: "10px" } } },
+        elementsOptions: { appearance: { theme: "stripe", variables: { colorPrimary: /^#[0-9a-f]{6}$/i.test(accent) ? accent : fallbackAccent, borderRadius: "10px" } } },
       });
       checkout.on("change", seen);
       const loaded = await checkout.loadActions();
@@ -337,7 +338,7 @@ function StripePay({ start, accent, collectPhone, slug, onTotals }: { start: Ext
       cancelled = true;
       cleanup();
     };
-  }, [start, accent, collectPhone, slug, onTotals]);
+  }, [start, accent, fallbackAccent, collectPhone, slug, onTotals]);
 
   async function payNow() {
     const actions = actionsRef.current;
