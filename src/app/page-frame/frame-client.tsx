@@ -8,7 +8,7 @@ type Shown = { doc: PageDoc; brand: string; selectedId: string | null };
 
 /** Messages between the editor and this frame. Both sides check who sent them. */
 export type ToFrame = { type: "bo-page"; doc: unknown; brand: string; selectedId: string | null; scrollTo?: string | null };
-export type FromFrame = { type: "bo-frame-ready" } | { type: "bo-select"; id: string };
+export type FromFrame = { type: "bo-frame-ready" } | { type: "bo-frame-boot" } | { type: "bo-frame-error"; message: string } | { type: "bo-select"; id: string };
 
 export function FrameClient() {
   const [shown, setShown] = useState<Shown | null>(null);

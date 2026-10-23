@@ -55,6 +55,7 @@ export function Canvas({ doc, brand, device = "desktop", selectedId = null, onSe
       if (!frameRef.current || e.source !== frameRef.current.contentWindow) return;
       const data = e.data as FromFrame | null;
       if (data?.type === "bo-frame-ready") setReady((n) => n + 1);
+      if (data?.type === "bo-frame-error") console.warn("Page preview:", data.message);
       if (data?.type === "bo-select" && typeof data.id === "string") onSelectRef.current?.(data.id);
     };
     window.addEventListener("message", onMessage);
