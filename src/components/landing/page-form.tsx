@@ -1,18 +1,14 @@
 "use client";
 
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useState } from "react";
 import type { SectionOf } from "@/lib/pages/schema";
 import { FormFields, formClasses } from "./landing-page";
 
 /** The working form on a published landing page. Sends to Contacts. */
-export function PageForm({ section, endpoint }: { section: SectionOf<"form">; endpoint: string }) {
+/** `token` is signed by the server when the page renders; it tells the server how long the form was open. */
+export function PageForm({ section, endpoint, token }: { section: SectionOf<"form">; endpoint: string; token: string }) {
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
-  // When the form appeared. A send faster than a person could manage is kept as spam.
-  const started = useRef<number | null>(null);
-  useEffect(() => {
-    started.current = Date.now();
-  }, []);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -23,7 +19,7 @@ export function PageForm({ section, endpoint }: { section: SectionOf<"form">; en
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ formId: section.id, fields, trap: String(data.get("website") ?? ""), elapsedMs: started.current ? Date.now() - started.current : 0 }),
+        body: JSON.stringify({ formId: section.id, fields, trap: String(data.get("website") ?? ""), token }),
       });
       const body = (await res.json().catch(() => ({}))) as { message?: string };
       setMessage(body.message ?? (res.ok ? section.success : "This wasn't sent. Try again in a minute."));

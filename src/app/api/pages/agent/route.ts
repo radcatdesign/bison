@@ -8,10 +8,10 @@ import { isUuid } from "@/lib/db";
 import { demoMode, pageAgentName } from "@/lib/env";
 import { runPageAgent } from "@/lib/pages/agent";
 import { type AgentEvent, type AgentTurn, MAX_HISTORY, MAX_INSTRUCTION } from "@/lib/pages/agent/types";
-import { agentRunsThisMonth, getPage, recordAgentRun } from "@/lib/pages/repo";
+import { getPage, recordAgentRun, startAgentRun } from "@/lib/pages/repo";
 import { PageDocError, parsePageDoc } from "@/lib/pages/schema";
 import { getPortalContext, scopeOf } from "@/lib/portal";
-import { allow } from "@/lib/rate-limit";
+import { allow, clientIp } from "@/lib/rate-limit";
 
 export const maxDuration = 60;
 
@@ -51,13 +51,16 @@ export async function POST(req: Request) {
   const pageId = typeof body.pageId === "string" ? body.pageId : "";
   if (!demo) {
     if (!isUuid(pageId) || !(await getPage(scope, pageId))) return refuse(404, "That page doesn't exist. It may have been deleted.");
+    // Counted before it runs, so a stopped or failed request still counts.
     const limit = CATALOG["module:marketing"].limits.pageAgentRunsPerMonth ?? 0;
-    if ((await agentRunsThisMonth(scope)) >= limit) {
-      return refuse(429, `You've used all ${limit} agent requests this month. You can still edit by hand, and requests reset on the 1st.`);
-    }
+    const run = await startAgentRun(scope, { pageId, actor: ctx.member.email, limit });
+    if (!run.ok) return refuse(429, `You've used all ${limit} agent requests this month. You can still edit by hand, and requests reset on the 1st.`);
   } else if (pageAgentName() === "claude") {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    if (!allow(`page-agent:${ip}`, 20, 60 * 60 * 1000)) return refuse(429, "The demo agent is busy. Try again in an hour, or edit the page by hand.");
+    // The public demo: a speed bump per visitor and per server instance. The
+    // spend limit on the API key is what actually caps the cost.
+    if (!allow(`page-agent:${clientIp(req)}`, 20, 60 * 60 * 1000) || !allow("page-agent:demo", 300, 24 * 60 * 60 * 1000)) {
+      return refuse(429, "The demo agent is busy. Try again later, or edit the page by hand.");
+    }
   }
 
   const encoder = new TextEncoder();

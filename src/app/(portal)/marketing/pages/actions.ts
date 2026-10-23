@@ -14,9 +14,10 @@ import { publicPageUrl } from "@/lib/pages/urls";
 
 export type PageActionResult = { ok: boolean; message: string; url?: string; savedAt?: string };
 
-async function pagesContext(action: Action): Promise<{ ctx: PortalContext; error: string | null }> {
+/** Taking a page down or deleting it works without the plan, so a lapsed trial can always clean up. */
+async function pagesContext(action: Action, { needsPlan = true } = {}): Promise<{ ctx: PortalContext; error: string | null }> {
   const ctx = await getPortalContext();
-  if (!can(ctx.tenant, "marketing.pages")) return { ctx, error: "Pages are part of Marketing. Unlock Marketing to build pages." };
+  if (needsPlan && !can(ctx.tenant, "marketing.pages")) return { ctx, error: "Pages are part of Marketing. Unlock Marketing to build pages." };
   if (!may(ctx.member.role, action)) return { ctx, error: action === "pages.publish" ? "Your role can't publish landing pages." : "Your role can't change landing pages." };
   if (demoMode()) return { ctx, error: "This is a demo, so pages stay in your browser." };
   return { ctx, error: null };
@@ -74,7 +75,7 @@ export async function publishPageAction(id: string, doc: unknown): Promise<PageA
 }
 
 export async function unpublishPageAction(id: string): Promise<PageActionResult> {
-  const { ctx, error } = await pagesContext("pages.publish");
+  const { ctx, error } = await pagesContext("pages.publish", { needsPlan: false });
   if (error) return { ok: false, message: error };
   try {
     await unpublishPage(scopeOf(ctx), id);
@@ -85,7 +86,7 @@ export async function unpublishPageAction(id: string): Promise<PageActionResult>
 }
 
 export async function deletePageAction(id: string): Promise<PageActionResult> {
-  const { ctx, error } = await pagesContext("pages.edit");
+  const { ctx, error } = await pagesContext("pages.edit", { needsPlan: false });
   if (error) return { ok: false, message: error };
   try {
     await deletePage(scopeOf(ctx), id);

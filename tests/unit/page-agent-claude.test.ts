@@ -82,7 +82,9 @@ describe("the Claude page agent", () => {
 
     // The page and the request go in the last user turn, after the earlier conversation.
     expect(requests[0].messages.map((m) => m.role)).toEqual(["user", "assistant", "user"]);
-    expect(String(requests[0].messages[2].content)).toContain("Build a dark quote page");
+    expect(JSON.stringify(requests[0].messages[2].content)).toContain("Build a dark quote page");
+    // The page is cached so later rounds don't pay for it again.
+    expect(JSON.stringify(requests[0].messages[2].content)).toContain('"cache_control":{"type":"ephemeral"}');
     expect(requests[0].tools.map((t) => t.name)).toEqual(["add_section", "update_section", "remove_section", "move_section", "set_theme", "set_seo"]);
   });
 

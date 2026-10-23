@@ -146,7 +146,8 @@ export async function runClaude(input: AgentInput, emit: Emit, signal?: AbortSig
     messages.push(m);
   }
   if (messages.length && messages[messages.length - 1].role === "user") messages.pop();
-  messages.push({ role: "user", content: pageMessage(input.doc, input.instruction) });
+  // Cached, so the page isn't billed again on each round of tool calls.
+  messages.push({ role: "user", content: [{ type: "text", text: pageMessage(input.doc, input.instruction), cache_control: { type: "ephemeral" } }] });
 
   let doc = input.doc;
   const changes: string[] = [];

@@ -17,7 +17,8 @@ export function FrameClient() {
     const post = (msg: FromFrame) => window.parent.postMessage(msg, "*");
 
     const onMessage = (e: MessageEvent) => {
-      if (e.source !== window.parent) return;
+      // Only the editor that framed this page, on this app's own address.
+      if (e.source !== window.parent || e.origin !== window.location.origin) return;
       const data = e.data as Partial<ToFrame> | null;
       if (data?.type !== "bo-page") return;
       const parsed = pageDocSchema.safeParse(data.doc);

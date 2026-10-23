@@ -180,6 +180,14 @@ export interface PageRevisionsTable {
   created_at: Timestamp;
 }
 
+export interface PageAgentRunsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  page_id: string | null;
+  actor: Generated<string>;
+  created_at: Timestamp;
+}
+
 export interface WebhookEventsTable {
   provider: string;
   event_id: string;
@@ -200,6 +208,7 @@ export interface DB {
   events: EventsTable;
   pages: PagesTable;
   page_revisions: PageRevisionsTable;
+  page_agent_runs: PageAgentRunsTable;
   webhook_events: WebhookEventsTable;
 }
 

@@ -4,6 +4,7 @@ import { cache, Suspense } from "react";
 import { LandingPage } from "@/components/landing/landing-page";
 import { PageForm } from "@/components/landing/page-form";
 import { demoMode } from "@/lib/env";
+import { formToken } from "@/lib/pages/form-token";
 import { getPublishedPage } from "@/lib/pages/repo";
 
 // A published landing page. Public: no session is read, and only the published
@@ -31,7 +32,8 @@ async function Published({ params }: { params: Params }) {
   const page = await load(tenant, slug);
   if (!page) notFound();
   const endpoint = `/p/${tenant}/${slug}/submit`;
-  return <LandingPage doc={page.doc} brand={page.brand} renderForm={(section) => <PageForm section={section} endpoint={endpoint} />} />;
+  const token = formToken(page.pageId);
+  return <LandingPage doc={page.doc} brand={page.brand} renderForm={(section) => <PageForm section={section} endpoint={endpoint} token={token} />} />;
 }
 
 export default function PublishedPage({ params }: { params: Params }) {

@@ -148,20 +148,35 @@ export async function agentTurns(scope: TenantScope, pageId: string, limit = 12,
   return rows.reverse().map((r) => ({ instruction: r.instruction, reply: r.reply, at: r.created_at }));
 }
 
+const monthStart = sql<Date>`date_trunc('month', now() at time zone 'utc') at time zone 'utc'`;
+
 /** Agent requests since the start of this calendar month (UTC), for the plan limit. */
 export async function agentRunsThisMonth(scope: TenantScope, database?: Database): Promise<number> {
   const row = await withTenant(
     scope,
-    (tx) =>
-      tx
-        .selectFrom("page_revisions")
-        .select(sql<number>`count(*)`.as("n"))
-        .where("source", "=", "agent")
-        .where("created_at", ">=", sql<Date>`date_trunc('month', now() at time zone 'utc') at time zone 'utc'`)
-        .executeTakeFirstOrThrow(),
+    (tx) => tx.selectFrom("page_agent_runs").select(sql<number>`count(*)`.as("n")).where("created_at", ">=", monthStart).executeTakeFirstOrThrow(),
     database,
   );
   return Number(row.n);
+}
+
+/**
+ * Counts an agent request before it runs, so stopped or failed runs count too.
+ * A per-tenant lock makes the check and the count one step, so requests sent at
+ * the same moment can't all slip under the limit.
+ */
+export async function startAgentRun(scope: TenantScope, input: { pageId: string | null; actor: string; limit: number }, database?: Database): Promise<{ ok: true } | { ok: false; used: number }> {
+  return withTenant(
+    scope,
+    async (tx) => {
+      await sql`select pg_advisory_xact_lock(hashtextextended('page-agent:' || ${scope.tenantId}, 0))`.execute(tx);
+      const { n } = await tx.selectFrom("page_agent_runs").select(sql<number>`count(*)`.as("n")).where("created_at", ">=", monthStart).executeTakeFirstOrThrow();
+      if (Number(n) >= input.limit) return { ok: false as const, used: Number(n) };
+      await tx.insertInto("page_agent_runs").values({ page_id: input.pageId, actor: input.actor }).execute();
+      return { ok: true as const };
+    },
+    database,
+  );
 }
 
 export async function publishPage(scope: TenantScope, id: string, actor: string, database?: Database): Promise<{ slug: string }> {

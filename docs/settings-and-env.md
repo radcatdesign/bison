@@ -46,13 +46,13 @@ Copy `.env.example` to `.env.local` for local work. Tests use `.env.test` (commi
 | Variable | Required | What it does |
 |---|---|---|
 | `SECRETS_KEYS` | Yes | Comma-separated `version:base64key` pairs, 32 bytes each. Tenant API keys and tokens are encrypted with these. |
-| `SECRETS_ACTIVE_KEY` | Yes | Which version encrypts new values. To rotate: add a key, make it active, re-encrypt stored values with `rotateSecret`, then remove the old key. |
+| `SECRETS_ACTIVE_KEY` | Yes | Which version encrypts new values and signs landing page form tokens. To rotate: add a key, make it active, re-encrypt stored values with `rotateSecret`, then remove the old key. |
 
 ### Page agent
 
 | Variable | Required | What it does |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | For the Claude agent | Marketing > Pages builds with Claude when set. Without it, an offline helper answers that builds from a brief and follows short, direct changes. For the public demo, use a key with a monthly spend limit; the demo also limits each visitor's network address to 20 requests an hour. |
+| `ANTHROPIC_API_KEY` | For the Claude agent | Marketing > Pages builds with Claude when set. Without it, an offline helper answers that builds from a brief and follows short, direct changes. For the public demo, use a key from its own workspace with a monthly spend limit; that limit is the real cap. The demo also slows each visitor to 20 requests an hour and 300 a day overall, counted per server instance, so it's a speed bump rather than a guarantee. |
 | `ANTHROPIC_MODEL` | No | Defaults to `claude-sonnet-5-5`. |
 | `PAGE_AGENT` | No | `stand-in` forces the offline helper even when a key is set. Tests use it so they never call Claude. |
 

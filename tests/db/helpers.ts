@@ -20,6 +20,7 @@ export const TENANT_TABLES = [
   "events",
   "pages",
   "page_revisions",
+  "page_agent_runs",
 ] as const;
 
 let appDb: Database | null = null;

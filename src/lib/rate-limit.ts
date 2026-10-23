@@ -13,3 +13,8 @@ export function allow(key: string, limit: number, windowMs: number, now = Date.n
   b.count++;
   return true;
 }
+
+/** The visitor's address. Vercel sets x-real-ip itself; x-forwarded-for is the fallback elsewhere. */
+export function clientIp(req: Request): string {
+  return req.headers.get("x-real-ip")?.trim() || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+}
