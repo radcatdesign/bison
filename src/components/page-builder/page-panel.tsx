@@ -17,6 +17,10 @@ const FONTS: { value: PageTheme["font"]; label: string; family: string }[] = [
 type Props = {
   doc: PageDoc;
   meta: { title: string; slug: string; status: PageStatus; publicUrl: string | null };
+  /** A version in an A/B test: only its look can change; the name, address and search details are the page's. */
+  lookOnly?: boolean;
+  /** The page is in a running A/B test. */
+  inTest?: boolean;
   storage: "server" | "browser";
   publicBase: string;
   canPublish: boolean;
@@ -43,7 +47,7 @@ function Choice<T extends string>({ label, value, options, onChange }: { label: 
   );
 }
 
-export function PagePanel({ doc, meta, storage, publicBase, canPublish, accentDefault, onTheme, onSeo, onRename, onUnpublish, onDelete }: Props) {
+export function PagePanel({ doc, meta, lookOnly, inTest, storage, publicBase, canPublish, accentDefault, onTheme, onSeo, onRename, onUnpublish, onDelete }: Props) {
   const [title, setTitle] = useState(meta.title);
   const [slug, setSlug] = useState(meta.slug);
   const [renameMsg, setRenameMsg] = useState<Result | null>(null);
@@ -98,6 +102,16 @@ export function PagePanel({ doc, meta, storage, publicBase, canPublish, accentDe
 
         <Choice label="Corners" value={doc.theme.corners} options={[{ value: "sharp", label: "Sharp" }, { value: "soft", label: "Soft" }, { value: "round", label: "Round" }]} onChange={(corners) => onTheme({ corners })} />
       </section>
+
+      {lookOnly ? (
+        <section className={s.panelSection} aria-labelledby="version-note">
+          <h2 id="version-note" className={s.panelHeading}>
+            Name, address and search
+          </h2>
+          <p className={s.hint}>Every version shares the page&apos;s name, address and search details, so search engines see one page. Change those on the page itself.</p>
+        </section>
+      ) : (
+        <>
 
       <section className={s.panelSection} aria-labelledby="address">
         <h2 id="address" className={s.panelHeading}>
@@ -166,8 +180,9 @@ export function PagePanel({ doc, meta, storage, publicBase, canPublish, accentDe
               <a href={meta.publicUrl ?? "#"} target="_blank" rel="noreferrer" className="link">
                 {(meta.publicUrl ?? "").replace(/^https?:\/\//, "")}
               </a>
-              {meta.status === "changed" && ". You have changes that aren't live yet; press Update to publish them."}
+              {meta.status === "changed" && (inTest ? ". You have changes that aren't live yet; they can go live once the A/B test ends." : ". You have changes that aren't live yet; press Update to publish them.")}
             </p>
+            {inTest && <p className={s.hint}>Taking the page offline ends its A/B test and keeps A, the page as it was.</p>}
             {canPublish && (
               <button type="button" className="btn" onClick={onUnpublish}>
                 Take it offline
@@ -197,6 +212,8 @@ export function PagePanel({ doc, meta, storage, publicBase, canPublish, accentDe
           </button>
         )}
       </section>
+        </>
+      )}
     </div>
   );
 }

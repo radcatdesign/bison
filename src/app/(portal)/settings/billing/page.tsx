@@ -30,6 +30,7 @@ const LIMIT_LABELS: Record<keyof Limits, string> = {
   translatedStringsPerMonth: "Translated lines a month",
   translatedStringsPerVisitorPerDay: "Translated lines per visitor a day",
   pageAgentRunsPerMonth: "Page agent requests a month",
+  runningPageTests: "A/B tests running at once",
   products: "Products",
   tradeAccounts: "Trade accounts",
 };

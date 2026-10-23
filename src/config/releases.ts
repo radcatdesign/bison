@@ -4,6 +4,20 @@ export type Release = { version: string; date: string; title: string; changes: s
 
 export const RELEASES: Release[] = [
   {
+    version: "0.5.0",
+    date: "2026-10-23",
+    title: "A/B tests",
+    changes: [
+      "Test a landing page against versions of it. B starts as a copy of the live page; change it in the same editor, by hand or with the agent. Add a C to try two ideas at once.",
+      "Choose what counts as a win: a form send or a click on any button. Choose the split, or keep it even.",
+      "Each visitor sees one version and keeps seeing it, without a cookie. Bots, link previews and your own team aren't counted.",
+      "Results say in a sentence whether there's a winner yet, with each version's rate, how it compares with A and the chance it's really better. Nothing is called before a week and 100 visitors on each version, and a lead has to hold for 3 days in a row.",
+      "End a test and keep any version. The one you keep goes live right away. Or let a test end on its own once one version is clearly ahead.",
+      "Setup steps on the A/B tests page walk you through your first test.",
+      "In the demo, read through two example tests and their results.",
+    ],
+  },
+  {
     version: "0.4.0",
     date: "2026-10-23",
     title: "Sales",

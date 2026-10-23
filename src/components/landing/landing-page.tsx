@@ -47,7 +47,7 @@ function T({ children }: { children: string | undefined }) {
 function Button({ cta, kind = "primary" }: { cta: Cta; kind?: "primary" | "secondary" }) {
   const external = /^https?:/i.test(cta.href);
   return (
-    <a href={cta.href} className={kind === "primary" ? s.primary : s.secondary} {...(external ? { rel: "noopener noreferrer" } : {})}>
+    <a href={cta.href} className={kind === "primary" ? s.primary : s.secondary} data-cta="" {...(external ? { rel: "noopener noreferrer" } : {})}>
       <T>{cta.label}</T>
       {kind === "primary" && <ArrowRight aria-hidden="true" />}
     </a>
@@ -372,7 +372,7 @@ export function LandingPage({ doc, brand, selectedId, builder, renderForm, signu
           {brand}
         </span>
         {heroCta && (
-          <a href={heroCta.href} className={s.barCta}>
+          <a href={heroCta.href} className={s.barCta} data-cta="">
             <T>{heroCta.label}</T>
           </a>
         )}

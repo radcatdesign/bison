@@ -46,7 +46,7 @@ Copy `.env.example` to `.env.local` for local work. Tests use `.env.test` (commi
 | Variable | Required | What it does |
 |---|---|---|
 | `SECRETS_KEYS` | Yes | Comma-separated `version:base64key` pairs, 32 bytes each. Tenant API keys and tokens are encrypted with these. |
-| `SECRETS_ACTIVE_KEY` | Yes | Which version encrypts new values and signs landing page form tokens. To rotate: add a key, make it active, re-encrypt stored values with `rotateSecret`, then remove the old key. |
+| `SECRETS_ACTIVE_KEY` | Yes | Which version encrypts new values, signs landing page form tokens, and keys which A/B test version each visitor is placed in (rotating it moves visitors between versions mid-test, so rotate between tests if you can). To rotate: add a key, make it active, re-encrypt stored values with `rotateSecret`, then remove the old key. |
 
 ### Page agent
 
@@ -103,6 +103,7 @@ Estimate links, trade sign-in links and shared contact links are signed with `SE
 | Subscriber types | Marketing, Subscribers | Three per industry | The "I am a..." question and its choices on signup forms. |
 | Welcome offer | Marketing, Welcome offer | Off | Percent or amount off, days it lasts, code prefix and fine print. Codes go out in the welcome email. |
 | Search pack | Marketing, Search pack | Built from business details | Business summary, services, areas served, contact details, and whether AI crawlers may read the pages. |
+| A/B tests | Marketing, A/B tests | None | Per test: the page, what counts (form sends or button clicks), the split (even, at least 10% each), and whether it ends on its own with a clear winner. Stored on `page_tests` and `page_test_versions`; up to 5 running at once with Marketing. |
 | Setup progress | Worked out on each visit | Nothing done | Every step ticks off from what's saved or verified. The one exception, submitting the sitemap to Google and Bing, is a "Mark as done" saved in `marketing_settings.search`. |
 | Payments | Settings, Payments | Not connected | The company's own Stripe account through Connect. Owners and admins connect it; only an owner can disconnect. The account id is in the `integrations` row for `stripe`. |
 | Shipping | Settings, Shipping | Flat, free | Ship-from address, boxes (three to start), rates from a carrier, flat or free, handling, free over an amount, and ShipStation for fulfillment. Carrier keys are encrypted and can't be read back. Stored in `sales_settings.shipping` and `integrations`. |

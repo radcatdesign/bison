@@ -28,6 +28,7 @@ export const FEATURES = {
   "marketing.welcome-offer": ["module:marketing"],
   "marketing.seo": ["module:marketing"],
   "marketing.pages": ["module:marketing"],
+  "marketing.tests": ["module:marketing"],
 
   // AI Assistant
   "assistant.widget": ["module:assistant"],

@@ -236,6 +236,7 @@ describe("setup steps", () => {
     newsletters: { count: 0, tested: false, sentOrScheduled: false },
     offer: { saved: false, on: false, inEmail: false },
     search: { described: false, contact: false, publishedPage: false, submitted: false },
+    tests: { publishedPage: false, created: false, started: false, ended: false, canStart: false },
   };
 
   it("starts with sending, and says who can do owner-only steps", () => {
@@ -260,5 +261,15 @@ describe("setup steps", () => {
     const p = progressOf(buildSetup(all));
     expect(p.next).toBeNull();
     expect(p.done).toBe(p.total);
+  });
+
+  it("keeps A/B tests optional, and says who starts one", () => {
+    const tests = buildSetup(none).find((t) => t.key === "tests")!;
+    expect(tests.optional).toBe(true);
+    expect(tests.steps.map((x) => x.key)).toEqual(["tests.page", "tests.version", "tests.start", "tests.keep"]);
+    expect(tests.steps[2].blockedNote).toBe("Someone who can publish pages starts the test.");
+    const started = buildSetup({ ...none, tests: { publishedPage: true, created: true, started: true, ended: false, canStart: true } }).find((t) => t.key === "tests")!;
+    expect(started.steps.map((x) => x.done)).toEqual([true, true, true, false]);
+    expect(started.steps[2].blockedNote).toBeUndefined();
   });
 });

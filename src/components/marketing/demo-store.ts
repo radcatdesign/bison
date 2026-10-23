@@ -83,5 +83,7 @@ export function demoSetupFacts(d: DemoMarketing, base: { subscribers: number; li
     newsletters: { count: d.newsletters?.length ?? 0, tested: Boolean(d.tested), sentOrScheduled: Boolean(d.newsletters?.some((n) => n.status !== "draft")) },
     offer: { saved: Boolean(d.offer), on: Boolean(d.offer?.on), inEmail: Boolean(d.series?.some((s) => s.steps.some((st) => st.doc.sections.some((x) => x.type === "offer")))) },
     search: { described: Boolean(d.search?.description), contact: Boolean(d.search?.phone || d.search?.email), publishedPage: false, submitted: Boolean(d.search?.submitted) },
+    // The demo's example tests: one has run its course, one is running on the example page.
+    tests: { publishedPage: true, created: true, started: true, ended: true, canStart: true },
   };
 }

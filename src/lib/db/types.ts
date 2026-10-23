@@ -605,6 +605,57 @@ export interface DiscountRedemptionsTable {
   updated_at: Timestamp;
 }
 
+export type PageTestGoal = "form" | "click";
+export type PageTestStatus = "draft" | "running" | "ended";
+export type PageTestEndReason = "" | "team" | "winner" | "unpublished";
+
+export interface PageTestsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  page_id: string;
+  name: string;
+  hypothesis: Generated<string>;
+  goal: Generated<PageTestGoal>;
+  status: Generated<PageTestStatus>;
+  auto_end: Generated<boolean>;
+  started_at: TimestampNullable;
+  ended_at: TimestampNullable;
+  end_reason: Generated<PageTestEndReason>;
+  kept_variant_id: string | null;
+  created_by: Generated<string>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface PageTestVersionsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  test_id: string;
+  key: "a" | "b" | "c";
+  name: Generated<string>;
+  doc: ColumnType<unknown | null, unknown | string | null | undefined, unknown | string | null>;
+  weight: Generated<number>;
+  visitors: Generated<number>;
+  conversions: Generated<number>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface PageTestVisitsTable {
+  tenant_id: TenantId;
+  test_id: string;
+  version_id: string;
+  day: ColumnType<string, string, string>;
+  visitor: string;
+  converted: Generated<boolean>;
+}
+
+export interface PageTestSaltsTable {
+  tenant_id: TenantId;
+  day: ColumnType<string, string, string>;
+  salt: Buffer;
+}
+
 export interface ContactSharesTable {
   id: Generated<string>;
   tenant_id: TenantId;
@@ -657,6 +708,10 @@ export interface DB {
   orders: OrdersTable;
   discount_redemptions: DiscountRedemptionsTable;
   contact_shares: ContactSharesTable;
+  page_tests: PageTestsTable;
+  page_test_versions: PageTestVersionsTable;
+  page_test_visits: PageTestVisitsTable;
+  page_test_salts: PageTestSaltsTable;
 }
 
 export type Tenant = Selectable<TenantsTable>;

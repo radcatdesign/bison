@@ -8,6 +8,7 @@ import { sql } from "kysely";
 import { audit } from "@/lib/audit";
 import { type Database, db, isUuid, type TenantScope, withTenant } from "@/lib/db";
 import { findPlaceholders, type PageDoc, pageDocSchema, RESERVED_PAGE_SLUGS, SLUG_PATTERN, slugifyPage } from "./schema";
+import { endTestsForUnpublished } from "./tests";
 
 export type PageStatus = "draft" | "published" | "changed";
 
@@ -185,12 +186,16 @@ export async function publishPage(scope: TenantScope, id: string, actor: string,
   return withTenant(
     scope,
     async (tx) => {
-      const row = await tx.selectFrom("pages").select(["doc", "slug"]).where("id", "=", id).executeTakeFirst();
+      // Locked first, so a test can't start (or end) on this page halfway through.
+      const row = await tx.selectFrom("pages").select(["doc", "slug"]).where("id", "=", id).forUpdate().executeTakeFirst();
       if (!row) throw new PageInputError("That page doesn't exist.");
       const doc = readDoc(row.doc);
       if (doc.sections.length === 0) throw new PageInputError("This page is empty. Add a section before you publish.");
       const left = findPlaceholders(doc);
       if (left.length) throw new PageInputError(`Fill in ${left.length === 1 ? "the placeholder" : `all ${left.length} placeholders`} before you publish. They're marked in yellow, starting with "${left[0].text}".`);
+      // A running A/B test serves a copy of the page as it was; publishing now would change nothing visitors see.
+      const test = await tx.selectFrom("page_tests").select("name").where("page_id", "=", id).where("status", "=", "running").executeTakeFirst();
+      if (test) throw new PageInputError(`This page is in the A/B test "${test.name}". End the test first, then publish your changes.`);
       await tx.updateTable("pages").set({ published_doc: JSON.stringify(doc), published_at: new Date() }).where("id", "=", id).execute();
       await tx.insertInto("page_revisions").values({ page_id: id, source: "publish", doc: JSON.stringify(doc), actor }).execute();
       await audit(tx, { action: "page.published", targetType: "page", targetId: id, detail: { slug: row.slug } });
@@ -205,6 +210,8 @@ export async function unpublishPage(scope: TenantScope, id: string, database?: D
     scope,
     async (tx) => {
       await tx.updateTable("pages").set({ published_doc: null, published_at: null }).where("id", "=", id).execute();
+      // A test on a page that's offline has nothing to show; it ends, keeping A.
+      await endTestsForUnpublished(tx, id, scope.userId ?? "team");
       await audit(tx, { action: "page.unpublished", targetType: "page", targetId: id });
     },
     database,

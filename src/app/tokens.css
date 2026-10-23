@@ -31,6 +31,8 @@
   --bo-accent-text: color-mix(in oklab, var(--bo-accent) 88%, var(--bo-ink));
   /* For lines and dots on charts: full strength in light, lifted in dark */
   --bo-accent-vivid: var(--bo-accent);
+  /* A second chart color, for a third line next to neutral and the accent */
+  --bo-chart-2: #eb6834;
   --bo-accent-soft: color-mix(in oklab, var(--bo-accent) 10%, var(--bo-surface));
   --bo-accent-line: color-mix(in oklab, var(--bo-accent) 35%, var(--bo-line));
   --bo-focus: 0 0 0 3px color-mix(in oklab, var(--bo-accent) 28%, transparent);
@@ -104,6 +106,7 @@
     --bo-warn: #f5b546;
     --bo-accent-text: color-mix(in oklab, var(--bo-accent) 70%, white);
     --bo-accent-vivid: color-mix(in oklab, var(--bo-accent) 82%, white);
+    --bo-chart-2: #d95926;
     --bo-accent-soft: color-mix(in oklab, var(--bo-accent) 16%, var(--bo-surface));
     --bo-accent-line: color-mix(in oklab, var(--bo-accent) 45%, var(--bo-line));
     --bo-focus: 0 0 0 3px color-mix(in oklab, var(--bo-accent) 40%, transparent);
@@ -133,6 +136,7 @@
   --bo-warn: #f5b546;
   --bo-accent-text: color-mix(in oklab, var(--bo-accent) 70%, white);
   --bo-accent-vivid: color-mix(in oklab, var(--bo-accent) 82%, white);
+  --bo-chart-2: #d95926;
   --bo-accent-soft: color-mix(in oklab, var(--bo-accent) 16%, var(--bo-surface));
   --bo-accent-line: color-mix(in oklab, var(--bo-accent) 45%, var(--bo-line));
   --bo-focus: 0 0 0 3px color-mix(in oklab, var(--bo-accent) 40%, transparent);

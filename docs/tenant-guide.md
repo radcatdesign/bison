@@ -90,6 +90,20 @@ Pages are in Marketing. Describe the page you want in plain words: who it's for,
 
 Desktop, tablet and phone buttons show the page at each size. On a phone, Preview is its own tab.
 
+## Testing a page (A/B tests)
+
+A test shows some visitors your page as it is (A) and some a changed version (B), then tells you which one gets more people to act. Open **Marketing**, then **A/B tests**. The steps at the top tick off as you go.
+
+1. **Publish the page first.** A test needs a live page to compare against, and a few hundred visitors to learn anything, so pick one that already gets traffic.
+2. **Start a test.** Press **New test**, pick the page, name the test, and choose what counts as a win: someone sending the form, or someone clicking any button. Write down what you expect, if you like. It keeps everyone honest later.
+3. **Change B.** B starts as a copy of the live page. Press **Edit B** and change it in the usual editor, by hand or by asking the agent. Change one thing, like the headline, the offer or the button, so you know what made the difference. Press **Done** to go back. Want to try two ideas? Add a C.
+4. **Check the split.** Half see A and half see B unless you change it. Each version needs at least 10%.
+5. **Start it.** The checklist says what's left. Once it starts, the versions and the split are locked, and the page can't be published until the test ends.
+6. **Read the results.** The test page says in a sentence where things stand. Each version shows its visitors, its rate, how it compares with A and the chance it's really better. Give it at least a week and 100 visitors on each version; nothing is called before then, and a version has to stay clearly ahead for 3 days in a row before it's called the winner, so a lucky streak can't decide it.
+7. **Keep the winner.** Press **End the test** and pick the version to keep. If it's B or C, it goes live right away. Or tick "End on its own" and it ends itself once one version is clearly ahead.
+
+Each visitor sees the same version every time, and no cookie is set. Bots, link previews and anyone signed in to Bison Ops in that browser aren't counted. Your team can still look at the page; they just don't move the numbers. Starting and ending a test needs a role that can publish pages.
+
 ## Setting up Sales
 
 Open **Sales**, then **Setup**. Like Marketing, it lists every step in order, ticks each off when it's really done, and each tool shows its own steps at the top of its page. Plan on about an hour, most of it adding products.

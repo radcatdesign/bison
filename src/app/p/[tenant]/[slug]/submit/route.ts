@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { demoMode } from "@/lib/env";
 import { runEmailWork } from "@/lib/marketing/worker";
 import { submitPageForm } from "@/lib/pages/submit";
+import { recordGoal, visitorFrom } from "@/lib/pages/tests";
 import { allow, clientIp } from "@/lib/rate-limit";
 
 // Form sends from a published landing page. Public: no session, and the page
@@ -46,6 +47,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ tenant:
     const result = await submitPageForm(tenant, slug, (body ?? {}) as Record<string, unknown>);
     // Day 0 of a series goes right away, not whenever the job next runs.
     if (result.ok && result.queued && result.tenantId) after(() => runEmailWork({ tenantId: result.tenantId, budgetMs: 30_000 }).then(() => undefined));
+    // A form send counts toward the page's A/B test, for the version they saw. Spam and the team's own sends don't.
+    const who = visitorFrom(req.headers);
+    const { tenantId, pageId } = result.ok ? result : { tenantId: undefined, pageId: undefined };
+    if (result.ok && !result.spam && tenantId && pageId && !who.team) {
+      const version = (body as { version?: unknown } | null)?.version;
+      after(() => recordGoal(tenantId, pageId, "form", version, who).then(() => undefined, (err) => console.error("counting a page test goal failed", err)));
+    }
     return Response.json({ message: result.message }, { status: result.ok ? 200 : result.status });
   } catch (err) {
     console.error("page form failed", err);

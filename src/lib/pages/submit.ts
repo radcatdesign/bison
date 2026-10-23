@@ -2,21 +2,45 @@ import "server-only";
 // Form sends from published landing pages. They land in Contacts like any other
 // form: one contact per email address, one submission per send.
 import { sql } from "kysely";
-import { type Database, db, withTenant } from "@/lib/db";
+import { type Database, db, isUuid, withTenant } from "@/lib/db";
 import { signUp, startSeries } from "@/lib/marketing/people";
 import { getMarketingSettings, tenantInfo } from "@/lib/marketing/store";
 import { checkFormToken } from "./form-token";
 import { getPublishedPage } from "./repo";
+import { type PageDoc, pageDocSchema } from "./schema";
 
-export type SubmitInput = { formId?: unknown; fields?: unknown; trap?: unknown; token?: unknown };
-export type SubmitResult = { ok: true; message: string; tenantId?: string; queued?: boolean } | { ok: false; status: number; message: string };
+export type SubmitInput = { formId?: unknown; fields?: unknown; trap?: unknown; token?: unknown; version?: unknown };
+/** `spam` sends get the same answer as real ones; `pageId` lets the caller count an A/B test goal. */
+export type SubmitResult = { ok: true; message: string; tenantId?: string; pageId?: string; queued?: boolean; spam?: boolean } | { ok: false; status: number; message: string };
+
+/** The page as this visitor saw it: a version of a running A/B test, or the published page. */
+async function versionDoc(tenantId: string, pageId: string, versionId: unknown, database: Database): Promise<PageDoc | null> {
+  if (typeof versionId !== "string" || !isUuid(versionId)) return null;
+  const row = await withTenant(
+    { tenantId, userId: "public:page-form" },
+    (tx) =>
+      tx
+        .selectFrom("page_test_versions as v")
+        .innerJoin("page_tests as t", (j) => j.onRef("t.id", "=", "v.test_id").onRef("t.tenant_id", "=", "v.tenant_id"))
+        .select("v.doc")
+        .where("v.id", "=", versionId)
+        .where("t.page_id", "=", pageId)
+        .where("t.status", "=", "running")
+        .executeTakeFirst(),
+    database,
+  );
+  const parsed = row?.doc ? pageDocSchema.safeParse(typeof row.doc === "string" ? JSON.parse(row.doc) : row.doc) : null;
+  return parsed?.success ? parsed.data : null;
+}
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function submitPageForm(tenantSlug: string, pageSlug: string, input: SubmitInput, database: Database = db(), now = Date.now()): Promise<SubmitResult> {
   const page = await getPublishedPage(tenantSlug, pageSlug, database);
   if (!page) return { ok: false, status: 404, message: "This page isn't available anymore." };
-  const form = page.doc.sections.find((s) => s.type === "form" && s.id === input.formId);
+  // In an A/B test, version B's form can differ from the live page's, so check against what they saw.
+  const doc = (await versionDoc(page.tenantId, page.pageId, input.version, database)) ?? page.doc;
+  const form = doc.sections.find((s) => s.type === "form" && s.id === input.formId);
   if (!form || form.type !== "form") return { ok: false, status: 400, message: "This form has changed since the page loaded. Reload the page and try again." };
 
   const given = input.fields && typeof input.fields === "object" ? (input.fields as Record<string, unknown>) : {};
@@ -82,5 +106,5 @@ export async function submitPageForm(tenantSlug: string, pageSlug: string, input
     },
     database,
   );
-  return { ok: true, message: form.success, tenantId: page.tenantId, queued };
+  return { ok: true, message: form.success, tenantId: page.tenantId, pageId: page.pageId, queued, spam: Boolean(spamReason) };
 }

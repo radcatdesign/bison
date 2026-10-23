@@ -34,6 +34,7 @@ export type Limits = Partial<{
   translatedStringsPerMonth: number;
   translatedStringsPerVisitorPerDay: number;
   pageAgentRunsPerMonth: number;
+  runningPageTests: number;
   products: number;
   tradeAccounts: number;
 }>;
@@ -81,7 +82,7 @@ export const CATALOG: Record<ItemKey, CatalogItem> = {
     name: "Marketing",
     pitch: "Landing pages you build by telling an agent what you want, plus newsletters, automatic email series and a welcome offer, all in your own colors.",
     price: placeholder(99),
-    limits: { emailSendsPerMonth: 10_000, subscribers: 5_000, pageAgentRunsPerMonth: 300 },
+    limits: { emailSendsPerMonth: 10_000, subscribers: 5_000, pageAgentRunsPerMonth: 300, runningPageTests: 5 },
     trialDays: 14,
     stripePriceEnv: "STRIPE_PRICE_MARKETING",
   },

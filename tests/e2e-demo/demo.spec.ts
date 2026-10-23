@@ -252,6 +252,34 @@ test("marketing: subscribers, series, offer and search pack show sample data and
   await expect(page.getByTestId("step-search.contact")).toHaveAttribute("data-done", "true");
 });
 
+test("A/B tests: made-up tests with results to read, and nothing changes", async ({ page }) => {
+  const t = (id: string) => page.getByTestId(id).filter({ visible: true });
+  await pick(page, "dev_ada");
+  await page.goto("/marketing/tests");
+  await expect(t("setup-tests")).toBeVisible();
+  await expect(t("test-row")).toHaveCount(2);
+  await expect(t("test-row").first()).toContainText("A more concrete headline");
+  await expect(t("test-row").first()).toContainText(/Running, day \d+/);
+  await expect(t("test-row").nth(1)).toContainText("Ended, kept A");
+
+  await t("test-row").first().click();
+  await page.waitForURL(/\/marketing\/tests\/[0-9a-f-]{36}$/);
+  await expect(t("sample-banner")).toContainText("This is a demo");
+  await expect(t("test-verdict")).toBeVisible();
+  await expect(t("result-a")).toBeVisible();
+  await expect(t("result-b")).toBeVisible();
+  await expect(t("test-chart").locator("svg")).toBeVisible();
+  await t("end-test").click();
+  await t("end-test-confirm").click();
+  await expect(t("test-notice")).toContainText("This is a demo");
+  await expect(t("test-status")).toContainText("Running");
+
+  // Opening a version to edit goes back to the test: the examples have already started.
+  const testUrl = new URL(page.url()).pathname;
+  await page.goto(`${testUrl}/00000000-0000-4000-8000-000000000000`);
+  await page.waitForURL((u) => u.pathname === testUrl);
+});
+
 test("sales: made-up estimates, orders and trade accounts, and a shop to try", async ({ page }) => {
   const t = (id: string) => page.getByTestId(id).filter({ visible: true });
   await pick(page, "dev_cora");

@@ -28,6 +28,15 @@ export function allow(key: string, limit: number, windowMs: number, now = Date.n
 }
 
 /** The visitor's address. Vercel sets x-real-ip itself; x-forwarded-for is the fallback elsewhere. */
+export function ipFrom(headers: Headers): string {
+  return headers.get("x-real-ip")?.trim() || headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+}
+
+/** The address for rate limits: IPv6 addresses by their /64, since one connection usually gets a whole block. */
+export function addressKey(ip: string): string {
+  return ip.includes(":") ? ip.split(":").slice(0, 4).join(":") : ip;
+}
+
 export function clientIp(req: Request): string {
-  return req.headers.get("x-real-ip")?.trim() || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  return ipFrom(req.headers);
 }

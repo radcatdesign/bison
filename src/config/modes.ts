@@ -40,6 +40,7 @@ export const MODES: ModeSpec[] = [
       { href: "/marketing/series", label: "Email series", feature: "marketing.sequences" },
       { href: "/marketing/subscribers", label: "Subscribers", feature: "marketing.subscribers" },
       { href: "/marketing/pages", label: "Pages", feature: "marketing.pages" },
+      { href: "/marketing/tests", label: "A/B tests", feature: "marketing.tests" },
       { href: "/marketing/brand", label: "Brand kit", feature: "marketing.brand-kit" },
       { href: "/marketing/offer", label: "Welcome offer", feature: "marketing.welcome-offer" },
       { href: "/marketing/search", label: "Search pack", feature: "marketing.seo" },

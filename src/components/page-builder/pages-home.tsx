@@ -15,7 +15,7 @@ import { buildFromTemplate, type PageTemplate } from "@/lib/pages/page-templates
 import { createDemoPage, demoPages } from "./store";
 import { TemplateGallery } from "./template-gallery";
 
-export type PageCard = { id: string; title: string; slug: string; status: PageStatus; edited: string; doc: PageDoc };
+export type PageCard = { id: string; title: string; slug: string; status: PageStatus; edited: string; doc: PageDoc; /** A running A/B test on the page. */ testId?: string | null };
 
 type Props = {
   storage: "server" | "browser";
@@ -154,6 +154,7 @@ export function PagesHome({ storage, pages: serverPages, tenant, seed, canEdit, 
                   <strong>{p.title}</strong>
                   <span className={s.cardMeta}>
                     <span className={STATUS[p.status].tone}>{STATUS[p.status].label}</span>
+                    {p.testId && <span className="pill pill-accent">In an A/B test</span>}
                     <span className="mono">/{p.slug}</span>
                   </span>
                   <span className={s.edited}>{p.edited}</span>

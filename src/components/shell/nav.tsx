@@ -30,6 +30,7 @@ import {
   Settings,
   ShoppingBag,
   Sparkles,
+  SquareSplitHorizontal,
   Sun,
   X,
 } from "lucide-react";
@@ -53,6 +54,7 @@ const PAGE_ICONS: Record<string, LucideIcon> = {
   "/marketing/series": Repeat,
   "/marketing/subscribers": Users,
   "/marketing/pages": AppWindow,
+  "/marketing/tests": SquareSplitHorizontal,
   "/marketing/brand": Palette,
   "/marketing/offer": BadgePercent,
   "/marketing/search": ScanSearch,

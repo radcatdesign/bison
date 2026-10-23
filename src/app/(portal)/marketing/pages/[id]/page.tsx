@@ -7,6 +7,7 @@ import { may } from "@/config/roles";
 import { demoMode, pageAgentName } from "@/lib/env";
 import { gateMode } from "@/lib/gate";
 import { agentTurns, getPage } from "@/lib/pages/repo";
+import { openTestFor } from "@/lib/pages/tests";
 import { publicPageUrl } from "@/lib/pages/urls";
 import { withTenant } from "@/lib/db";
 import { defaultMarketingSettings } from "@/lib/marketing/settings";
@@ -44,6 +45,7 @@ async function EditorBody({ params, searchParams }: { params: Params; searchPara
   const page = await getPage(scope, id);
   if (!page) notFound();
   const turns = await agentTurns(scope, id);
+  const test = await openTestFor(scope, id);
   const thread = turns.flatMap((t, i) => [
     { id: `u${i}`, role: "user" as const, text: t.instruction },
     { id: `a${i}`, role: "agent" as const, text: t.reply, state: "done" as const },
@@ -53,6 +55,7 @@ async function EditorBody({ params, searchParams }: { params: Params; searchPara
     <Editor
       {...shared}
       storage="server"
+      runningTest={test?.status === "running" ? { id: test.id, name: test.name } : null}
       initial={{ title: page.title, slug: page.slug, doc: page.doc, status: page.status, publicUrl: page.status === "draft" ? null : publicPageUrl(ctx.tenant.slug, page.slug), thread }}
     />
   );

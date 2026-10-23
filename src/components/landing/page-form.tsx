@@ -6,7 +6,8 @@ import { FormFields, formClasses, type SignupChoices } from "./landing-page";
 
 /** The working form on a published landing page. Sends to Contacts. */
 /** `token` is signed by the server when the page renders; it tells the server how long the form was open. */
-export function PageForm({ section, endpoint, token, signup }: { section: SectionOf<"form">; endpoint: string; token: string; signup?: SignupChoices | null }) {
+/** `version` is the A/B test version this visitor sees, when the page is in a test. */
+export function PageForm({ section, endpoint, token, signup, version }: { section: SectionOf<"form">; endpoint: string; token: string; signup?: SignupChoices | null; version?: string }) {
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
 
@@ -19,7 +20,7 @@ export function PageForm({ section, endpoint, token, signup }: { section: Sectio
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ formId: section.id, fields, trap: String(data.get("website") ?? ""), token }),
+        body: JSON.stringify({ formId: section.id, fields, trap: String(data.get("website") ?? ""), token, ...(version ? { version } : {}) }),
       });
       const body = (await res.json().catch(() => ({}))) as { message?: string };
       setMessage(body.message ?? (res.ok ? section.success : "This wasn't sent. Try again in a minute."));

@@ -10,6 +10,7 @@ import { runPageAgent } from "@/lib/pages/agent";
 import { type AgentEvent, type AgentTurn, MAX_HISTORY, MAX_INSTRUCTION } from "@/lib/pages/agent/types";
 import { getPage, recordAgentRun, startAgentRun } from "@/lib/pages/repo";
 import { PageDocError, parsePageDoc } from "@/lib/pages/schema";
+import { saveVersionDoc, versionForEditing } from "@/lib/pages/tests";
 import { getPortalContext, scopeOf } from "@/lib/portal";
 import { allow, clientIp } from "@/lib/rate-limit";
 
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
   if (!can(ctx.tenant, "marketing.pages")) return refuse(403, "Pages are part of Marketing. Unlock Marketing to build pages.");
   if (!may(ctx.member.role, "pages.edit")) return refuse(403, "Your role can't change landing pages.");
 
-  let body: { pageId?: unknown; doc?: unknown; instruction?: unknown; history?: unknown };
+  let body: { pageId?: unknown; versionId?: unknown; doc?: unknown; instruction?: unknown; history?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -49,8 +50,15 @@ export async function POST(req: Request) {
   const demo = demoMode();
   const scope = scopeOf(ctx);
   const pageId = typeof body.pageId === "string" ? body.pageId : "";
+  // Editing version B or C of an A/B test: the result saves to that version, not the page.
+  const versionId = typeof body.versionId === "string" && body.versionId ? body.versionId : null;
   if (!demo) {
     if (!isUuid(pageId) || !(await getPage(scope, pageId))) return refuse(404, "That page doesn't exist. It may have been deleted.");
+    if (versionId) {
+      const v = await versionForEditing(scope, versionId);
+      if (!v || v.pageId !== pageId) return refuse(404, "That version isn't here anymore. Go back to the test and open it again.");
+      if (v.status !== "draft") return refuse(409, "This test is running, so its versions are locked. Changing one now would mix up the results.");
+    }
     // Counted before it runs, so a stopped or failed request still counts.
     const limit = CATALOG["module:marketing"].limits.pageAgentRunsPerMonth ?? 0;
     const run = await startAgentRun(scope, { pageId, actor: ctx.member.email, limit });
@@ -75,7 +83,8 @@ export async function POST(req: Request) {
         );
         let saved = false;
         if (!demo) {
-          await recordAgentRun(scope, pageId, { doc: result.doc, instruction, reply: result.reply, actor: ctx.member.email });
+          if (versionId) await saveVersionDoc(scope, versionId, result.doc);
+          else await recordAgentRun(scope, pageId, { doc: result.doc, instruction, reply: result.reply, actor: ctx.member.email });
           saved = true;
         }
         send({ type: "done", doc: result.doc, reply: result.reply, changes: result.changes, saved });

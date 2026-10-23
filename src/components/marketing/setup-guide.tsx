@@ -79,7 +79,7 @@ export function SetupGuide({ tool, variant = "page", onMark, number }: Props) {
                 {tool.name}
               </Link>
             ) : (
-              `Set up ${tool.name.toLowerCase()}`
+              `Set up ${/^[A-Z]\//.test(tool.name) ? tool.name : tool.name.toLowerCase()}`
             )}
             {tool.optional && <span className="pill">Optional</span>}
           </h2>

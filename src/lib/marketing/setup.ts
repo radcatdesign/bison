@@ -30,6 +30,9 @@ export async function loadSetupFacts(ctx: PortalContext): Promise<SetupFacts> {
       offer_in_email: boolean;
       published: number;
       signup_form: boolean;
+      page_tests: number;
+      page_tests_started: boolean;
+      page_tests_ended: boolean;
     }>`select
         exists (select 1 from email_sends where kind = 'test') as tests,
         exists (select 1 from email_sends where kind = 'test' and newsletter_id is not null) as newsletter_tests,
@@ -40,7 +43,10 @@ export async function loadSetupFacts(ctx: PortalContext): Promise<SetupFacts> {
         exists (select 1 from sequences where status = 'on') as any_on,
         exists (select 1 from sequence_steps where doc -> 'sections' @> '[{"type": "offer"}]') as offer_in_email,
         (select count(*)::int from pages where published_at is not null) as published,
-        exists (select 1 from pages where coalesce(published_doc, doc) -> 'sections' @> '[{"type": "form", "subscribe": true}]') as signup_form`.execute(tx);
+        exists (select 1 from pages where coalesce(published_doc, doc) -> 'sections' @> '[{"type": "form", "subscribe": true}]') as signup_form,
+        (select count(*)::int from page_tests) as page_tests,
+        exists (select 1 from page_tests where status in ('running', 'ended')) as page_tests_started,
+        exists (select 1 from page_tests where status = 'ended') as page_tests_ended`.execute(tx);
     const f = rows[0];
     const starter = await tx.selectFrom("sequences").select("id").where("starter", "=", true).executeTakeFirst();
     let starterReady = false;
@@ -61,6 +67,7 @@ export async function loadSetupFacts(ctx: PortalContext): Promise<SetupFacts> {
       newsletters: { count: f.newsletters, tested: f.newsletter_tests, sentOrScheduled: f.out },
       offer: { saved: saved(row?.offer), on: settings.offer.on, inEmail: f.offer_in_email },
       search: { described: Boolean(settings.search.description), contact: Boolean(settings.search.phone || settings.search.email), publishedPage: f.published > 0, submitted: settings.search.submitted },
+      tests: { publishedPage: f.published > 0, created: f.page_tests > 0, started: f.page_tests_started, ended: f.page_tests_ended, canStart: may(ctx.member.role, "pages.publish") },
     };
   });
 }

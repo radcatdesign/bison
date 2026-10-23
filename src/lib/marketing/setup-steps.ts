@@ -14,9 +14,11 @@ export type SetupFacts = {
   newsletters: { count: number; tested: boolean; sentOrScheduled: boolean };
   offer: { saved: boolean; on: boolean; inEmail: boolean };
   search: { described: boolean; contact: boolean; publishedPage: boolean; submitted: boolean };
+  /** A/B tests on landing pages. `canStart` is false for roles that can't publish pages. */
+  tests: { publishedPage: boolean; created: boolean; started: boolean; ended: boolean; canStart: boolean };
 };
 
-export type ToolKey = "sending" | "brand" | "subscribers" | "series" | "newsletters" | "offer" | "search";
+export type ToolKey = "sending" | "brand" | "subscribers" | "series" | "newsletters" | "offer" | "search" | "tests";
 
 export type SetupStep = {
   key: string;
@@ -273,6 +275,49 @@ export function buildSetup(f: SetupFacts): ToolSetup[] {
           href: "/marketing/search#files",
           cta: "Show the addresses",
           manual: true,
+        },
+      ],
+    },
+    {
+      key: "tests",
+      name: "A/B tests",
+      href: "/marketing/tests",
+      summary: "Show visitors two or three versions of a landing page and keep the one that gets more form sends or clicks.",
+      optional: true,
+      steps: [
+        {
+          key: "tests.page",
+          title: "Publish the page you want to improve",
+          body: "A test compares the live page with versions of it, so the page has to be live first. Pick one that already gets visitors.",
+          done: f.tests.publishedPage,
+          href: "/marketing/pages",
+          cta: "Open Pages",
+        },
+        {
+          key: "tests.version",
+          title: "Make a version to compare",
+          body: "Start a test and B begins as a copy of the live page. Change one thing, like the headline or the button, so you know what made the difference.",
+          done: f.tests.created,
+          href: "/marketing/tests",
+          cta: "New test",
+        },
+        {
+          key: "tests.start",
+          title: "Start the test",
+          body: "Visitors are split between the page as it is (A) and your version. Each person sees the same one every time they come back.",
+          done: f.tests.started,
+          href: "/marketing/tests",
+          cta: "Open tests",
+          blockedNote: f.tests.canStart ? undefined : "Someone who can publish pages starts the test.",
+        },
+        {
+          key: "tests.keep",
+          title: "Keep the winner",
+          body: "Give it at least a week and 100 visitors on each version. When the results say one is clearly ahead, end the test and keep it. It goes live right away.",
+          done: f.tests.ended,
+          href: "/marketing/tests",
+          cta: "See results",
+          blockedNote: f.tests.canStart ? undefined : "Someone who can publish pages ends the test.",
         },
       ],
     },

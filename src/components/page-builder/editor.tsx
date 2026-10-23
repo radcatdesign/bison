@@ -4,6 +4,7 @@
 // changes it, the section forms change it, and the preview shows it. Changes
 // save on their own (to the account, or to this browser in the demo).
 import { ArrowLeft, Eye, ExternalLink, Monitor, Palette, Redo2, Rows3, Smartphone, Sparkles, Tablet, Undo2, X } from "lucide-react";
+import { saveVersionAction } from "@/app/(portal)/marketing/tests/actions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
@@ -20,7 +21,7 @@ import s from "./builder.module.css";
 import { Canvas } from "./canvas";
 import { PagePanel } from "./page-panel";
 import { SectionsPanel } from "./sections-panel";
-import { browserStore, demoPage, saveDemoPage, serverStore, type ThreadItem } from "./store";
+import { browserStore, demoPage, type PageStore, saveDemoPage, serverStore, type ThreadItem } from "./store";
 
 export type EditorInitial = { title: string; slug: string; doc: PageDoc; status: PageStatus; publicUrl: string | null; thread: ThreadItem[] };
 
@@ -36,10 +37,14 @@ type Props = {
   autoBuild: string | null;
   /** The "I am a..." choices, so form previews show them. */
   signup?: SignupChoices | null;
+  /** Editing version B or C of an A/B test instead of the page itself. */
+  version?: { id: string; key: "b" | "c"; testId: string; testName: string } | null;
+  /** A test running on this page; publishing waits until it ends. */
+  runningTest?: { id: string; name: string } | null;
 };
 
 type Tab = "agent" | "sections" | "page" | "preview";
-type Notice = { tone: "ok" | "error" | "info"; text: string; url?: string } | null;
+type Notice = { tone: "ok" | "error" | "info"; text: string; url?: string; href?: string; linkText?: string } | null;
 
 const DEVICE_ICONS = { desktop: Monitor, tablet: Tablet, phone: Smartphone } as const;
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -66,9 +71,15 @@ export function Editor(props: Props) {
   return <EditorCore {...props} initial={initial} />;
 }
 
-function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, agentName, autoBuild, signup }: Props & { initial: EditorInitial }) {
+/** A test version saves to the test; it's never published or renamed on its own. */
+function versionStore(versionId: string): PageStore {
+  const no = async () => ({ ok: false, message: "This is a version in an A/B test. It goes live when you end the test and keep it." });
+  return { kind: "server", save: (_id, doc) => saveVersionAction(versionId, doc), rename: no, publish: no, unpublish: no, remove: no };
+}
+
+function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, agentName, autoBuild, signup, version, runningTest }: Props & { initial: EditorInitial }) {
   const router = useRouter();
-  const store = useMemo(() => (storage === "server" ? serverStore : browserStore(tenant.id, publicBase)), [storage, tenant.id, publicBase]);
+  const store = useMemo(() => (version ? versionStore(version.id) : storage === "server" ? serverStore : browserStore(tenant.id, publicBase)), [version, storage, tenant.id, publicBase]);
 
   const [doc, setDoc] = useState<PageDoc | null>(initial.doc);
   const [meta, setMeta] = useState({ title: initial.title, slug: initial.slug, status: initial.status, publicUrl: initial.publicUrl });
@@ -78,7 +89,9 @@ function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, 
   const [tab, setTab] = useState<Tab>("agent");
   const [device, setDevice] = useState<Device>("desktop");
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
-  const [notice, setNotice] = useState<Notice>(null);
+  const [notice, setNotice] = useState<Notice>(
+    runningTest ? { tone: "info", text: `This page is in the A/B test "${runningTest.name}". Visitors see the test's versions, so publishing your changes waits until it ends.`, href: `/marketing/tests/${runningTest.id}`, linkText: "Open the test" } : null,
+  );
   const [running, setRunning] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
@@ -226,7 +239,7 @@ function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, 
         const res = await fetch("/api/pages/agent", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ pageId, doc: before, instruction: text, history: turns }),
+          body: JSON.stringify({ pageId, versionId: version?.id, doc: before, instruction: text, history: turns }),
           signal: ac.signal,
         });
         if (!res.ok || !res.body) {
@@ -260,7 +273,7 @@ function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, 
         setRunning(false);
       }
     },
-    [pageId, thread],
+    [pageId, thread, version],
   );
 
   const stop = () => abortRef.current?.abort();
@@ -316,7 +329,8 @@ function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, 
 
   if (!doc) return <div className={s.editor} aria-busy="true" />;
 
-  const statusLabel = meta.status === "published" ? "Live" : meta.status === "changed" ? "Live, with changes" : "Draft";
+  const statusLabel = version ? `Version ${version.key.toUpperCase()}` : meta.status === "published" ? "Live" : meta.status === "changed" ? "Live, with changes" : "Draft";
+  const backHref = version ? `/marketing/tests/${version.testId}` : "/marketing/pages";
   const tabs: { key: Tab; label: string; icon: typeof Sparkles }[] = [
     { key: "agent", label: "Agent", icon: Sparkles },
     { key: "sections", label: "Sections", icon: Rows3 },
@@ -327,13 +341,13 @@ function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, 
   return (
     <div className={s.editor} data-tab={tab} data-testid="page-editor" data-no-pull>
       <header className={s.topbar}>
-        <Link href="/marketing/pages" className={s.back} aria-label="Back to Pages">
+        <Link href={backHref} className={s.back} aria-label={version ? "Back to the test" : "Back to Pages"}>
           <ArrowLeft aria-hidden="true" />
         </Link>
         <div className={s.titleBlock}>
-          <strong className={s.pageName}>{meta.title}</strong>
+          <strong className={s.pageName}>{version ? `${version.testName}: version ${version.key.toUpperCase()}` : meta.title}</strong>
           <span className={s.meta}>
-            <span className={meta.status === "draft" ? "pill" : meta.status === "published" ? "pill pill-good" : "pill pill-accent"} data-testid="page-status">
+            <span className={version || meta.status === "changed" ? "pill pill-accent" : meta.status === "draft" ? "pill" : "pill pill-good"} data-testid="page-status">
               {statusLabel}
             </span>
             <span className={s.saveState} data-state={saveState} data-testid="save-state">
@@ -365,15 +379,21 @@ function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, 
               {placeholders.length} to fill in
             </button>
           )}
-          {meta.publicUrl && meta.status !== "draft" && (
+          {!version && meta.publicUrl && meta.status !== "draft" && (
             <a href={meta.publicUrl} target="_blank" rel="noreferrer" className={s.iconButton} aria-label="Open the live page" title="Open the live page">
               <ExternalLink aria-hidden="true" />
             </a>
           )}
-          {canPublish && (
-            <button type="button" className="btn btn-primary" onClick={publish} disabled={publishing || running || doc.sections.length === 0} data-testid="publish">
-              {publishing ? "Publishing" : meta.status === "changed" ? "Update" : meta.status === "published" ? "Published" : "Publish"}
-            </button>
+          {version ? (
+            <Link href={backHref} className="btn btn-primary" aria-disabled={saveState === "saving" || running} onClick={(e) => (saveState === "saving" || running) && e.preventDefault()} data-testid="version-done">
+              Done
+            </Link>
+          ) : (
+            canPublish && (
+              <button type="button" className="btn btn-primary" onClick={publish} disabled={publishing || running || doc.sections.length === 0 || Boolean(runningTest)} title={runningTest ? "End the A/B test first" : undefined} data-testid="publish">
+                {publishing ? "Publishing" : meta.status === "changed" ? "Update" : meta.status === "published" ? "Published" : "Publish"}
+              </button>
+            )
           )}
         </div>
       </header>
@@ -386,6 +406,11 @@ function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, 
               <a href={notice.url} target="_blank" rel="noreferrer" className="link">
                 {notice.url.replace(/^https?:\/\//, "")}
               </a>
+            )}
+            {notice.href && (
+              <Link href={notice.href} className="link">
+                {notice.linkText ?? "Open"}
+              </Link>
             )}
           </span>
           <button type="button" className={s.iconButton} aria-label="Dismiss" onClick={() => setNotice(null)}>
@@ -423,6 +448,8 @@ function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, 
           <PagePanel
             doc={doc}
             meta={meta}
+            lookOnly={Boolean(version)}
+            inTest={Boolean(runningTest)}
             storage={storage}
             publicBase={publicBase}
             canPublish={canPublish}
