@@ -1,6 +1,7 @@
 // Creating a tenant. The new tenant's rows are written under its own tenant
 // context, so creation goes through the same RLS policies as everything else.
 import { randomUUID } from "node:crypto";
+import { type EditionKey, editionFor, editionOfIndustry } from "@/config/editions";
 import { audit } from "@/lib/audit";
 import { type Database, db, withTenant } from "@/lib/db";
 import type { Role } from "@/lib/db/types";
@@ -11,6 +12,8 @@ export type NewTenantInput = {
   name: string;
   domain: string;
   industry?: string;
+  /** Bison Ops or Fit Funnels. Left out, it follows the industry. */
+  edition?: EditionKey;
   clerkOrgId?: string | null;
   sampleData?: boolean;
   owner: { userId: string; email: string; name: string; role?: Role };
@@ -46,6 +49,8 @@ export async function createTenant(input: NewTenantInput, database: Database = d
   if (!name || name.length > 120) throw new TenantInputError("Add your company name (120 characters at most).");
   const domain = normalizeDomain(input.domain);
   const baseSlug = slugify(name);
+  const industry = input.industry ?? "general";
+  const edition = editionFor(input.edition ?? editionOfIndustry(industry));
 
   for (let attempt = 0; attempt < 5; attempt++) {
     const tenantId = input.id ?? randomUUID();
@@ -56,9 +61,9 @@ export async function createTenant(input: NewTenantInput, database: Database = d
         async (tx) => {
           await tx
             .insertInto("tenants")
-            .values({ id: tenantId, name, slug, industry: input.industry ?? "general", clerk_org_id: input.clerkOrgId ?? null, stripe_customer_id: null })
+            .values({ id: tenantId, name, slug, industry, edition: edition.key, clerk_org_id: input.clerkOrgId ?? null, stripe_customer_id: null })
             .execute();
-          await tx.insertInto("settings").values({ sample_data: input.sampleData ?? true, privacy: "{}" }).execute();
+          await tx.insertInto("settings").values({ sample_data: input.sampleData ?? true, accent: edition.defaultAccent, privacy: "{}" }).execute();
           const site = await tx.insertInto("sites").values({ domain }).returning(["id", "site_key"]).executeTakeFirstOrThrow();
           await tx
             .insertInto("members")

@@ -1,5 +1,7 @@
-// The Bison mark. Drawn in the current text color, so it follows light and dark
-// mode on its own. The original artwork is in public/brand/.
+// The marks. Bison Ops has the bison; Fit Funnels has three bars narrowing like
+// a funnel. Both are drawn in the current text color, so they follow light and
+// dark mode on their own. The original artwork is in public/brand/.
+import type { EditionKey } from "@/config/editions";
 
 /** The bison's shapes, from the brand files (viewBox 0 0 49 36). */
 export const BISON_PATHS = [
@@ -23,11 +25,35 @@ export function Bison({ width = 40, className }: { width?: number; className?: s
   );
 }
 
-/** The app mark: the bison on a rounded tile, `size` square. */
-export function Mark({ size = 28 }: { size?: number }) {
+/** The Fit Funnels bars (viewBox 0 0 32 32): wide, middle, narrow. */
+export const FUNNEL_BARS = [
+  { x: 3, y: 5, w: 26, h: 6 },
+  { x: 8, y: 13, w: 16, h: 6 },
+  { x: 12.5, y: 21, w: 7, h: 6 },
+] as const;
+
+/** The Fit Funnels mark on its own, `width` wide. */
+export function Funnel({ width = 32, className }: { width?: number; className?: string }) {
+  return (
+    <svg width={width} height={width} viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" className={className} style={{ flex: "none", display: "block" }}>
+      {FUNNEL_BARS.map((b) => (
+        <rect key={b.y} x={b.x} y={b.y} width={b.w} height={b.h} rx={b.h / 2} />
+      ))}
+    </svg>
+  );
+}
+
+/** The edition's mark on its own. */
+export function Glyph({ edition = "bison", width = 40 }: { edition?: EditionKey; width?: number }) {
+  return edition === "fit" ? <Funnel width={Math.round(width * 0.82)} /> : <Bison width={width} />;
+}
+
+/** The app mark: the edition's glyph on a rounded tile, `size` square. */
+export function Mark({ size = 28, edition = "bison" }: { size?: number; edition?: EditionKey }) {
   return (
     <span
       aria-hidden="true"
+      data-mark={edition}
       style={{
         flex: "none",
         display: "grid",
@@ -39,7 +65,7 @@ export function Mark({ size = 28 }: { size?: number }) {
         color: "var(--bo-canvas)",
       }}
     >
-      <Bison width={Math.round(size * 0.74)} />
+      {edition === "fit" ? <Funnel width={Math.round(size * 0.66)} /> : <Bison width={Math.round(size * 0.74)} />}
     </span>
   );
 }

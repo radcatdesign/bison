@@ -107,3 +107,11 @@ export function pageAgentName(): "claude" | "stand-in" {
   if (process.env.PAGE_AGENT === "stand-in") return "stand-in";
   return process.env.ANTHROPIC_API_KEY ? "claude" : "stand-in";
 }
+
+/** Host names that open Fit Funnels before anyone signs in (comma separated, like "app.fitfunnels.com"). */
+export function fitFunnelsHosts(): string[] {
+  return (process.env.FIT_FUNNELS_HOSTS ?? "")
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+}

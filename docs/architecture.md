@@ -1,6 +1,6 @@
 # Bison Ops architecture
 
-Status: Phase 0 (foundation), Sales (Phase 2) and Marketing (Phase 3) built. This document covers the whole platform so later phases fit the same frame. Sections marked **Planned** are designed but not built yet.
+Status: Phase 0 (foundation), Sales (Phase 2) and Marketing (Phase 3) built, in two editions (Bison Ops and Fit Funnels). This document covers the whole platform so later phases fit the same frame. Sections marked **Planned** are designed but not built yet.
 
 ## The shape of it
 
@@ -60,6 +60,18 @@ Entitlement rows have a `source`: `subscription` (synced from Stripe), `trial` (
 
 When a feature is locked, the page renders the module's pitch with an Unlock button that goes to `/settings/billing?item=...`. Nothing 404s.
 
+## Editions: Bison Ops and Fit Funnels
+
+One app, two editions of the product. **Bison Ops** is for businesses that sell from their website; **Fit Funnels** is for gyms, health clubs and fitness studios. They share every tool, table, rule and test; an edition sets the name, the mark, the default accent, the kinds of business offered at signup, nav names, module names and pitches, sample data, page templates and the words on every screen.
+
+- **Per company.** `tenants.edition` (`bison` or `fit`, migration 0010) is set when the company is created and the app role can't change it. `createTenant` takes it, or follows the industry (`gym` and `studio` are Fit Funnels), and starts the company in that edition's accent.
+- **Config** (`src/config/editions.ts`, pure): `EDITIONS` with product name, accent, pitch, industries, `pageLabels` (nav names by href) and `items` (module and add-on names and pitches, read with `itemOf`). Words that differ are written where they're used with `say("Bison Ops words", "Fit Funnels words")`: `sayOf(ctx)` in server code (`src/lib/edition.ts`), `useSay()` in browser code (`src/components/edition.tsx`, provided by the portal shell), and an `edition` or `say` parameter for pure functions such as setup steps, emails and sample data. Bison Ops text is the first argument, unchanged.
+- **Signed in**, the edition is the company's: the shell shows its mark and names, sets `data-edition` and the accent, and the portal layout's metadata gives Fit Funnels companies their own tab titles, icon (`public/brand/fit-icon.svg`, `fit-apple-icon.png`) and install manifest (`public/brand/fit.webmanifest`). The root layout links Bison Ops' icon and manifest by metadata, not file name, so the portal layout can override them.
+- **Before sign-in** (the sign-in page, onboarding), it's `?edition=fit`, then the host name (`FIT_FUNNELS_HOSTS`), then Bison Ops. The dev and demo sign-in has a Bison Ops / Fit Funnels switch listing each edition's made-up companies. Signing out returns to that edition's sign-in.
+- **Public pages** (shop, checkout, quotes, corporate accounts, unsubscribe) read the tenant's edition with the tenant info they already load; there's no browser provider outside the portal.
+- **Made-up companies**: Brightwater Pools and Ridgeline Roasters (Bison Ops), Summit Strength Club (`gym`, sample data on, Marketing) and Pulse Cycle Studio (`studio`, no modules) for Fit Funnels. Seeded the same way and available in the demo.
+- **Accent-derived colors** (`--bo-accent-soft`, `-line`, `-text`, `-vivid`, `--bo-focus`) are worked out again on any element with `data-accent`, so they follow the company's accent instead of the default.
+
 ## Sample data mode
 
 `settings.sample_data` per tenant, on for new tenants. Every screen reads through a repository (`src/lib/repo`) that has two implementations with the same interface: database and sample. The sample one generates realistic data from a seeded random generator keyed on the tenant id, the company name and its domain, so it's stable across reloads and different for every tenant. Writes check sample mode first and refuse with a plain message, so nothing is saved while it's on.
@@ -70,7 +82,7 @@ Built so far (all with RLS):
 
 | Table | Purpose | Key columns |
 |---|---|---|
-| `tenants` | One customer company | `name`, `slug`, `industry`, `clerk_org_id`, `stripe_customer_id`, `status`, `retention_days` |
+| `tenants` | One customer company | `name`, `slug`, `industry`, `edition` (bison, fit), `clerk_org_id`, `stripe_customer_id`, `status`, `retention_days` |
 | `sites` | Domains a tenant installs the tag on | `domain` (unique once verified), `verified_at`, `site_key` (public), `excluded_ips`, `first_event_at` |
 | `members` | People on a tenant's team | `user_id` (auth provider id), `email`, `name`, `role`, `status` (active, invited, pending, removed) |
 | `entitlements` | What a tenant can use | `item_key`, `source`, `status`, `ends_at`, `stripe_subscription_id`, `stripe_subscription_item_id` |

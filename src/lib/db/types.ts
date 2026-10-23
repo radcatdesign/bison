@@ -21,6 +21,7 @@ export interface TenantsTable {
   name: string;
   slug: string;
   industry: Generated<string>;
+  edition: Generated<"bison" | "fit">;
   clerk_org_id: string | null;
   stripe_customer_id: string | null;
   status: Generated<"active" | "suspended">;

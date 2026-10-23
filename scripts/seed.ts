@@ -1,4 +1,4 @@
-// Seeds two made-up companies with people, modules and real (stored) data.
+// Seeds four made-up companies (two per edition) with people, modules and real (stored) data.
 // Runs as the app role, so seeding goes through RLS like everything else.
 // pnpm db:seed (pnpm db:reset runs it too)
 import { sql } from "kysely";
@@ -24,7 +24,31 @@ const STORED_CONTACTS: Record<string, { name: string; email: string; form: strin
     { name: "", email: "orders@summitbakery.com", form: "Wholesale inquiry", message: "Can we get a sample pack?", status: "new" },
     { name: "Rafe Daniels", email: "rafe@danielsfit.com", form: "Office coffee", message: "Cold brew kegs for a gym?", status: "lost" },
   ],
+  [DEV_TENANTS.summit.id]: [
+    { name: "Priya Nair", email: "priya.nair@gmail.com", form: "Free trial pass", message: "Can I use the trial pass on a Saturday?", status: "new" },
+    { name: "Marcus Hill", email: "marcus@hillarchitects.com", form: "Corporate membership", message: "We have 25 people downtown. What does a corporate rate look like?", status: "contacted" },
+    { name: "", email: "kt.lam@outlook.com", form: "Club tour", message: "Do you have childcare during morning classes?", status: "new" },
+    { name: "Elena Ruiz", email: "elena.ruiz@yahoo.com", form: "Personal training", message: "Looking for a coach to get back into lifting after an injury.", status: "qualified" },
+    { name: "Dev Patel", email: "devpatel@icloud.com", form: "Free trial pass", message: "Is the pool open to trial members?", status: "won" },
+  ],
+  [DEV_TENANTS.pulse.id]: [
+    { name: "Hana Kim", email: "hana.kim@gmail.com", form: "First ride free", message: "Do I need clip-in shoes for my first class?", status: "new" },
+    { name: "Luis Moreno", email: "luis@morenodental.com", form: "Private event", message: "Team ride for 18 people on a Friday evening?", status: "contacted" },
+    { name: "Ava Chen", email: "ava.chen@hotmail.com", form: "First ride free", message: "Is the 6 am class good for beginners?", status: "new" },
+    { name: "Noah Brooks", email: "noah@brookscpa.com", form: "Corporate membership", message: "Class packs for our office wellness budget?", status: "qualified" },
+    { name: "", email: "riley.s@gmail.com", form: "Class pack question", message: "Do 10-class packs expire?", status: "new" },
+    { name: "Grace Lin", email: "grace.lin@gmail.com", form: "First ride free", message: "Booked for Thursday, see you then.", status: "lost" },
+  ],
 };
+
+/** The pages each company's made-up traffic lands on. */
+const SEED_PATHS: Record<keyof typeof DEV_TENANTS, string[]> = {
+  brightwater: ["/", "/glow-aggregate", "/gallery", "/dealers", "/quote"],
+  ridgeline: ["/", "/shop", "/wholesale", "/cafes", "/about"],
+  summit: ["/", "/memberships", "/classes", "/personal-training", "/free-pass"],
+  pulse: ["/", "/schedule", "/first-ride", "/packs", "/instructors"],
+};
+const SEED_RNG: Record<keyof typeof DEV_TENANTS, number> = { brightwater: 7, ridgeline: 11, summit: 13, pulse: 17 };
 
 function prng(seed: number) {
   return () => {
@@ -46,6 +70,7 @@ async function seedTenant(database: Database, key: keyof typeof DEV_TENANTS, log
       name: t.name,
       domain: t.domain,
       industry: t.industry,
+      edition: t.edition,
       sampleData: t.sampleData,
       owner: { userId: owner.userId, email: owner.email, name: owner.name, role: owner.role },
     },
@@ -59,7 +84,8 @@ async function seedTenant(database: Database, key: keyof typeof DEV_TENANTS, log
         await tx.insertInto("members").values({ user_id: p.userId, email: p.email, name: p.name, role: p.role }).execute();
       }
 
-      if (key === "brightwater") {
+      // One company per edition starts with Marketing, so the demo shows locked and unlocked modes.
+      if (key === "brightwater" || key === "summit") {
         await tx.insertInto("entitlements").values({ item_key: "module:marketing", source: "grant", stripe_subscription_item_id: null, ends_at: null, note: "Seed data" }).execute();
         await tx
           .insertInto("entitlements")
@@ -92,8 +118,8 @@ async function seedTenant(database: Database, key: keyof typeof DEV_TENANTS, log
 
       // About four weeks of traffic so the overview has real numbers.
       await sql`select ensure_event_partitions(2, 2)`.execute(tx);
-      const rand = prng(key === "brightwater" ? 7 : 11);
-      const paths = key === "brightwater" ? ["/", "/glow-aggregate", "/gallery", "/dealers", "/quote"] : ["/", "/shop", "/wholesale", "/cafes", "/about"];
+      const rand = prng(SEED_RNG[key]);
+      const paths = SEED_PATHS[key];
       const rows = [];
       for (let day = 27; day >= 0; day--) {
         const visits = 14 + Math.floor(rand() * 18) + (day % 7 < 2 ? -6 : 0);
@@ -124,8 +150,7 @@ async function seedTenant(database: Database, key: keyof typeof DEV_TENANTS, log
 export async function seed(appUrl: string, log = console.log, ownerUrl = process.env.DATABASE_MIGRATE_URL) {
   const database = createDb(appUrl, 2);
   try {
-    await seedTenant(database, "brightwater", log);
-    await seedTenant(database, "ridgeline", log);
+    for (const key of Object.keys(DEV_TENANTS) as (keyof typeof DEV_TENANTS)[]) await seedTenant(database, key, log);
   } finally {
     await database.destroy();
   }

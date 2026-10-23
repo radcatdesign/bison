@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   description: "Measure every visitor, work every lead, and sell from your own site.",
   applicationName: BRAND.productName,
   appleWebApp: { capable: true, title: BRAND.shortName, statusBarStyle: "default" },
+  // Linked here rather than by file name, so a Fit Funnels company's pages can point at their own.
+  icons: { icon: "/icon.svg", apple: "/apple-icon" },
+  manifest: "/manifest.webmanifest",
   formatDetection: { telephone: false },
 };
 

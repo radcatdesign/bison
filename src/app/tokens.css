@@ -162,3 +162,46 @@
     --bo-slow: 0ms;
   }
 }
+
+/* Fit Funnels' accent is orange, so its second chart color is blue instead. */
+[data-edition="fit"] {
+  --bo-chart-2: #2a78d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) [data-edition="fit"] {
+    --bo-chart-2: #3987e5;
+  }
+}
+
+:root[data-theme="dark"] [data-edition="fit"] {
+  --bo-chart-2: #3987e5;
+}
+
+/* Where a company's accent is set (the app shell, the sign-in page), the colors
+   made from it are worked out again, so they follow that accent and not the default. */
+[data-accent] {
+  --bo-accent-text: color-mix(in oklab, var(--bo-accent) 88%, var(--bo-ink));
+  --bo-accent-vivid: var(--bo-accent);
+  --bo-accent-soft: color-mix(in oklab, var(--bo-accent) 10%, var(--bo-surface));
+  --bo-accent-line: color-mix(in oklab, var(--bo-accent) 35%, var(--bo-line));
+  --bo-focus: 0 0 0 3px color-mix(in oklab, var(--bo-accent) 28%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) [data-accent] {
+    --bo-accent-text: color-mix(in oklab, var(--bo-accent) 70%, white);
+    --bo-accent-vivid: color-mix(in oklab, var(--bo-accent) 82%, white);
+    --bo-accent-soft: color-mix(in oklab, var(--bo-accent) 16%, var(--bo-surface));
+    --bo-accent-line: color-mix(in oklab, var(--bo-accent) 45%, var(--bo-line));
+    --bo-focus: 0 0 0 3px color-mix(in oklab, var(--bo-accent) 40%, transparent);
+  }
+}
+
+:root[data-theme="dark"] [data-accent] {
+  --bo-accent-text: color-mix(in oklab, var(--bo-accent) 70%, white);
+  --bo-accent-vivid: color-mix(in oklab, var(--bo-accent) 82%, white);
+  --bo-accent-soft: color-mix(in oklab, var(--bo-accent) 16%, var(--bo-surface));
+  --bo-accent-line: color-mix(in oklab, var(--bo-accent) 45%, var(--bo-line));
+  --bo-focus: 0 0 0 3px color-mix(in oklab, var(--bo-accent) 40%, transparent);
+}

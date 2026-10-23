@@ -1,13 +1,14 @@
 import { LogOut } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
-import { BRAND } from "@/config/brand";
 import { MODES } from "@/config/modes";
 import { ROLES, seesMode } from "@/config/roles";
 import { signOut } from "@/app/sign-in/actions";
 import { can } from "@/lib/access/entitlements";
 import { accentInk } from "@/lib/color";
+import { editionOf } from "@/lib/edition";
 import { getPortalContext } from "@/lib/portal";
+import { EditionProvider } from "../edition";
 import { Dock, GeneralNav, ModeMemory, ModeSwitch, type NavMode, SideNav, ThemeSwitch } from "./nav";
 import { PullToRefresh } from "./pull-to-refresh";
 import { Mark } from "../mark";
@@ -20,27 +21,28 @@ function initials(name: string, email: string) {
 
 export async function Shell({ children }: { children: ReactNode }) {
   const ctx = await getPortalContext();
+  const edition = editionOf(ctx);
   const modes: NavMode[] = MODES.filter((m) => seesMode(ctx.member.role, m.key)).map((m) => ({
     key: m.key,
     label: m.label,
     locked: !can(ctx.tenant, m.feature),
-    pages: m.pages.map(({ href, label }) => ({ href, label })),
+    pages: m.pages.map(({ href, label }) => ({ href, label: edition.pageLabels[href] ?? label })),
   }));
   const who = initials(ctx.member.name, ctx.member.email);
   const theme = { "--bo-accent": ctx.settings.accent, "--bo-accent-ink": accentInk(ctx.settings.accent) } as CSSProperties;
 
   return (
-    <div className={s.app} style={theme}>
+    <div className={s.app} style={theme} data-edition={edition.key} data-accent="">
       <ModeMemory />
 
       <aside className={s.sidebar}>
         <Link href="/analyze" className={s.org}>
-          <Mark />
+          <Mark edition={edition.key} />
           <span className={s.orgText}>
             <span className={s.orgName} data-testid="tenant-name">
               {ctx.tenant.name}
             </span>
-            <span className={s.orgSub}>{ctx.sites[0]?.domain ?? BRAND.productName}</span>
+            <span className={s.orgSub}>{ctx.sites[0]?.domain ?? edition.productName}</span>
           </span>
         </Link>
 
@@ -71,7 +73,7 @@ export async function Shell({ children }: { children: ReactNode }) {
 
       <header className={s.topbar}>
         <Link href="/analyze" className={s.topbarOrg}>
-          <Mark size={26} />
+          <Mark size={26} edition={edition.key} />
           <span className={s.orgName}>{ctx.tenant.name}</span>
         </Link>
         <button type="button" className={s.avatarButton} popoverTarget="account-menu" aria-label="Account">
@@ -102,7 +104,9 @@ export async function Shell({ children }: { children: ReactNode }) {
 
       <main className={s.main} id="main">
         <PullToRefresh>
-          <div className={s.content}>{children}</div>
+          <EditionProvider edition={edition.key}>
+            <div className={s.content}>{children}</div>
+          </EditionProvider>
         </PullToRefresh>
       </main>
 

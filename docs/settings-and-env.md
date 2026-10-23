@@ -85,6 +85,7 @@ Estimate links, trade sign-in links and shared contact links are signed with `SE
 |---|---|---|
 | `CRON_SECRET` | On Vercel | Vercel Cron sends it as a bearer token to `/api/cron/daily` and `/api/cron/email`. The daily job briefly locks the events table while it adds or drops a month, so it runs at 2:17 AM Pacific; it runs the email job too, as a backstop. `/api/cron/email` sends scheduled newsletters and series emails, and runs the sales job (left-behind carts, code holds, ShipStation retries); it should run every 5 minutes: on Vercel Pro add it to `vercel.json`, on the free plan point an outside scheduler at it with the same bearer token. |
 | `APP_URL` | Yes | The dashboard's public URL, used in Stripe return links and in published page addresses (`/p/<company>/<page>`). |
+| `FIT_FUNNELS_HOSTS` | No | Host names that open Fit Funnels before sign-in, comma separated (like `app.fitfunnels.com`). Elsewhere the sign-in and onboarding open Bison Ops, and `?edition=fit` switches. Once signed in, the company's own edition applies wherever it's opened. |
 | `PW_CHROMIUM_PATH` | No | Points Playwright at a Chromium other than its own download. |
 | `E2E_PORT` | No | Port for the end-to-end test server. Default 3100. |
 
@@ -93,7 +94,8 @@ Estimate links, trade sign-in links and shared contact links are signed with `SE
 | Setting | Where | Default | Notes |
 |---|---|---|---|
 | Sample data | Settings, Data | On | Generated, never stored. Writes refuse while on. |
-| Accent color | Settings, Appearance | `#3b5bff` | Recolors buttons, the active page, charts and highlights for the whole team. |
+| Edition | Set at signup (`tenants.edition`) | Bison Ops, or Fit Funnels for gyms and studios | Name, mark, accent, nav names and words. Can't be changed from the app. |
+| Accent color | Settings, Appearance | `#3b5bff` (Fit Funnels `#f76b15`) | Recolors buttons, the active page, charts and highlights for the whole team. |
 | Light or dark | Sidebar (phone: Menu) | Match my device | Per person, saved in their browser. |
 | Time zone | `settings.timezone` | America/Los_Angeles | Day boundaries for charts. Editable in Phase 1. |
 | Retention | `tenants.retention_days` | 400 days | Daily job removes older events. |

@@ -20,7 +20,7 @@ const customer = `cus_test_${randomUUID().slice(0, 8)}`;
 async function contextFor(id: string): Promise<PortalContext> {
   const access = await withTenant({ tenantId: id }, (tx) => loadAccess(tx), app());
   return {
-    tenant: { id, name: "Webhook Test Co", slug: "x", industry: "general", access },
+    tenant: { id, name: "Webhook Test Co", slug: "x", industry: "general", edition: "bison", access },
     member: { id: "m", userId: "user_test", email: "owner@webhooktest.com", name: "Owner", role: "owner" },
     settings: { sampleData: false, accent: "#7df9ff", timezone: "UTC" },
     sites: [],
