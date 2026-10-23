@@ -153,6 +153,143 @@ const general: SeedPage = {
   },
 };
 
+// ---- Fit Funnels ----------------------------------------------------------------
+
+const gym: SeedPage = {
+  title: "Free week pass",
+  slug: "free-week",
+  brief: "A free week pass page for first-time visitors, dark and bold, with what's included, a few common questions and a short form",
+  doc: {
+    version: PAGE_DOC_VERSION,
+    theme: { mode: "dark", accent: "#f76b15", font: "modern", corners: "soft" },
+    seo: { title: "Train free for a week | Summit Strength Club", description: "A free 7-day pass to the strength floor, every group class and the pool at Summit Strength Club. Claim it in a minute." },
+    sections: [
+      {
+        id: "hero",
+        type: "hero",
+        eyebrow: "Free 7-day pass for first-time visitors",
+        headline: "Train free at Summit for a week",
+        body: "Lift on the strength floor, drop into any group class and swim laps in the pool. Seven days, on us.",
+        primary: { label: "Claim your free week", href: "#form" },
+        secondary: { label: "What's included", href: "#features" },
+        align: "left",
+        art: "glow",
+      },
+      {
+        id: "features",
+        type: "features",
+        heading: "What your week includes",
+        items: [
+          { title: "The strength floor", body: "Racks, platforms and free weights, with coaches on the floor at the busy hours." },
+          { title: "Every group class", body: "Strength, HIIT, spin and yoga. Book a spot in the app the day before." },
+          { title: "The pool and childcare", body: "Swim laps any time we're open. Childcare is included for pass holders on weekday mornings." },
+        ],
+      },
+      {
+        id: "offer",
+        type: "offer",
+        heading: "Your free week",
+        price: "Free",
+        note: "For first-time visitors 16 and up. One pass per person.",
+        bullets: ["Full access for 7 days in a row", "A free intro session with a coach", "No card needed and nothing to cancel"],
+        cta: { label: "Claim your free week", href: "#form" },
+      },
+      {
+        id: "steps",
+        type: "steps",
+        heading: "How it works",
+        items: [
+          { title: "Claim your pass", body: "Send the form below. It takes a minute." },
+          { title: "Pick your start day", body: "The front desk texts you within a day to set it up." },
+          { title: "Come in and train", body: "Check in at the desk and a coach shows you around." },
+        ],
+      },
+      {
+        id: "faq",
+        type: "faq",
+        heading: "Questions",
+        items: [
+          { q: "Is it really free?", a: "Yes. There's no card to enter and nothing to cancel. If you want to keep training after the week, the front desk can walk you through memberships." },
+          { q: "Can I bring a friend?", a: "Yes. Each friend claims their own pass, and you can start on the same day." },
+          { q: "What should I bring?", a: "Training shoes, a water bottle and a lock for the lockers. Towels are at the desk." },
+        ],
+      },
+      {
+        id: "form",
+        type: "form",
+        heading: "Claim your free week",
+        body: "Your name and how to reach you. We'll text to set up your first day.",
+        fields: ["name", "email", "phone"],
+        submit: "Claim my free week",
+        success: "You're in. The front desk will text you within a day to pick your start date.",
+      },
+    ],
+  },
+};
+
+const studio: SeedPage = {
+  title: "First ride free",
+  slug: "first-ride",
+  brief: "A first ride free page for new riders, light and energetic, with how a first class works, common questions and a sign up form",
+  doc: {
+    version: PAGE_DOC_VERSION,
+    theme: { mode: "light", accent: "#e11d74", font: "modern", corners: "round" },
+    seo: { title: "Your first ride is free | Pulse Cycle Studio", description: "Try a 45-minute indoor cycling class at Pulse Cycle Studio on us. Shoes and water included." },
+    sections: [
+      {
+        id: "hero",
+        type: "hero",
+        eyebrow: "New riders: your first class is free",
+        headline: "Your first ride is on us",
+        body: "45 minutes, the lights down, the music up and a coach calling every climb. Book any cycling class and the first one is free.",
+        primary: { label: "Book my free ride", href: "#form" },
+        secondary: { label: "How a first ride works", href: "#steps" },
+        align: "center",
+        art: "orbs",
+      },
+      {
+        id: "steps",
+        type: "steps",
+        heading: "How your first ride works",
+        items: [
+          { title: "Book a class", body: "Pick any cycling class on the schedule. Mornings fill up first." },
+          { title: "Come 15 minutes early", body: "We fit your bike, lend you shoes and show you how to clip in." },
+          { title: "Ride at your own pace", body: "The coach calls the targets, but you set the resistance. Nobody's watching your numbers." },
+        ],
+      },
+      {
+        id: "features",
+        type: "features",
+        heading: "What's in the studio",
+        items: [
+          { title: "Shoes and water included", body: "Clip-in shoes in every size and cold water by the door." },
+          { title: "Cycling and HIIT", body: "Ride, then add a 30-minute HIIT class when you want more." },
+          { title: "Showers and lockers", body: "Showers, towels and lockers, so you can ride before work." },
+        ],
+      },
+      {
+        id: "faq",
+        type: "faq",
+        heading: "Questions",
+        items: [
+          { q: "I've never done indoor cycling. Is that okay?", a: "Yes. Tell the coach it's your first ride. They'll help you set up and check in with you during class." },
+          { q: "What should I wear?", a: "Shorts or leggings and a light top. We lend clip-in shoes, or bring your own with SPD cleats." },
+          { q: "What happens after my free ride?", a: "Nothing, unless you want to come back. Class packs and memberships are on our Packs page." },
+        ],
+      },
+      {
+        id: "form",
+        type: "form",
+        heading: "Book my free ride",
+        body: "Your details, and we'll email a link to pick your class.",
+        fields: ["name", "email", "phone"],
+        submit: "Book my free ride",
+        success: "Thanks. Check your email for a link to pick your first class.",
+      },
+    ],
+  },
+};
+
 export function seedPageFor(industry: string): SeedPage {
-  return industry === "pools" ? pools : industry === "coffee" ? coffee : general;
+  return industry === "pools" ? pools : industry === "coffee" ? coffee : industry === "gym" ? gym : industry === "studio" ? studio : general;
 }

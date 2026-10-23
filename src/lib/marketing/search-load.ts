@@ -31,7 +31,7 @@ export async function loadSearchContext(tenantId: string, database: Database = d
           return { slug: p.slug, name: p.name, summary: descriptionSummary(p.description, 200), price: r ? (r.min === r.max ? formatMoney(r.min, currency) : `from ${formatMoney(r.min, currency)}`) : "", updatedAt: p.updatedAt };
         });
       }
-      return { name: settings.brand.businessName || info.name, tenantSlug: info.slug, site: info.domain ?? null, base: appUrl(), brand: settings.brand, search: settings.search, pages, products };
+      return { name: settings.brand.businessName || info.name, tenantSlug: info.slug, site: info.domain ?? null, base: appUrl(), brand: settings.brand, search: settings.search, pages, products, edition: info.edition };
     },
     database,
   );

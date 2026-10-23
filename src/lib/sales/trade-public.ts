@@ -1,8 +1,10 @@
 import "server-only";
 // The shop's trade pages: applying for an account, asking for a sign-in link,
-// and turning a link into a session on this browser. Public requests, so each
+// and turning a link into a session on this browser. For a Fit Funnels club
+// these are corporate accounts; the route passes the club's edition. Public requests, so each
 // one works inside the shop's company and answers without saying whether an
 // email has an account.
+import { type EditionKey, sayFor } from "@/config/editions";
 import { type Database, db, withTenant } from "@/lib/db";
 import { appUrl } from "@/lib/env";
 import { checkFormToken } from "@/lib/pages/form-token";
@@ -16,12 +18,14 @@ const clean = (v: unknown, max: number) => (typeof v === "string" ? v.trim().sli
 export const tradeFormKey = (tenantId: string) => `trade:${tenantId}`;
 
 export const LINK_SENT = "If that email has an approved trade account, a sign-in link is on its way. It works for 24 hours.";
+const LINK_SENT_FIT = "If that email has an approved corporate account, a sign-in link is on its way. It works for 24 hours.";
 
 export type ApplyInput = { token: unknown; company: unknown; name: unknown; email: unknown; phone: unknown; website: unknown; type: unknown; resale: unknown; volume: unknown; message: unknown; trap?: unknown };
 
 export const APPLIED = "Thanks. We'll review your application and email you.";
 
-export async function submitTradeApplication(tenantId: string, slug: string, input: ApplyInput, database: Database = db()): Promise<{ ok: boolean; message: string; status?: number }> {
+export async function submitTradeApplication(tenantId: string, slug: string, input: ApplyInput, database: Database = db(), edition: EditionKey = "bison"): Promise<{ ok: boolean; message: string; status?: number }> {
+  const say = sayFor(edition);
   // A hidden field people never see. Anything in it is a bot; answer as if it worked.
   if (clean(input.trap, 200)) return { ok: true, message: APPLIED };
   const t = checkFormToken(input.token, tradeFormKey(tenantId));
@@ -42,8 +46,8 @@ export async function submitTradeApplication(tenantId: string, slug: string, inp
     { tenantId, userId: "public:trade" },
     async (tx) => {
       const settings = await getSalesSettings(tx);
-      if (!settings.trade.open) throw new TradeError("We aren't taking trade applications right now.");
-      const saved = await applyForTrade(tx, a);
+      if (!settings.trade.open) throw new TradeError(say("We aren't taking trade applications right now.", "We aren't taking corporate account applications right now."));
+      const saved = await applyForTrade(tx, a, edition);
       return { saved, to: settings.store.alertEmails, sender: await salesSender(tx) };
     },
     database,
@@ -51,7 +55,7 @@ export async function submitTradeApplication(tenantId: string, slug: string, inp
   // The answer is the same whatever the email's account looks like, so the form can't be used to find out.
   // Someone approved already gets a sign-in link in their own inbox instead.
   if (r.saved.status === "approved") {
-    await requestTradeLink(tenantId, slug, a.email, database);
+    await requestTradeLink(tenantId, slug, a.email, database, edition);
     return { ok: true, message: APPLIED };
   }
   if (r.to.length && r.saved.status === "applied") {
@@ -62,9 +66,10 @@ export async function submitTradeApplication(tenantId: string, slug: string, inp
 }
 
 /** Emails a sign-in link when the address belongs to an approved account. Says the same thing either way. */
-export async function requestTradeLink(tenantId: string, slug: string, emailInput: unknown, database: Database = db()): Promise<{ ok: boolean; message: string }> {
+export async function requestTradeLink(tenantId: string, slug: string, emailInput: unknown, database: Database = db(), edition: EditionKey = "bison"): Promise<{ ok: boolean; message: string }> {
+  const say = sayFor(edition);
   const email = clean(emailInput, 254).toLowerCase();
-  if (!EMAIL.test(email)) return { ok: false, message: "Enter the email on your trade account." };
+  if (!EMAIL.test(email)) return { ok: false, message: say("Enter the email on your trade account.", "Enter the email on your corporate account.") };
   const r = await withTenant(
     { tenantId, userId: "public:trade" },
     async (tx) => ({
@@ -78,7 +83,7 @@ export async function requestTradeLink(tenantId: string, slug: string, emailInpu
     // One link a minute per account, whatever is clicked.
     await sendOne(r.sender, { to: email, ...mail, kind: "trade-link", ref: r.a.id }, `bison/trade-link/${r.a.id}/${Math.floor(Date.now() / 60_000)}`);
   }
-  return { ok: true, message: LINK_SENT };
+  return { ok: true, message: say(LINK_SENT, LINK_SENT_FIT) };
 }
 
 /** The company a sign-in link is for, to show before signing in. Null when the link is old or the account isn't approved. */

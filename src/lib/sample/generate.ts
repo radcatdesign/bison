@@ -126,7 +126,7 @@ export function sampleLandingPages(tenant: SampleTenant, rangeDays: number, now 
   const total = weights.reduce((a, b) => a + b, 0);
   const pages = preset.pages.map((path, i) => {
     const entries = Math.max(1, Math.round((current.visits * weights[i]) / total));
-    const intent = /quote|contact|wholesale|dealers|pricing/.test(path);
+    const intent = /quote|contact|wholesale|dealers|pricing|free-pass|first-ride|memberships|packs|personal-training/.test(path);
     return {
       path,
       title: samplePageTitle(tenant.industry, path),

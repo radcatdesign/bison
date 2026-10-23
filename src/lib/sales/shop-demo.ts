@@ -3,7 +3,7 @@ import "server-only";
 // catalog, and a cart that lives entirely in its own id (the items are packed
 // into it), so adding, changing and codes all work without saving anything.
 // Checkout stops with a plain note.
-import { BRAND } from "@/config/brand";
+import { editionFor } from "@/config/editions";
 import { DEV_TENANTS } from "@/lib/auth/dev-people";
 import { appUrl } from "@/lib/env";
 import { sampleCatalog, sampleUuid } from "@/lib/sample/sales";
@@ -20,7 +20,7 @@ const tenantFor = (slug: string) => Object.values(DEV_TENANTS).find((t) => t.dom
 export function demoShop(slug: string): Shop | null {
   const t = tenantFor(slug);
   if (!t) return null;
-  return { tenantId: t.id, slug, name: t.name, accent: BRAND.defaultAccent, logo: null, currency: "usd", shopOn: true, tradeOpen: true, tradeOn: true, tradeIntro: "", payable: false, checkoutNote: "", countries: ["US"], collectPhone: true, inquiryMessage: "", site: t.domain, base: appUrl() };
+  return { tenantId: t.id, slug, edition: t.edition, name: t.name, accent: editionFor(t.edition).defaultAccent, logo: null, currency: "usd", shopOn: true, tradeOpen: true, tradeOn: true, tradeIntro: "", payable: false, checkoutNote: "", countries: ["US"], collectPhone: true, inquiryMessage: "", site: t.domain, base: appUrl() };
 }
 
 const productId = (tenantId: string, slug: string) => sampleUuid(`${tenantId}:product:${slug}`);

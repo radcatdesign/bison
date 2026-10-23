@@ -50,7 +50,7 @@ export async function createNewsletterAction(formData: FormData): Promise<void> 
   const { ctx, error } = await guard("marketing.edit");
   if (error) redirect(`/marketing/newsletters?error=${encodeURIComponent(error)}`);
   const site = ctx.sites[0]?.domain ? `https://${ctx.sites[0].domain}` : "https://example.com";
-  const template = findEmailTemplate(formData.get("template"));
+  const template = findEmailTemplate(formData.get("template"), ctx.tenant.edition);
   const savedId = formData.get("saved");
   let content = { subject: "", preheader: "", doc: emptyEmailDoc() };
   if (template) content = { subject: template.subject, preheader: template.preheader, doc: parseEmailDoc(template.doc(site)) };

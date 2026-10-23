@@ -4,6 +4,7 @@ import "server-only";
 // Stripe invoice with a Pay link, and recording the payment as an order.
 // Every step lands in estimate_events, so the history reads like a log.
 import { sql } from "kysely";
+import { type EditionKey, type Say, sayFor } from "@/config/editions";
 import { audit } from "@/lib/audit";
 import { type Database, db, isUuid, type Tx, withTenant } from "@/lib/db";
 import type { EstimateEventKind, EstimateStatus } from "@/lib/db/types";
@@ -17,13 +18,16 @@ import { formatMoney } from "./money";
 import { afterOrderPaid, createOrder, nextEstimateNumber, upsertBuyer } from "./orders";
 import { type PaymentsProvider, paymentsProvider } from "./payments";
 import { type EstimateDiscount, type EstimateLine, estimateTotals } from "./pricing";
-import { getSalesSettings, readPayments } from "./store";
+import { getSalesSettings, readEdition, readPayments } from "./store";
 import type { Delivery, EstimateClient, EstimateDetail, EstimateRow } from "./types";
 
 /** Links keep working this long after they're sent. */
 export const ESTIMATE_LINK_DAYS = 180;
 
 export class EstimateError extends Error {}
+
+/** The words for this company's edition: a Fit Funnels club sends quotes, not estimates. */
+const wordsIn = async (tx: Tx): Promise<Say> => sayFor(await readEdition(tx));
 
 const OPEN: EstimateStatus[] = ["sent", "viewed", "changes_requested"];
 
@@ -115,8 +119,8 @@ export async function createEstimate(tx: Tx, e: EstimateInput, actor: string): P
 
 export async function saveEstimate(tx: Tx, id: string, e: EstimateInput, actor: string): Promise<void> {
   const cur = await tx.selectFrom("estimates").select(["status"]).where("id", "=", id).executeTakeFirst();
-  if (!cur) throw new EstimateError("That estimate isn't here anymore.");
-  if (!EDITABLE.has(cur.status)) throw new EstimateError("This estimate was approved, so it can't change. Duplicate it to make a new one.");
+  if (!cur) throw new EstimateError((await wordsIn(tx))("That estimate isn't here anymore.", "That quote isn't here anymore."));
+  if (!EDITABLE.has(cur.status)) throw new EstimateError((await wordsIn(tx))("This estimate was approved, so it can't change. Duplicate it to make a new one.", "This quote was approved, so it can't change. Duplicate it to make a new one."));
   await tx.updateTable("estimates").set(columns(e)).where("id", "=", id).execute();
   if (cur.status !== "draft") {
     // One "edited" line per few minutes is plenty; autosave runs often.
@@ -127,7 +131,7 @@ export async function saveEstimate(tx: Tx, id: string, e: EstimateInput, actor: 
 
 export async function duplicateEstimate(tx: Tx, id: string, actor: string): Promise<{ id: string; number: number }> {
   const src = await getEstimate(tx, id);
-  if (!src) throw new EstimateError("That estimate isn't here anymore.");
+  if (!src) throw new EstimateError((await wordsIn(tx))("That estimate isn't here anymore.", "That quote isn't here anymore."));
   const settings = await getSalesSettings(tx);
   return createEstimate(tx, { title: src.title, client: { ...src.client, address: src.client.address }, tradeAccountId: src.tradeAccountId, items: src.items.map((i) => ({ ...i, productId: i.productId ?? null, variantId: i.variantId ?? null })), discount: src.discount as EstimateInput["discount"], shippingCents: src.shippingCents, notes: src.notes, internalNote: "", validUntil: new Date(Date.now() + settings.store.estimates.validDays * 86_400_000).toISOString().slice(0, 10) }, actor);
 }
@@ -166,10 +170,10 @@ export async function sendEstimate(tenantId: string, id: string, input: { messag
     { tenantId, userId: input.actor },
     async (tx) => {
       const e = await tx.selectFrom("estimates").selectAll().where("id", "=", id).executeTakeFirst();
-      if (!e) throw new EstimateError("That estimate isn't here anymore.");
-      if (!EDITABLE.has(e.status)) throw new EstimateError("This estimate was already approved.");
+      if (!e) throw new EstimateError((await wordsIn(tx))("That estimate isn't here anymore.", "That quote isn't here anymore."));
+      if (!EDITABLE.has(e.status)) throw new EstimateError((await wordsIn(tx))("This estimate was already approved.", "This quote was already approved."));
       const c = client(e.client);
-      const problems = sendProblems({ title: e.title, client: { ...c, address: c.address }, tradeAccountId: e.trade_account_id, items: (e.items ?? []) as EstimateLine[], discount: {}, shippingCents: e.shipping_cents, notes: e.notes, internalNote: "", validUntil: null });
+      const problems = sendProblems({ title: e.title, client: { ...c, address: c.address }, tradeAccountId: e.trade_account_id, items: (e.items ?? []) as EstimateLine[], discount: {}, shippingCents: e.shipping_cents, notes: e.notes, internalNote: "", validUntil: null }, await readEdition(tx));
       if (problems.length) throw new EstimateError(problems.join(" "));
       return { e, c, sender: await salesSender(tx) };
     },
@@ -199,9 +203,10 @@ export async function sendEstimate(tenantId: string, id: string, input: { messag
 }
 
 export async function voidEstimate(tenantId: string, id: string, actor: string, database: Database = db(), payments: PaymentsProvider | null = paymentsProvider()): Promise<{ ok: boolean; message: string }> {
-  const e = await withTenant({ tenantId, userId: actor }, (tx) => tx.selectFrom("estimates").select(["status", "stripe_invoice_id"]).where("id", "=", id).executeTakeFirst(), database);
-  if (!e) return { ok: false, message: "That estimate isn't here anymore." };
-  if (e.status === "paid") return { ok: false, message: "It's paid, so it can't be voided. Refund the order instead." };
+  const { e, edition } = await withTenant({ tenantId, userId: actor }, async (tx) => ({ e: await tx.selectFrom("estimates").select(["status", "stripe_invoice_id"]).where("id", "=", id).executeTakeFirst(), edition: await readEdition(tx) }), database);
+  const say = sayFor(edition);
+  if (!e) return { ok: false, message: say("That estimate isn't here anymore.", "That quote isn't here anymore.") };
+  if (e.status === "paid") return { ok: false, message: say("It's paid, so it can't be voided. Refund the order instead.", "It's paid, so it can't be voided. Refund the purchase instead.") };
   if (e.status === "void") return { ok: true, message: "It's already void." };
   if (e.stripe_invoice_id) {
     const conn = await withTenant({ tenantId, userId: actor }, (tx) => readPayments(tx), database);
@@ -221,12 +226,12 @@ export async function voidEstimate(tenantId: string, id: string, actor: string, 
     },
     database,
   );
-  return { ok: true, message: "Voided. The client's link stops working." };
+  return { ok: true, message: say("Voided. The client's link stops working.", "Voided. Their link stops working.") };
 }
 
 // ---- The client's page -------------------------------------------------------------------------
 
-export type ClientView = { estimate: EstimateDetail; business: { name: string; accent: string; logo: string | null; address: string; email: string }; expired: boolean; payable: boolean; currency: string };
+export type ClientView = { estimate: EstimateDetail; business: { name: string; accent: string; logo: string | null; address: string; email: string }; expired: boolean; payable: boolean; currency: string; edition: EditionKey };
 
 export async function clientView(tenantId: string, estimateId: string, database: Database = db()): Promise<ClientView | null> {
   return withTenant(
@@ -239,7 +244,7 @@ export async function clientView(tenantId: string, estimateId: string, database:
         await event(tx, e.id, "viewed", "client");
         e.status = "viewed";
       } else if (!e.viewedAt) await tx.updateTable("estimates").set({ viewed_at: new Date() }).where("id", "=", e.id).execute();
-      const info = await tx.selectFrom("tenants").select(["name"]).executeTakeFirstOrThrow();
+      const info = await tx.selectFrom("tenants").select(["name", "edition"]).executeTakeFirstOrThrow();
       const settings = await tx.selectFrom("settings").select("accent").executeTakeFirstOrThrow();
       const ms = await tx.selectFrom("marketing_settings").select("brand").executeTakeFirst();
       const brand = (ms?.brand ?? {}) as { businessName?: string; logo?: { src?: string } | null; address?: string; colors?: { accent?: string }; replyTo?: string };
@@ -250,6 +255,7 @@ export async function clientView(tenantId: string, estimateId: string, database:
         expired,
         payable: e.status === "invoiced" && Boolean(e.invoiceUrl),
         currency: e.currency,
+        edition: info.edition === "fit" ? "fit" : "bison",
       };
     },
     database,
@@ -265,11 +271,12 @@ export async function clientReply(tenantId: string, estimateId: string, reply: C
     { tenantId, userId: "public:estimate" },
     async (tx) => {
       const e = await tx.selectFrom("estimates").selectAll().where("id", "=", estimateId).forUpdate().executeTakeFirst();
-      if (!e || e.status === "draft" || e.status === "void") return { ok: false, message: "This estimate isn't open anymore." } as const;
-      if (!OPEN.includes(e.status)) return { ok: false, message: e.status === "declined" ? "You declined this estimate. Ask them for a new one if you've changed your mind." : "This estimate was already approved." } as const;
+      const say = await wordsIn(tx);
+      if (!e || e.status === "draft" || e.status === "void") return { ok: false, message: say("This estimate isn't open anymore.", "This quote isn't open anymore.") } as const;
+      if (!OPEN.includes(e.status)) return { ok: false, message: e.status === "declined" ? say("You declined this estimate. Ask them for a new one if you've changed your mind.", "You declined this quote. Ask them for a new one if you've changed your mind.") : say("This estimate was already approved.", "This quote was already approved.") } as const;
       const seen = new Date(reply.seen).getTime();
-      if (!Number.isFinite(seen) || seen + 1000 < e.updated_at.getTime()) return { ok: false, message: "This estimate changed while you had it open. Look it over again, then answer.", changed: true } as const;
-      if (e.valid_until && dateOnly(e.valid_until)! < now.toISOString().slice(0, 10) && reply.kind === "approve") return { ok: false, message: "This estimate has expired. Ask for an updated one." } as const;
+      if (!Number.isFinite(seen) || seen + 1000 < e.updated_at.getTime()) return { ok: false, message: say("This estimate changed while you had it open. Look it over again, then answer.", "This quote changed while you had it open. Look it over again, then answer."), changed: true } as const;
+      if (e.valid_until && dateOnly(e.valid_until)! < now.toISOString().slice(0, 10) && reply.kind === "approve") return { ok: false, message: say("This estimate has expired. Ask for an updated one.", "This quote has expired. Ask for an updated one.") } as const;
       if (reply.kind === "approve") {
         const name = reply.name.trim();
         if (name.length < 2) return { ok: false, message: "Type your full name to approve." } as const;
@@ -282,12 +289,12 @@ export async function clientReply(tenantId: string, estimateId: string, reply: C
         await event(tx, e.id, reply.kind === "changes" ? "changes_requested" : "declined", "client", message);
       }
       const settings = await getSalesSettings(tx);
-      return { ok: true, e, settings, conn: await readPayments(tx), sender: await salesSender(tx) } as const;
+      return { ok: true, e, settings, conn: await readPayments(tx), sender: await salesSender(tx), say } as const;
     },
     database,
   );
   if (!result.ok) return result;
-  const { e, settings, conn, sender } = result;
+  const { e, settings, conn, sender, say } = result;
   const c = client(e.client);
 
   let invoiceUrl: string | null = null;
@@ -301,14 +308,14 @@ export async function clientReply(tenantId: string, estimateId: string, reply: C
     await sendOne(sender, { to: to.join(","), replyTo: c.email || undefined, ...mail, kind: "estimate-reply", ref: e.id }, `bison/estimate-reply/${e.id}/${reply.kind}/${Date.now()}`);
   }
   if (reply.kind === "approve") return { ok: true, message: invoiceUrl ? "Approved. Your invoice is ready to pay." : `Approved. ${settings.store.alertEmails.length ? "We'll" : "They'll"} send your invoice shortly.`, invoiceUrl };
-  return { ok: true, message: reply.kind === "changes" ? "Sent. They'll update the estimate and send it again." : "Declined. Thanks for letting them know." };
+  return { ok: true, message: reply.kind === "changes" ? say("Sent. They'll update the estimate and send it again.", "Sent. They'll update the quote and send it again.") : "Declined. Thanks for letting them know." };
 }
 
 /** Makes the Stripe invoice for an approved estimate. Returns its Pay link, or null (with the reason in the history). */
 export async function invoiceEstimate(tenantId: string, id: string, database: Database = db(), payments: PaymentsProvider | null = paymentsProvider()): Promise<string | null> {
   const prep = await withTenant(
     { tenantId, userId: "system:stripe" },
-    async (tx) => ({ e: await tx.selectFrom("estimates").selectAll().where("id", "=", id).executeTakeFirst(), conn: await readPayments(tx), settings: await getSalesSettings(tx), tenant: await tx.selectFrom("tenants").select("name").executeTakeFirstOrThrow() }),
+    async (tx) => ({ e: await tx.selectFrom("estimates").selectAll().where("id", "=", id).executeTakeFirst(), conn: await readPayments(tx), settings: await getSalesSettings(tx), tenant: await tx.selectFrom("tenants").select(["name", "edition"]).executeTakeFirstOrThrow() }),
     database,
   );
   const { e, conn, settings } = prep;
@@ -327,7 +334,7 @@ export async function invoiceEstimate(tenantId: string, id: string, database: Da
       discount: e.discount_cents > 0 ? { label: "Discount", amountCents: e.discount_cents } : null,
       tax: settings.store.checkout.tax && conn.tax === "active",
       dueDays: settings.store.estimates.dueDays,
-      memo: `Estimate #${e.number}${e.title ? `: ${e.title}` : ""}. Approved by ${e.approved_name}.`,
+      memo: `${sayFor(prep.tenant.edition === "fit" ? "fit" : "bison")("Estimate", "Quote")} #${e.number}${e.title ? `: ${e.title}` : ""}. Approved by ${e.approved_name}.`,
       footer: e.notes,
     });
     await withTenant(
@@ -404,7 +411,7 @@ export async function recordEstimatePaid(tx: Tx, id: string, p: PaidInput): Prom
     needsShipping: items.some((l) => l.variantId) && Boolean(c.address.line1),
   });
   await tx.updateTable("estimates").set({ status: "paid", paid_at: new Date(), order_id: order.id }).where("id", "=", e.id).execute();
-  await event(tx, e.id, "paid", p.actor, p.note ?? `Order #${order.number}`);
+  await event(tx, e.id, "paid", p.actor, p.note ?? `${(await wordsIn(tx))("Order", "Purchase")} #${order.number}`);
   return { orderId: order.id, orderNumber: order.number, estimateId: e.id, created: order.created };
 }
 
@@ -414,10 +421,11 @@ export async function markEstimatePaid(tenantId: string, id: string, actor: stri
     { tenantId, userId: actor },
     async (tx) => {
       const e = await tx.selectFrom("estimates").select(["status", "total_cents", "stripe_invoice_id"]).where("id", "=", id).executeTakeFirst();
-      if (!e) return { ok: false, message: "That estimate isn't here anymore." } as const;
-      if (!["approved", "invoiced", "sent", "viewed"].includes(e.status)) return { ok: false, message: e.status === "paid" ? "It's already paid." : "Only approved or sent estimates can be marked paid." } as const;
+      const say = await wordsIn(tx);
+      if (!e) return { ok: false, message: say("That estimate isn't here anymore.", "That quote isn't here anymore.") } as const;
+      if (!["approved", "invoiced", "sent", "viewed"].includes(e.status)) return { ok: false, message: e.status === "paid" ? "It's already paid." : say("Only approved or sent estimates can be marked paid.", "Only approved or sent quotes can be marked paid.") } as const;
       const paid = await recordEstimatePaid(tx, id, { invoiceId: null, paymentIntentId: null, totalCents: e.total_cents, taxCents: 0, accountId: null, actor, note: note.trim() ? `Paid outside Stripe: ${note.trim()}` : "Paid outside Stripe" });
-      return paid ? ({ ok: true, ...paid, invoiceId: e.stripe_invoice_id, conn: await readPayments(tx) } as const) : ({ ok: false, message: "Couldn't record the payment." } as const);
+      return paid ? ({ ok: true, ...paid, invoiceId: e.stripe_invoice_id, conn: await readPayments(tx), say } as const) : ({ ok: false, message: "Couldn't record the payment." } as const);
     },
     database,
   );
@@ -425,7 +433,7 @@ export async function markEstimatePaid(tenantId: string, id: string, actor: stri
   // The Stripe invoice is still open, so the client could pay it twice. Void it.
   if (r.invoiceId && r.conn.accountId && payments) await payments.voidInvoice(r.conn.accountId, r.invoiceId).catch((err) => console.error("Voiding the paid invoice failed", err));
   if (r.created) await afterOrderPaid(tenantId, r.orderId, database);
-  return { ok: true, message: `Marked paid. It's order #${r.orderNumber}.`, orderId: r.orderId };
+  return { ok: true, message: r.say(`Marked paid. It's order #${r.orderNumber}.`, `Marked paid. It's purchase #${r.orderNumber}.`), orderId: r.orderId };
 }
 
 async function alertPaid(tenantId: string, estimateId: string, orderNumber: number, database: Database) {

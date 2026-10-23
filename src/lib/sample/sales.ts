@@ -1,6 +1,8 @@
 // Made-up orders, estimates, carts and trade accounts for sample mode and the
 // demo, plus a sample catalog per industry. Same company, same data, every
-// time. Never written to the database.
+// time. Never written to the database. Fit Funnels clubs (a gym, a studio) get
+// their own: memberships and packs, corporate quotes, corporate accounts.
+import { editionOfIndustry } from "@/config/editions";
 import type { EstimateStatus, FulfillmentStatus, OrderStatus, TradeStatus } from "@/lib/db/types";
 import { estimateTotals, type EstimateLine } from "@/lib/sales/pricing";
 import type { CartRow, EstimateDetail, EstimateRow, OrderDetail, OrderItem, OrderRow, SalesSummary, TradeRow } from "@/lib/sales/types";
@@ -81,6 +83,90 @@ const CATALOGS: Record<string, SampleProduct[]> = {
     { slug: "pour-over-kit", name: "Pour-over kit", category: "Gear", color: "#5c4033", description: "Ceramic dripper, filters and a 12 oz bag of house blend.", options: [], variants: [v({}, 4500, "PO-KIT", 40, "small")] },
     { slug: "ceramic-mug", name: "Ceramic mug", category: "Gear", color: "#b08968", description: "12 oz, glazed in the shop's colors.", options: [], variants: [v({}, 2200, "MUG-12", 18, "small", { unitsPerBox: 2 })] },
   ],
+  // Fit Funnels: a full gym, and a boutique cycling studio. Memberships, packs
+  // and training don't ship (a flat shipping charge of 0); only gear does.
+  gym: [
+    {
+      slug: "club-membership",
+      name: "Club membership",
+      category: "Memberships",
+      color: "#f76b15",
+      description: "The strength floor, group classes, the pool and the sauna, seven days a week.\n\n- Monthly, annual, or off-peak (weekdays before 4 pm and weekends)\n- A fitness assessment in your first week\n- Bring a friend once a month",
+      options: [{ name: "Plan", values: ["Monthly", "Annual", "Off-peak monthly"] }],
+      variants: [v({ Plan: "Monthly" }, 8900, "MEM-MONTH", 0, "", { flatShipCents: 0 }), v({ Plan: "Annual" }, 89000, "MEM-YEAR", 0, "", { flatShipCents: 0, compareAtCents: 106800 }), v({ Plan: "Off-peak monthly" }, 5900, "MEM-OFFPEAK", 0, "", { flatShipCents: 0 })],
+    },
+    {
+      slug: "class-pack",
+      name: "Class pack",
+      category: "Class packs",
+      color: "#e8590c",
+      description: "Group classes on the schedule: spin, HIIT, strength, yoga and aqua. Book in the app. Packs last six months.",
+      options: [{ name: "Classes", values: ["5 classes", "10 classes", "20 classes"] }],
+      variants: [v({ Classes: "5 classes" }, 9500, "CP-5", 0, "", { flatShipCents: 0 }), v({ Classes: "10 classes" }, 17000, "CP-10", 0, "", { flatShipCents: 0 }), v({ Classes: "20 classes" }, 30000, "CP-20", 0, "", { flatShipCents: 0 })],
+    },
+    {
+      slug: "personal-training",
+      name: "Personal training",
+      category: "Personal training",
+      color: "#d9480f",
+      description: "One-on-one sessions with a coach, planned around what you want to work on. Sessions are 50 minutes.\n\n- Start with one session to meet your trainer\n- Packages last 90 days",
+      options: [{ name: "Package", values: ["1 session", "4 sessions", "8 sessions", "12 sessions"] }],
+      variants: [v({ Package: "1 session" }, 7500, "PT-1", 0, "", { flatShipCents: 0 }), v({ Package: "4 sessions" }, 28000, "PT-4", 0, "", { flatShipCents: 0 }), v({ Package: "8 sessions" }, 52000, "PT-8", 0, "", { flatShipCents: 0 }), v({ Package: "12 sessions" }, 72000, "PT-12", 0, "", { flatShipCents: 0 })],
+    },
+    { slug: "day-pass", name: "Day pass", category: "Passes", color: "#fd7e14", description: "One day, the whole club. Bring a photo ID to the front desk.", options: [], variants: [v({}, 2500, "DAY-1", 0, "", { flatShipCents: 0 })] },
+    {
+      slug: "family-add-on",
+      name: "Family add-on",
+      category: "Memberships",
+      color: "#f08c00",
+      description: "Add a partner or a teen (14 to 17) to a club membership. Childcare is included for kids under 8 while you train.",
+      options: [{ name: "Who", values: ["Partner", "Teen"] }],
+      variants: [v({ Who: "Partner" }, 4900, "FAM-PARTNER", 0, "", { flatShipCents: 0 }), v({ Who: "Teen" }, 2900, "FAM-TEEN", 0, "", { flatShipCents: 0 })],
+    },
+    {
+      slug: "club-tee",
+      name: "Club tee",
+      category: "Gear",
+      color: "#495057",
+      description: "Soft cotton tee with the club logo on the chest.",
+      options: [{ name: "Size", values: ["S", "M", "L", "XL"] }],
+      variants: ["S", "M", "L", "XL"].map((sz) => v({ Size: sz }, 2800, `TEE-${sz}`, 6, "small", { unitsPerBox: 4 })),
+    },
+    { slug: "shaker-bottle", name: "Shaker bottle", category: "Gear", color: "#343a40", description: "24 oz, with a mixing ball and a leakproof lid.", options: [], variants: [v({}, 1400, "SHAKER-24", 8, "small", { unitsPerBox: 4 })] },
+    { slug: "gym-towel", name: "Gym towel", category: "Gear", color: "#868e96", description: "Quick-dry microfiber, sized for a bench.", options: [], variants: [v({}, 1800, "TOWEL-1", 10, "small", { unitsPerBox: 3 })] },
+  ],
+  studio: [
+    { slug: "first-ride", name: "First ride", category: "Intro", color: "#f76b15", description: "Your first class, shoes included. Come 15 minutes early and we'll set up your bike.", options: [], variants: [v({}, 1500, "RIDE-FIRST", 0, "", { flatShipCents: 0 })] },
+    {
+      slug: "class-pack",
+      name: "Class pack",
+      category: "Class packs",
+      color: "#e8590c",
+      description: "Rides and HIIT classes, booked in the app. Packs last six months.\n\n- 5, 10 or 20 classes\n- Share a pack with a friend at the front desk",
+      options: [{ name: "Classes", values: ["5 classes", "10 classes", "20 classes"] }],
+      variants: [v({ Classes: "5 classes" }, 11000, "PACK-5", 0, "", { flatShipCents: 0 }), v({ Classes: "10 classes" }, 20000, "PACK-10", 0, "", { flatShipCents: 0 }), v({ Classes: "20 classes" }, 36000, "PACK-20", 0, "", { flatShipCents: 0, compareAtCents: 40000 })],
+    },
+    { slug: "unlimited-monthly", name: "Unlimited monthly", category: "Memberships", color: "#d9480f", description: "Every ride and every HIIT class, as many as you can book. Renews each month.", options: [], variants: [v({}, 18900, "UNL-MONTH", 0, "", { flatShipCents: 0 })] },
+    { slug: "shoe-rental", name: "Shoe rental", category: "Add-ons", color: "#fd7e14", description: "Clip-in cycling shoes for one class. Free with your first ride.", options: [], variants: [v({}, 300, "SHOE-1", 0, "", { flatShipCents: 0 })] },
+    {
+      slug: "grip-socks",
+      name: "Grip socks",
+      category: "Gear",
+      color: "#495057",
+      description: "Non-slip socks for HIIT and the mat room.",
+      options: [{ name: "Size", values: ["S/M", "L/XL"] }],
+      variants: ["S/M", "L/XL"].map((sz) => v({ Size: sz }, 1400, `SOCK-${sz.replace("/", "")}`, 3, "small", { unitsPerBox: 6 })),
+    },
+    {
+      slug: "studio-tee",
+      name: "Studio tee",
+      category: "Gear",
+      color: "#343a40",
+      description: "Lightweight tee with the studio logo on the back.",
+      options: [{ name: "Size", values: ["XS", "S", "M", "L", "XL"] }],
+      variants: ["XS", "S", "M", "L", "XL"].map((sz) => v({ Size: sz }, 3200, `TEE-${sz}`, 5, "small", { unitsPerBox: 4 })),
+    },
+  ],
   general: [
     { slug: "starter-package", name: "Starter package", category: "Packages", color: "#4263eb", description: "A good first step: the essentials, set up and handed over.", options: [], variants: [v({}, 25000, "PKG-S", 0, "", { flatShipCents: 0 })] },
     { slug: "standard-package", name: "Standard package", category: "Packages", color: "#3b5bdb", description: "Everything in Starter, plus a second round of changes.", options: [], variants: [v({}, 65000, "PKG-M", 0, "", { flatShipCents: 0 })] },
@@ -116,7 +202,13 @@ const COMPANIES: Record<string, string[]> = {
   pools: ["Blue Lagoon Pools", "Desert Oasis Builders", "Clearwater Pool Co", "Aqua Craft Resurfacing", "Sunbelt Pools", "Northshore Spas", "Coastal Plaster", "Lone Star Pool Works", "Palmetto Pools", "Highline Outdoor"],
   coffee: ["Corner Cafe", "Two Rivers Coffee Bar", "Brightside Bakery", "Fieldhouse Offices", "Juniper Market", "The Daily Grind", "Hilltop Co-op", "Lantern Books and Coffee", "Northside Coworking", "Saltbox Diner"],
   general: ["Hartwell Group", "Oakline Studio", "Pinecrest Partners", "Meridian Health", "Brightpath Schools", "Summit Legal", "Redwood Dental", "Ironside Fitness", "Kestrel Media", "Bluebird Realty"],
+  // Local employers whose staff join on corporate pricing.
+  gym: ["Cascade Medical Group", "High Desert Credit Union", "Juniper Elementary", "Ridgeview Engineering", "Pine Street Dental", "Deschutes Brewing Co", "Northside Fire District", "Basin Logistics", "Sagebrush Software", "Lakeside Senior Living"],
+  studio: ["Ember Coffee Co", "Stonefly Design", "Trailhead Outfitters", "Alder Physical Therapy", "Bright Lane Realty", "Riverbend Law", "Kiln and Co", "Harbor Yoga Collective", "Copperline Marketing", "Oak Hill Montessori"],
 };
+
+/** Fit Funnels clubs get club data: memberships, packs and corporate accounts. */
+const isClub = (t: SampleTenant) => editionOfIndustry(t.industry) === "fit";
 
 type Person = { name: string; email: string; city: (typeof CITIES)[number]; street: string };
 
@@ -139,9 +231,33 @@ function pickItems(rand: ReturnType<typeof seeded>, catalog: SampleProduct[], ma
   return items;
 }
 
+/** Gear ships; memberships, packs and training don't. */
+const ships = (sku: string, catalog: SampleProduct[]) => catalog.some((p) => p.variants.some((x) => x.sku === sku && x.weightOz > 0));
+
+/**
+ * What a club member buys: usually one membership, pack or training package,
+ * sometimes with a piece of gear. Memberships and packs come one at a time.
+ */
+function pickClubItems(rand: ReturnType<typeof seeded>, catalog: SampleProduct[], max: number): OrderItem[] {
+  const sold = catalog.filter((p) => !p.variants.some((x) => x.weightOz > 0));
+  const gear = catalog.filter((p) => p.variants.some((x) => x.weightOz > 0));
+  const count = rand.int(1, max);
+  const items: OrderItem[] = [];
+  for (let i = 0; i < count; i++) {
+    const fromGear = gear.length > 0 && (i === 0 ? rand.chance(0.1) : rand.chance(0.7));
+    const p = rand.pick(fromGear ? gear : sold);
+    const variant = rand.pick(p.variants);
+    if (items.some((x) => x.sku === variant.sku)) continue;
+    const qty = variant.weightOz > 0 ? rand.int(1, 2) : 1;
+    items.push({ productId: null, variantId: null, name: p.name, variant: Object.values(variant.options).join(" / "), sku: variant.sku, qty, unitCents: variant.priceCents, lineCents: variant.priceCents * qty });
+  }
+  return items;
+}
+
 // ---- Orders --------------------------------------------------------------------------
 
 export function sampleOrders(tenant: SampleTenant, now = new Date()): OrderDetail[] {
+  if (isClub(tenant)) return clubOrders(tenant, now);
   const rand = seeded(`${tenant.id}:${tenant.name}:orders`);
   const catalog = sampleCatalog(tenant);
   const companies = COMPANIES[tenant.industry] ?? COMPANIES.general;
@@ -201,6 +317,68 @@ export function sampleOrders(tenant: SampleTenant, now = new Date()): OrderDetai
   return out;
 }
 
+/** A club's purchases: memberships, packs and training, with the odd piece of gear that ships. */
+function clubOrders(tenant: SampleTenant, now: Date): OrderDetail[] {
+  const rand = seeded(`${tenant.id}:${tenant.name}:orders`);
+  const catalog = sampleCatalog(tenant);
+  const companies = COMPANIES[tenant.industry] ?? COMPANIES.general;
+  const total = rand.int(90, 160);
+  const out: OrderDetail[] = [];
+  for (let i = 0; i < total; i++) {
+    const p = person(rand);
+    const ageDays = Math.pow(i / total, 1.2) * 120 + rand.next() * 0.8;
+    const paidAt = new Date(now.getTime() - ageDays * DAY - rand.int(0, 8) * 3_600_000);
+    const items = pickClubItems(rand, catalog, 2);
+    const subtotal = items.reduce((n, x) => n + x.lineCents, 0);
+    const corporate = rand.chance(0.14) ? rand.pick(companies) : null;
+    const corporateOff = corporate ? Math.round(subtotal * 0.15) : 0;
+    const code = !corporate && rand.chance(0.18) ? rand.pick(["FIRSTMONTH", "SUMMER15", "FRIENDS"]) : "";
+    const discount = corporateOff + (code ? Math.round(subtotal * 0.1) : 0);
+    const gearCents = items.filter((x) => ships(x.sku, catalog)).reduce((n, x) => n + x.lineCents, 0);
+    const shipping = gearCents ? Math.round(600 + gearCents * 0.05 + rand.int(0, 300)) : 0;
+    const tax = Math.round(gearCents * 0.078);
+    const totalCents = subtotal - discount + shipping + tax;
+    const ageHours = ageDays * 24;
+    const fulfillment: FulfillmentStatus = !gearCents ? "none" : ageHours < 6 ? "pending" : ageHours < 40 ? "sent" : "shipped";
+    const refunded = i > 3 && rand.chance(0.03);
+    const status: OrderStatus = refunded ? (rand.chance(0.5) ? "refunded" : "partially_refunded") : "paid";
+    const refundedCents = status === "refunded" ? totalCents : status === "partially_refunded" ? Math.round(totalCents * 0.3) : 0;
+    const number = 1000 + total - i;
+    const domain = corporate ? corporate.toLowerCase().replace(/[^a-z]+/g, "") : "";
+    out.push({
+      id: sampleUuid(`${tenant.id}:order:${i}`),
+      number,
+      source: i % 13 === 4 ? "estimate" : "checkout",
+      status,
+      fulfillment,
+      email: corporate ? `${p.name.split(" ")[0].toLowerCase()}@${domain}.com` : p.email,
+      name: p.name,
+      itemCount: items.reduce((n, x) => n + x.qty, 0),
+      totalCents,
+      refundedCents,
+      currency: "usd",
+      paidAt,
+      tradeCompany: corporate,
+      phone: `(555) 01${rand.int(10, 99)}-${rand.int(1000, 9999)}`,
+      shipTo: gearCents ? { name: p.name, company: "", line1: p.street, line2: "", city: p.city[0], state: p.city[1], postal: p.city[2], country: "US" } : {},
+      items,
+      subtotalCents: subtotal,
+      discountCents: discount,
+      shippingCents: shipping,
+      taxCents: tax,
+      discountCode: code,
+      shippingService: shipping ? rand.pick(["USPS Ground Advantage", "USPS Ground Advantage", "USPS Priority Mail", "UPS Ground"]) : "",
+      alert: { to: ["frontdesk@example.com"], at: paidAt.toISOString(), providerId: `re_${hashString(`${i}`).toString(16)}` },
+      fulfillmentDetail: fulfillment === "none" ? {} : { provider: "shipstation", externalId: `se-${100000 + number}`, attempts: 1, at: paidAt.toISOString(), ...(fulfillment === "shipped" ? { tracking: `9400${hashString(`t${i}`).toString().padEnd(18, "0").slice(0, 18)}` } : {}) },
+      stripe: { accountId: null, paymentIntentId: null, sessionId: null, invoiceId: null },
+      estimate: null,
+      contactId: null,
+      note: "",
+    });
+  }
+  return out;
+}
+
 export function orderRows(orders: OrderDetail[]): OrderRow[] {
   return orders.map(({ id, number, source, status, fulfillment, email, name, itemCount, totalCents, refundedCents, currency, paidAt, tradeCompany }) => ({ id, number, source, status, fulfillment, email, name, itemCount, totalCents, refundedCents, currency, paidAt, tradeCompany }));
 }
@@ -214,6 +392,7 @@ const ESTIMATE_TITLES: Record<string, string[]> = {
 };
 
 export function sampleEstimates(tenant: SampleTenant, now = new Date()): EstimateDetail[] {
+  if (isClub(tenant)) return clubEstimates(tenant, now);
   const rand = seeded(`${tenant.id}:${tenant.name}:estimates`);
   const catalog = sampleCatalog(tenant);
   const companies = COMPANIES[tenant.industry] ?? COMPANIES.general;
@@ -271,6 +450,118 @@ export function sampleEstimates(tenant: SampleTenant, now = new Date()): Estimat
   return out;
 }
 
+type ClubQuote = { title: (company: string, first: string) => string; corporate: boolean; lines: (rand: ReturnType<typeof seeded>) => Omit<EstimateLine, "id" | "productId" | "variantId">[] };
+
+// Quotes a club sends: corporate memberships for local employers, team rides, PT bundles.
+const CLUB_QUOTES: Record<string, ClubQuote[]> = {
+  gym: [
+    { title: (c) => `Corporate memberships for ${c}`, corporate: true, lines: (r) => [{ name: "Club membership, Annual", detail: "Corporate pricing, one per employee", qty: r.int(8, 40), unitCents: 89000 }] },
+    { title: (c) => `Class packs for ${c} staff`, corporate: true, lines: (r) => [{ name: "Class pack, 20 classes", detail: "Shared out by your office", qty: r.int(5, 20), unitCents: 30000 }] },
+    {
+      title: (_, f) => `Personal training bundle for ${f}`,
+      corporate: false,
+      lines: () => [
+        { name: "Personal training, 12 sessions", detail: "50 minutes each, within 90 days", qty: 1, unitCents: 72000 },
+        { name: "Fitness assessment", detail: "Movement screen and a starting plan", qty: 1, unitCents: 4500 },
+      ],
+    },
+    { title: (c) => `Small-group training for ${c}`, corporate: true, lines: (r) => [{ name: "Small-group training, 8 weeks", detail: "Two sessions a week, up to 8 people", qty: r.int(1, 3), unitCents: 160000 }] },
+    {
+      title: (c) => `Staff wellness day for ${c}`,
+      corporate: true,
+      lines: (r) => [
+        { name: "Day pass", detail: "One per guest", qty: r.int(15, 60), unitCents: 2500 },
+        { name: "Private group class", detail: "50 minutes with a coach", qty: 1, unitCents: 25000 },
+      ],
+    },
+  ],
+  studio: [
+    {
+      title: (c) => `Team ride for ${c}`,
+      corporate: true,
+      lines: (r) => [
+        { name: "Private team ride", detail: "45 minutes, the whole room, up to 40 riders", qty: 1, unitCents: 60000 },
+        { name: "Shoe rental", detail: "One per rider", qty: r.int(10, 40), unitCents: 300 },
+      ],
+    },
+    { title: (c) => `Class packs for ${c} staff`, corporate: true, lines: (r) => [{ name: "Class pack, 10 classes", detail: "Corporate pricing", qty: r.int(6, 25), unitCents: 20000 }] },
+    { title: (c) => `Unlimited memberships for ${c}`, corporate: true, lines: (r) => [{ name: "Unlimited monthly", detail: "Corporate pricing, per person per month", qty: r.int(5, 15), unitCents: 18900 }] },
+    {
+      title: (_, f) => `Birthday ride for ${f}`,
+      corporate: false,
+      lines: (r) => [
+        { name: "Private ride", detail: "45 minutes, up to 25 riders", qty: 1, unitCents: 45000 },
+        { name: "Grip socks", detail: "A pair for each guest", qty: r.int(8, 20), unitCents: 1400 },
+      ],
+    },
+    { title: (c) => `First rides for ${c} new hires`, corporate: true, lines: (r) => [{ name: "First ride", detail: "Shoes included", qty: r.int(5, 15), unitCents: 1500 }] },
+  ],
+};
+
+const CLUB_NOTES: Record<string, { notes: string; change: string }> = {
+  gym: { notes: "Corporate pricing holds for 30 days. Memberships start on the first of the month after you approve.", change: "Can we start with 15 memberships and add the rest in the spring?" },
+  studio: { notes: "Prices hold for 30 days. We book the ride once the invoice is paid.", change: "Could we move the ride to a Friday evening and add 10 more riders?" },
+};
+
+function clubEstimates(tenant: SampleTenant, now: Date): EstimateDetail[] {
+  const rand = seeded(`${tenant.id}:${tenant.name}:estimates`);
+  const companies = COMPANIES[tenant.industry] ?? COMPANIES.gym;
+  const quotes = CLUB_QUOTES[tenant.industry] ?? CLUB_QUOTES.gym;
+  const words = CLUB_NOTES[tenant.industry] ?? CLUB_NOTES.gym;
+  const statuses: EstimateStatus[] = ["draft", "sent", "sent", "viewed", "viewed", "changes_requested", "approved", "invoiced", "invoiced", "paid", "paid", "paid", "declined", "void"];
+  const out: EstimateDetail[] = [];
+  const count = rand.int(14, 20);
+  for (let i = 0; i < count; i++) {
+    const p = person(rand);
+    const q = quotes[i % quotes.length];
+    const company = q.corporate ? rand.pick(companies) : "";
+    const first = p.name.split(" ")[0];
+    const status = i < statuses.length ? statuses[i] : rand.pick(statuses);
+    const items: EstimateLine[] = q.lines(rand).map((x, n) => ({ id: `l${n}`, productId: null, variantId: null, ...x }));
+    const discount = q.corporate && rand.chance(0.6) ? ({ kind: "percent", value: rand.pick([10, 15, 20]) } as const) : ({} as Record<string, never>);
+    const t = estimateTotals(items, discount, 0);
+    const createdAgo = rand.int(1, 70) * DAY;
+    const sentAt = status === "draft" ? null : new Date(now.getTime() - createdAgo + DAY);
+    const updatedAt = new Date(now.getTime() - createdAgo + rand.int(1, 5) * DAY);
+    const validUntil = new Date(now.getTime() - createdAgo + 31 * DAY).toISOString().slice(0, 10);
+    const email = company ? `${first.toLowerCase()}@${company.toLowerCase().replace(/[^a-z]+/g, "")}.com` : p.email;
+    out.push({
+      id: sampleUuid(`${tenant.id}:estimate:${i}`),
+      number: 101 + count - i,
+      status,
+      title: q.title(company, first),
+      client: { name: p.name, email, company, phone: `(555) 01${rand.int(10, 99)}-${rand.int(1000, 9999)}`, address: { line1: p.street, city: p.city[0], state: p.city[1], postal: p.city[2], country: "US" } },
+      totalCents: t.totalCents,
+      currency: "usd",
+      sentAt,
+      updatedAt: updatedAt > now ? now : updatedAt,
+      validUntil,
+      source: i === 3 ? "inquiry" : "team",
+      items,
+      discount,
+      shippingCents: 0,
+      subtotalCents: t.subtotalCents,
+      discountCents: t.discountCents,
+      notes: words.notes,
+      internalNote: "",
+      approvedName: ["approved", "invoiced", "paid"].includes(status) ? p.name : "",
+      changeRequest: status === "changes_requested" ? words.change : "",
+      delivery: sentAt ? { to: [email], at: sentAt.toISOString(), providerId: "re_sample" } : {},
+      invoiceUrl: ["invoiced", "paid"].includes(status) ? "https://invoice.stripe.com/" : null,
+      paidAt: status === "paid" ? updatedAt : null,
+      viewedAt: ["viewed", "changes_requested", "approved", "invoiced", "paid", "declined"].includes(status) && sentAt ? new Date(sentAt.getTime() + 5 * 3_600_000) : null,
+      orderId: null,
+      contactId: null,
+      tradeAccountId: null,
+      events: [
+        { kind: "created", actor: "team", detail: "", at: new Date(now.getTime() - createdAgo) },
+        ...(sentAt ? [{ kind: "sent", actor: "team", detail: `Sent to ${email}`, at: sentAt }] : []),
+      ],
+    });
+  }
+  return out;
+}
+
 export function estimateRows(list: EstimateDetail[]): EstimateRow[] {
   return list.map(({ id, number, status, title, client, totalCents, currency, sentAt, updatedAt, validUntil, source }) => ({ id, number, status, title, client, totalCents, currency, sentAt, updatedAt, validUntil, source }));
 }
@@ -282,9 +573,10 @@ export function sampleCarts(tenant: SampleTenant, now = new Date()): CartRow[] {
   const catalog = sampleCatalog(tenant);
   const out: CartRow[] = [];
   const count = rand.int(12, 26);
+  const club = isClub(tenant);
   for (let i = 0; i < count; i++) {
     const p = person(rand);
-    const items = pickItems(rand, catalog, 3);
+    const items = club ? pickClubItems(rand, catalog, 2) : pickItems(rand, catalog, 3);
     const lastActiveAt = new Date(now.getTime() - (i * 1.7 + rand.next()) * DAY - rand.int(1, 20) * 3_600_000);
     const recovered = rand.chance(0.15);
     out.push({
@@ -311,6 +603,7 @@ export function sampleTrade(tenant: SampleTenant, now = new Date()): TradeRow[] 
   const rand = seeded(`${tenant.id}:${tenant.name}:trade`);
   const companies = COMPANIES[tenant.industry] ?? COMPANIES.general;
   const statuses: TradeStatus[] = ["applied", "applied", "approved", "approved", "approved", "approved", "approved", "declined", "paused", "approved"];
+  const club = isClub(tenant);
   return companies.map((company, i) => {
     const p = person(rand);
     const status = statuses[i % statuses.length];
@@ -325,8 +618,10 @@ export function sampleTrade(tenant: SampleTenant, now = new Date()): TradeRow[] 
       phone: `(555) 01${rand.int(10, 99)}-${rand.int(1000, 9999)}`,
       website: `https://${domain}.com`,
       status,
-      details: { type: tenant.industry === "pools" ? rand.pick(["Pool builder", "Dealer", "Landscaper"]) : tenant.industry === "coffee" ? rand.pick(["Cafe", "Grocery", "Office"]) : rand.pick(["Agency", "Reseller"]), resale: rand.chance(0.7) ? `${p.city[1]}-${rand.int(100000, 999999)}` : "", volume: rand.pick(["About $1,000 a month", "$5,000 to $10,000 a year", "We're just starting out"]), message: status === "applied" ? "We'd like to stock your products for our spring season." : "" },
-      note: status === "declined" ? "Retail only, no resale certificate." : "",
+      details: club
+        ? { type: rand.pick(["Clinic", "School", "Office", "Nonprofit"]), resale: `About ${rand.pick([12, 25, 40, 60, 120])} staff`, volume: rand.pick(["Memberships for staff who want one", "Class packs to share around the office", "A team ride each quarter"]), message: status === "applied" ? "We'd like to offer memberships as a staff benefit this year." : "" }
+        : { type: tenant.industry === "pools" ? rand.pick(["Pool builder", "Dealer", "Landscaper"]) : tenant.industry === "coffee" ? rand.pick(["Cafe", "Grocery", "Office"]) : rand.pick(["Agency", "Reseller"]), resale: rand.chance(0.7) ? `${p.city[1]}-${rand.int(100000, 999999)}` : "", volume: rand.pick(["About $1,000 a month", "$5,000 to $10,000 a year", "We're just starting out"]), message: status === "applied" ? "We'd like to stock your products for our spring season." : "" },
+      note: status === "declined" ? (club ? "Fewer than five staff, so regular pricing fits better." : "Retail only, no resale certificate.") : "",
       tierOverride: "",
       spendCents,
       orderCount: spendCents ? Math.max(1, Math.round(spendCents / 90000)) : 0,

@@ -7,6 +7,7 @@
 import { ArrowDown, ArrowLeft, ArrowUp, ChevronRight, Copy, Eye, Mail, Plus, Redo2, Rows3, Send, Settings2, Trash2, Undo2, X } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEditionKey, useSay } from "@/components/edition";
 import { DeviceSwitch } from "@/components/marketing/brand-kit-editor";
 import { EmailFrame, type EmailDevice } from "@/components/marketing/email-frame";
 import m from "@/components/marketing/marketing.module.css";
@@ -50,6 +51,11 @@ const MAX_UNDO = 60;
 
 export function EmailBuilder(props: BuilderProps) {
   const { initial, brand, baseUrl, site, storage, save, readOnly } = props;
+  const edition = useEditionKey();
+  const say = useSay();
+  // The offer section is the welcome offer in Bison Ops and the intro offer in Fit Funnels.
+  const sectionLabel = (t: EmailSectionType) => (t === "offer" ? say(EMAIL_SECTION_LABELS.offer, "Intro offer code") : EMAIL_SECTION_LABELS[t]);
+  const sectionNote = (t: EmailSectionType) => (t === "offer" ? say(EMAIL_SECTION_NOTES.offer, "Shows each new lead their own code") : EMAIL_SECTION_NOTES[t]);
   const [content, setContent] = useState<EmailContent>(initial);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scrollTo, setScrollTo] = useState<{ id: string; nonce: number } | null>(null);
@@ -185,7 +191,7 @@ export function EmailBuilder(props: BuilderProps) {
   };
 
   const addSection = (type: EmailSectionType) => {
-    const r = apply({ op: "add", section: starterEmailSection(type, site, new Set(content.doc.sections.map((x) => x.id))), after: selectedId });
+    const r = apply({ op: "add", section: starterEmailSection(type, site, new Set(content.doc.sections.map((x) => x.id)), edition), after: selectedId });
     if (r?.selected) select(r.selected);
     setAdding(false);
   };
@@ -280,7 +286,7 @@ export function EmailBuilder(props: BuilderProps) {
                       <ChevronRight aria-hidden="true" className={s.chev} />
                       <span className={s.sectionText}>
                         <span className={s.sectionType}>
-                          {EMAIL_SECTION_LABELS[section.type]}
+                          {sectionLabel(section.type)}
                           {flagged && <span className={s.flag}>To fix</span>}
                         </span>
                         <span className={s.sectionSummary}>{summary(section)}</span>
@@ -339,8 +345,8 @@ export function EmailBuilder(props: BuilderProps) {
                   <div className={s.addGrid}>
                     {EMAIL_SECTION_TYPES.map((type) => (
                       <button key={type} type="button" className={s.addType} onClick={() => addSection(type)}>
-                        <strong>{EMAIL_SECTION_LABELS[type]}</strong>
-                        <span>{EMAIL_SECTION_NOTES[type]}</span>
+                        <strong>{sectionLabel(type)}</strong>
+                        <span>{sectionNote(type)}</span>
                       </button>
                     ))}
                   </div>
@@ -412,6 +418,7 @@ function summary(section: EmailSection): string {
 }
 
 function EmailSettings({ content, readOnly, onChange, extra, saveTemplate }: { content: EmailContent; readOnly?: boolean; onChange: (next: EmailContent, key: string) => void; extra?: ReactNode; saveTemplate?: (name: string, c: EmailContent) => Promise<Result> }) {
+  const say = useSay();
   const [name, setName] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [pending, start] = useTransition();
@@ -464,7 +471,7 @@ function EmailSettings({ content, readOnly, onChange, extra, saveTemplate }: { c
             Save as a template
           </label>
           <div className={m.inline}>
-            <input id="template-name" className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Monthly news" style={{ flex: 1 }} />
+            <input id="template-name" className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder={say("Monthly news", "Monthly club news")} style={{ flex: 1 }} />
             <button type="submit" className="btn" disabled={pending || !name.trim()} data-testid="save-template">
               Save
             </button>
@@ -477,6 +484,7 @@ function EmailSettings({ content, readOnly, onChange, extra, saveTemplate }: { c
 }
 
 function TestButton({ test, content }: { test: NonNullable<BuilderProps["test"]>; content: EmailContent }) {
+  const say = useSay();
   const dialog = useRef<HTMLDialogElement>(null);
   const [to, setTo] = useState(test.me);
   const [result, setResult] = useState<Result | null>(null);
@@ -501,7 +509,7 @@ function TestButton({ test, content }: { test: NonNullable<BuilderProps["test"]>
               <X aria-hidden="true" />
             </button>
           </div>
-          <p className={m.hint}>Goes to someone on your team, exactly as subscribers will get it, with [Test] in front of the subject. Welcome codes show a sample.</p>
+          <p className={m.hint}>{say("Goes to someone on your team, exactly as subscribers will get it, with [Test] in front of the subject. Welcome codes show a sample.", "Goes to someone on your team, exactly as members and leads will get it, with [Test] in front of the subject. Intro offer codes show a sample.")}</p>
           <div className={m.field}>
             <label htmlFor="test-to-builder" className={m.fieldLabel}>
               Send to

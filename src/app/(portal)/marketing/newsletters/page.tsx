@@ -11,12 +11,14 @@ import { listNewsletters, listTemplates } from "@/lib/marketing/newsletters";
 import { subscriberCount } from "@/lib/marketing/people";
 import { defaultMarketingSettings } from "@/lib/marketing/settings";
 import { getMarketingSettings, settingsTenantOf } from "@/lib/marketing/store";
+import { sayOf } from "@/lib/edition";
 import { getPortalContext, scopeOf } from "@/lib/portal";
 import { sampleSubscribers } from "@/lib/sample/marketing";
 
 export const metadata: Metadata = { title: "Newsletters" };
 
 const NOTE = "Build an email on the email itself, send yourself a test, then send it now or schedule it up to 30 days out.";
+const CLUB_NOTE = "Member updates, class schedules and challenges. Build the email on the email itself, send yourself a test, then send it now or schedule it up to 30 days out.";
 
 async function Body({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const ctx = await getPortalContext();
@@ -61,7 +63,7 @@ async function Body({ searchParams }: { searchParams: Promise<{ error?: string }
 
   return (
     <>
-      <PageHeader title="Newsletters" note={NOTE} />
+      <PageHeader title="Newsletters" note={sayOf(ctx)(NOTE, CLUB_NOTE)} />
       <SetupFor ctx={ctx} tool="newsletters" />
       {error && (
         <p className="notice notice-error" role="alert" style={{ marginBottom: 18 }}>
@@ -79,6 +81,7 @@ async function Body({ searchParams }: { searchParams: Promise<{ error?: string }
         canEdit={may(ctx.member.role, "marketing.edit")}
         subscribed={subscribed}
         timeZone={tz}
+        industry={ctx.tenant.industry}
       />
     </>
   );

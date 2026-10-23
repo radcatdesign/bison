@@ -6,6 +6,7 @@ import { Copy, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { saveSalesSettingsAction } from "@/app/(portal)/sales/actions";
+import { useEditionKey, useSay } from "@/components/edition";
 import m from "@/components/marketing/marketing.module.css";
 import { moneyInput, parseMoney } from "@/lib/sales/money";
 import type { Box, ShippingSettings, StoreSettings } from "@/lib/sales/settings";
@@ -66,13 +67,14 @@ export function CheckoutSettings(p: Props) {
 }
 
 function ShopCard({ shopUrl }: Props) {
+  const say = useSay();
   const [copied, setCopied] = useState(false);
   return (
     <fieldset className={m.group} id="shop">
-      <legend>Your shop</legend>
-      <p className={m.hint}>Every active product has its own page, and this page lists them all. Share either one. When the tracking script is on your own site, the cart and checkout can sit there too.</p>
+      <legend>{say("Your shop", "Your online store")}</legend>
+      <p className={m.hint}>{say("Every active product has its own page, and this page lists them all. Share either one. When the tracking script is on your own site, the cart and checkout can sit there too.", "Every active membership, pack and piece of gear has its own page, and this page lists them all, so people can join online. Share either one. When the tracking script is on your club's site, the cart and checkout can sit there too.")}</p>
       <div className={s.copyRow}>
-        <input className="input mono" readOnly value={shopUrl} aria-label="Shop address" data-testid="shop-url" />
+        <input className="input mono" readOnly value={shopUrl} aria-label={say("Shop address", "Online store address")} data-testid="shop-url" />
         <button
           type="button"
           className="btn"
@@ -92,6 +94,7 @@ function ShopCard({ shopUrl }: Props) {
 }
 
 function StoreForm({ store, team, canEdit, taxActive, demo }: Props) {
+  const say = useSay();
   const [v, setV] = useState<StoreSettings>(store);
   const [extra, setExtra] = useState("");
   const [countries, setCountries] = useState(store.checkout.countries.join(", "));
@@ -121,8 +124,8 @@ function StoreForm({ store, team, canEdit, taxActive, demo }: Props) {
       }}
     >
       <fieldset className={m.group} id="alerts" disabled={!canEdit}>
-        <legend>Who hears about orders</legend>
-        <p className={m.hint}>They get an email for every paid order, quote request, estimate reply and trade application. Each email records who it went to and when, so a missed one shows up on the order.</p>
+        <legend>{say("Who hears about orders", "Who hears about purchases")}</legend>
+        <p className={m.hint}>{say("They get an email for every paid order, quote request, estimate reply and trade application. Each email records who it went to and when, so a missed one shows up on the order.", "They get an email for every paid purchase, quote request, quote reply and corporate account application. Each email records who it went to and when, so a missed one shows up on the purchase.")}</p>
         <div className={m.formCol} style={{ gap: 8 }}>
           {team.map((t) => (
             <label key={t.email} className={m.checkRow}>
@@ -140,7 +143,7 @@ function StoreForm({ store, team, canEdit, taxActive, demo }: Props) {
           ))}
         </div>
         <div className={s.copyRow}>
-          <input className="input" type="email" value={extra} placeholder="Someone else, like orders@yourcompany.com" onChange={(e) => setExtra(e.target.value)} aria-label="Add an email" />
+          <input className="input" type="email" value={extra} placeholder={say("Someone else, like orders@yourcompany.com", "Someone else, like frontdesk@yourclub.com")} onChange={(e) => setExtra(e.target.value)} aria-label="Add an email" />
           <button
             type="button"
             className="btn"
@@ -159,14 +162,14 @@ function StoreForm({ store, team, canEdit, taxActive, demo }: Props) {
         <legend>Checkout</legend>
         <div className={m.field}>
           <label htmlFor="co-countries" className={m.fieldLabel}>
-            Countries you ship to
+            {say("Countries you ship to", "Countries you sell to")}
           </label>
           <input id="co-countries" className="input mono" value={countries} onChange={(e) => setCountries(e.target.value)} />
           <span className={m.hint}>Two-letter codes with commas, like US, CA. Checkout only takes addresses in these.</span>
         </div>
         <label className={m.checkRow}>
           <input type="checkbox" checked={v.checkout.collectPhone} onChange={(e) => set("checkout", { ...v.checkout, collectPhone: e.target.checked })} />
-          <span>Ask for a phone number (carriers use it for delivery problems)</span>
+          <span>{say("Ask for a phone number (carriers use it for delivery problems)", "Ask for a phone number (your front desk, and carriers for gear)")}</span>
         </label>
         <label className={m.checkRow}>
           <input type="checkbox" checked={v.checkout.tax} disabled={!taxActive && !v.checkout.tax} onChange={(e) => set("checkout", { ...v.checkout, tax: e.target.checked })} data-testid="tax-toggle" />
@@ -185,18 +188,21 @@ function StoreForm({ store, team, canEdit, taxActive, demo }: Props) {
           <label htmlFor="co-note" className={m.fieldLabel}>
             A line under the Pay button <em>Optional</em>
           </label>
-          <input id="co-note" className="input" maxLength={300} value={v.checkout.note} placeholder="Returns accepted within 30 days." onChange={(e) => set("checkout", { ...v.checkout, note: e.target.value })} />
+          <input id="co-note" className="input" maxLength={300} value={v.checkout.note} placeholder={say("Returns accepted within 30 days.", "Ask the front desk about pausing or canceling.")} onChange={(e) => set("checkout", { ...v.checkout, note: e.target.value })} />
         </div>
       </fieldset>
 
       <fieldset className={m.group} id="limits" disabled={!canEdit}>
-        <legend>Big orders</legend>
+        <legend>{say("Big orders", "Big purchases")}</legend>
         <label className={m.checkRow}>
           <input type="checkbox" checked={v.inquiry.on} onChange={(e) => set("inquiry", { ...v.inquiry, on: e.target.checked })} data-testid="inquiry-toggle" />
           <span>
-            Quote big orders instead of taking payment
+            {say("Quote big orders instead of taking payment", "Quote big purchases instead of taking payment")}
             <span className={m.hint} style={{ display: "block" }}>
-              Above either limit, checkout becomes &quot;Ask for a quote&quot;. It lands as a draft estimate with their cart in it, and the team gets an email.
+              {say(
+                `Above either limit, checkout becomes "Ask for a quote". It lands as a draft estimate with their cart in it, and the team gets an email.`,
+                `Above either limit, checkout becomes "Ask for a quote". It lands as a draft quote with their cart in it, and your team gets an email. Handy when a company buys many memberships at once.`,
+              )}
             </span>
           </span>
         </label>
@@ -214,15 +220,15 @@ function StoreForm({ store, team, canEdit, taxActive, demo }: Props) {
         {v.inquiry.on && (
           <div className={m.field}>
             <label htmlFor="inq-msg" className={m.fieldLabel}>
-              What shoppers see <em>Optional</em>
+              {say("What shoppers see", "What people see")} <em>Optional</em>
             </label>
-            <input id="inq-msg" className="input" maxLength={300} value={v.inquiry.message} placeholder="Orders this size get a quote with freight. Send your cart and we'll reply within a day." onChange={(e) => set("inquiry", { ...v.inquiry, message: e.target.value })} />
+            <input id="inq-msg" className="input" maxLength={300} value={v.inquiry.message} placeholder={say("Orders this size get a quote with freight. Send your cart and we'll reply within a day.", "Purchases this size get a corporate quote. Send your cart and we'll be in touch.")} onChange={(e) => set("inquiry", { ...v.inquiry, message: e.target.value })} />
           </div>
         )}
       </fieldset>
 
       <fieldset className={m.group} id="estimates" disabled={!canEdit}>
-        <legend>Estimates</legend>
+        <legend>{say("Estimates", "Quotes")}</legend>
         <div className={m.twoUp}>
           <div className={m.field}>
             <label htmlFor="est-valid" className={m.fieldLabel}>
@@ -241,20 +247,20 @@ function StoreForm({ store, team, canEdit, taxActive, demo }: Props) {
           <label htmlFor="est-terms" className={m.fieldLabel}>
             Standard terms <em>Optional</em>
           </label>
-          <textarea id="est-terms" className={`input ${m.textarea}`} rows={4} maxLength={2000} value={v.estimates.terms} placeholder="A 50% deposit holds your spot. Lead time is about two weeks." onChange={(e) => set("estimates", { ...v.estimates, terms: e.target.value })} data-testid="estimate-terms" />
-          <span className={m.hint}>They go on every new estimate. You can change them on each one.</span>
+          <textarea id="est-terms" className={`input ${m.textarea}`} rows={4} maxLength={2000} value={v.estimates.terms} placeholder={say("A 50% deposit holds your spot. Lead time is about two weeks.", "Memberships start on the first of the month after you approve.")} onChange={(e) => set("estimates", { ...v.estimates, terms: e.target.value })} data-testid="estimate-terms" />
+          <span className={m.hint}>{say("They go on every new estimate. You can change them on each one.", "They go on every new quote. You can change them on each one.")}</span>
         </div>
       </fieldset>
 
       <fieldset className={m.group} id="carts" disabled={!canEdit}>
-        <legend>Left-behind carts</legend>
+        <legend>{say("Left-behind carts", "Unfinished joins")}</legend>
         <div className={m.field}>
           <label htmlFor="ab-hours" className={m.fieldLabel}>
-            A cart counts as left behind after this many quiet hours
+            {say("A cart counts as left behind after this many quiet hours", "A join counts as unfinished after this many quiet hours")}
           </label>
           <input id="ab-hours" className="input num" inputMode="numeric" value={v.abandonedAfterHours} style={{ maxWidth: 120 }} onChange={(e) => set("abandonedAfterHours", Math.min(168, Math.max(1, Number(e.target.value) || 1)))} />
           <span className={m.hint}>
-            Only carts where we have an email count. With Marketing, an email series set to &quot;Someone leaves a cart&quot; starts for them, and stops if they buy.
+            {say(`Only carts where we have an email count. With Marketing, an email series set to "Someone leaves a cart" starts for them, and stops if they buy.`, "Only joins where we have an email count. With Marketing, a follow-up set to start when someone leaves a cart goes to them, and stops if they buy.")}
           </span>
         </div>
       </fieldset>
@@ -280,6 +286,8 @@ function newBox(boxes: Box[]): Box {
 }
 
 function ShippingForm({ shipping, canEdit, carriers, demo }: Props) {
+  const say = useSay();
+  const club = useEditionKey() === "fit";
   const [v, setV] = useState<ShippingSettings>(shipping);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
@@ -302,7 +310,8 @@ function ShippingForm({ shipping, canEdit, carriers, demo }: Props) {
       }}
     >
       <fieldset className={m.group} disabled={!canEdit}>
-        <legend>Where orders ship from</legend>
+        <legend>{say("Where orders ship from", "Where gear ships from")}</legend>
+        {club && <p className={m.hint}>Only gear ships. Memberships, class packs and personal training don&apos;t, so give them a flat shipping charge of 0 on their page.</p>}
         <div className={m.twoUp}>
           <div className={m.field}>
             <label htmlFor="sf-company" className={m.fieldLabel}>Company</label>
@@ -388,12 +397,12 @@ function ShippingForm({ shipping, canEdit, carriers, demo }: Props) {
           <MoneyField id="handling" label="Handling, added to every rate" value={v.handlingCents} onChange={(n) => set("handlingCents", n ?? 0)} />
           <MoneyField id="free-over" label="Free shipping over" optional value={v.freeOverCents} onChange={(n) => set("freeOverCents", n)} hint="After discounts, before tax." />
         </div>
-        <p className={m.hint}>A discount code that takes the whole order off always ships free. Products with a flat shipping charge add it on top of any rate.</p>
+        <p className={m.hint}>{say("A discount code that takes the whole order off always ships free. Products with a flat shipping charge add it on top of any rate.", "A promo code that takes the whole purchase off always ships free. Anything with a flat shipping charge adds it on top of any rate. A flat charge, per order or per item, applies to every purchase, gear or not.")}</p>
       </fieldset>
 
       <fieldset className={m.group} disabled={!canEdit}>
         <legend>Boxes</legend>
-        <p className={m.hint}>Each product ships in one of these. Products fill their box by count (set on the product) and by weight, and carriers rate each box.</p>
+        <p className={m.hint}>{say("Each product ships in one of these. Products fill their box by count (set on the product) and by weight, and carriers rate each box.", "Gear ships in one of these. Gear fills its box by count (set on each item) and by weight, and carriers rate each box.")}</p>
         <div style={{ overflowX: "auto" }}>
           <table className={s.variants}>
             <thead>
@@ -445,9 +454,9 @@ function ShippingForm({ shipping, canEdit, carriers, demo }: Props) {
         <label className={m.checkRow}>
           <input type="checkbox" checked={v.fulfillment === "shipstation"} onChange={(e) => set("fulfillment", e.target.checked ? "shipstation" : "none")} data-testid="fulfillment-toggle" />
           <span>
-            Send paid orders to ShipStation to pack and label
+            {say("Send paid orders to ShipStation to pack and label", "Send paid purchases to ShipStation to pack and label gear")}
             <span className={m.hint} style={{ display: "block" }}>
-              {carriers.shipstation ? "Each paid order lands in ShipStation with what was bought, where it's going and the shipping they paid for. If ShipStation is down, we try again." : "Connect ShipStation in Settings, Shipping first."}
+              {carriers.shipstation ? say("Each paid order lands in ShipStation with what was bought, where it's going and the shipping they paid for. If ShipStation is down, we try again.", "Each paid purchase lands in ShipStation with what was bought, where it's going and the shipping they paid for. If ShipStation is down, we try again.") : "Connect ShipStation in Settings, Shipping first."}
             </span>
           </span>
         </label>

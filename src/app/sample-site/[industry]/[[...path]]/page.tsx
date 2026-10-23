@@ -3,6 +3,7 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
 import { Suspense } from "react";
+import { editionOfIndustry, sayFor } from "@/config/editions";
 import { sampleSiteFor } from "@/lib/sample/sites";
 import s from "./site.module.css";
 
@@ -20,6 +21,8 @@ async function Site({ params, searchParams }: Props) {
   const base = `/sample-site/${industry}`;
   const link = (to: string) => `${base}${to === "/" ? "" : to}${name ? `?name=${encodeURIComponent(brand)}` : ""}`;
   const t = site.theme;
+  // A gym or studio site is a Fit Funnels sample.
+  const say = sayFor(editionOfIndustry(industry));
   const vars = {
     "--s-bg": t.bg,
     "--s-surface": t.surface,
@@ -46,7 +49,7 @@ async function Site({ params, searchParams }: Props) {
             </a>
           ))}
         </nav>
-        <a href={link(Object.keys(site.pages).find((p) => /quote|contact|wholesale/.test(p)) ?? "/")} className={s.navCta}>
+        <a href={link(site.ctaPath ?? Object.keys(site.pages).find((p) => /quote|contact|wholesale/.test(p)) ?? "/")} className={s.navCta}>
           {site.pages["/"].cta}
         </a>
       </header>
@@ -98,7 +101,7 @@ async function Site({ params, searchParams }: Props) {
         <span>
           © {brand}
         </span>
-        <span>Sample page made by Bison Ops. Not a real business.</span>
+        <span>{say("Sample page made by Bison Ops. Not a real business.", "Sample page made by Fit Funnels. Not a real business.")}</span>
       </footer>
     </div>
   );

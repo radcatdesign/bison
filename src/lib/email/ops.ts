@@ -1,6 +1,7 @@
 // Every change to an email goes through these, and every result is checked
 // against the schema, so the builder can't produce an email that won't send.
 // Works in the browser and on the server.
+import type { EditionKey } from "@/config/editions";
 import { type EmailDoc, EmailDocError, type EmailSection, type EmailSectionType, emailDocSchema, MAX_EMAIL_SECTIONS, describeIssues } from "./schema";
 
 export type EmailOp =
@@ -68,7 +69,7 @@ export function applyEmailOp(doc: EmailDoc, op: EmailOp): { doc: EmailDoc; selec
 }
 
 /** A new section with sensible starting content, so it shows up looking right. */
-export function starterEmailSection(type: EmailSectionType, site = "https://example.com", taken: Set<string> = new Set()): EmailSection {
+export function starterEmailSection(type: EmailSectionType, site = "https://example.com", taken: Set<string> = new Set(), edition: EditionKey = "bison"): EmailSection {
   const id = sectionId(type, taken);
   switch (type) {
     case "text":
@@ -96,7 +97,7 @@ export function starterEmailSection(type: EmailSectionType, site = "https://exam
     case "divider":
       return { id, type, style: "line" };
     case "offer":
-      return { id, type, heading: "A welcome gift", body: "Here's a code for your first order." };
+      return edition === "fit" ? { id, type, heading: "Your intro offer", body: "Here's your own code for our intro offer." } : { id, type, heading: "A welcome gift", body: "Here's a code for your first order." };
   }
 }
 

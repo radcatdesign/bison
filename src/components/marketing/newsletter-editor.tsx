@@ -41,6 +41,8 @@ type Props = {
   maxWhen: string;
   canSend: boolean;
   canEdit: boolean;
+  /** The company's kind of business, for the demo's example newsletter. */
+  industry: string;
 };
 
 export function NewsletterEditor(props: Props) {
@@ -48,7 +50,7 @@ export function NewsletterEditor(props: Props) {
   const demo = useDemoMarketing(props.tenantId);
   if (props.storage === "server") return <Editor {...props} initial={props.initial!} />;
   if (!client) return <div aria-busy="true" style={{ minHeight: 400 }} />;
-  const list = demo.newsletters ?? [demoSeedNewsletter(props.site, props.everyone)];
+  const list = demo.newsletters ?? [demoSeedNewsletter(props.site, props.everyone, props.industry)];
   const found = list.find((n) => n.id === props.id);
   if (!found) {
     return (
@@ -85,7 +87,7 @@ function Editor(props: Props & { initial: EmailContent }) {
     if (browser) {
       writeDemo(props.tenantId, (d) => ({
         ...d,
-        newsletters: (d.newsletters ?? [demoSeedNewsletter(props.site, props.everyone)]).map((n) => (n.id === props.id ? { ...n, ...content, updatedAt: new Date().toISOString() } : n)),
+        newsletters: (d.newsletters ?? [demoSeedNewsletter(props.site, props.everyone, props.industry)]).map((n) => (n.id === props.id ? { ...n, ...content, updatedAt: new Date().toISOString() } : n)),
       }));
       return { ok: true, message: "Saved in this browser" };
     }

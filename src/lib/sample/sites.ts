@@ -1,5 +1,6 @@
 // Made-up websites for sample mode, so the Landing pages screen has real pages
-// to preview before a tenant's own site is connected. One per industry preset.
+// to preview before a tenant's own site is connected. One per industry preset,
+// for both editions (a gym and a cycling studio for Fit Funnels).
 
 export type SitePage = { title: string; headline: string; sub: string; cta: string };
 
@@ -21,6 +22,8 @@ export type SampleSite = {
   features: { title: string; body: string }[];
   proof: { quote: string; who: string };
   pages: Record<string, SitePage>;
+  /** Where the button in the top bar goes, when it isn't a quote, contact or wholesale page. */
+  ctaPath?: string;
 };
 
 export const SAMPLE_SITES: Record<string, SampleSite> = {
@@ -126,6 +129,75 @@ export const SAMPLE_SITES: Record<string, SampleSite> = {
       "/about": { title: "About", headline: "A small team that sweats the details", sub: "Ten years, a few hundred projects, and the same people answering the phone.", cta: "Meet the team" },
       "/contact": { title: "Contact", headline: "Let's talk", sub: "Tell us what you're working on. We reply within one business day.", cta: "Send a message" },
       "/blog": { title: "Blog", headline: "Notes from the work", sub: "Short, useful posts on what we're learning.", cta: "Read the latest" },
+    },
+  },
+  // Fit Funnels: a full gym and a boutique cycling studio. Made up.
+  gym: {
+    fallbackName: "Your Club",
+    nav: [
+      { path: "/memberships", label: "Memberships" },
+      { path: "/classes", label: "Classes" },
+      { path: "/personal-training", label: "Personal training" },
+      { path: "/free-pass", label: "Free pass" },
+    ],
+    ctaPath: "/free-pass",
+    theme: {
+      bg: "#111214",
+      surface: "#1b1d21",
+      ink: "#f4f4f2",
+      muted: "#9a9ca3",
+      accent: "#f76b15",
+      accentInk: "#1c0b00",
+      hero: "radial-gradient(60% 80% at 78% 15%, rgba(247,107,21,.32), transparent 60%), radial-gradient(45% 60% at 10% 95%, rgba(255,184,77,.14), transparent 60%), linear-gradient(180deg,#17181b,#111214)",
+      font: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif",
+      display: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif",
+    },
+    features: [
+      { title: "A strength floor built for lifting", body: "Racks, platforms and free weights, with coaches on the floor at the busy hours." },
+      { title: "Classes all week", body: "Strength, HIIT, spin, yoga and aqua, from early morning to evening." },
+      { title: "A pool and childcare", body: "Swim laps after you train, with childcare on site for members' kids." },
+    ],
+    proof: { quote: "The 6 a.m. strength class is the best hour of my week.", who: "Member since 2021" },
+    pages: {
+      "/": { title: "Strength club", headline: "Strength, classes and a pool under one roof", sub: "A full gym with a strength floor, group classes all week, a lap pool, personal training and childcare.", cta: "Claim a free pass" },
+      "/memberships": { title: "Memberships", headline: "Pick the membership that fits your week", sub: "Monthly or annual, with classes, the pool and childcare included. Freeze it when you travel.", cta: "Compare memberships" },
+      "/classes": { title: "Group classes", headline: "Over 60 classes a week", sub: "Strength, HIIT, spin, yoga and aqua, from 5:30 a.m. to 8 p.m. Book a spot the day before.", cta: "See the schedule" },
+      "/personal-training": { title: "Personal training", headline: "Train one on one with a coach", sub: "Start with a consult. Your coach plans every session around what you want to work on.", cta: "Book a consult" },
+      "/free-pass": { title: "Free pass", headline: "Try the club free for 7 days", sub: "The strength floor, every class and the pool. No card needed, nothing to cancel.", cta: "Claim my free pass" },
+    },
+  },
+  studio: {
+    fallbackName: "Your Studio",
+    nav: [
+      { path: "/schedule", label: "Schedule" },
+      { path: "/packs", label: "Packs" },
+      { path: "/instructors", label: "Instructors" },
+      { path: "/first-ride", label: "First ride" },
+    ],
+    ctaPath: "/first-ride",
+    theme: {
+      bg: "#fff6f9",
+      surface: "#ffffff",
+      ink: "#1d0f1a",
+      muted: "#7a5a6e",
+      accent: "#e11d74",
+      accentInk: "#ffffff",
+      hero: "radial-gradient(60% 80% at 80% 10%, rgba(225,29,116,.22), transparent 60%), radial-gradient(45% 60% at 10% 90%, rgba(124,58,237,.14), transparent 60%), linear-gradient(180deg,#ffeef4,#fff6f9)",
+      font: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif",
+      display: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif",
+    },
+    features: [
+      { title: "45 minutes, start to finish", body: "Warm up, climb, sprint and cool down, all to the beat." },
+      { title: "Shoes and water included", body: "Clip-in shoes in every size and cold water by the door." },
+      { title: "Cycling and HIIT", body: "Ride, then add a 30-minute HIIT class when you want more." },
+    ],
+    proof: { quote: "Lights down, music up, and nobody cares how fast you go.", who: "Rider, Portland" },
+    pages: {
+      "/": { title: "Indoor cycling studio", headline: "Ride loud, ride in the dark", sub: "45-minute cycling classes and 30-minute HIIT, coached live with the music up.", cta: "Book a free first ride" },
+      "/schedule": { title: "Class schedule", headline: "Classes from 6 a.m. to 7:30 p.m.", sub: "Cycling and HIIT every day. Book up to a week ahead and pick your bike.", cta: "Book a class" },
+      "/first-ride": { title: "First ride free", headline: "Your first ride is on us", sub: "Book any cycling class. We fit your bike, lend you shoes and show you how to clip in.", cta: "Book my free ride" },
+      "/packs": { title: "Class packs", headline: "Ride as often as you like", sub: "5, 10 or 20 class packs, or unlimited monthly. Packs never expire.", cta: "See the packs" },
+      "/instructors": { title: "Instructors", headline: "Meet the coaches", sub: "Eight instructors, each with their own playlist and their own way of making a climb feel shorter.", cta: "Meet the team" },
     },
   },
 };

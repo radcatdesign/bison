@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { PagePreview, PageThumb } from "@/components/page-preview";
 import { Metric, PageHeader, SampleBanner, Segmented } from "@/components/ui";
+import { sayOf } from "@/lib/edition";
 import { demoMode } from "@/lib/env";
 import { formatDuration, formatInt, formatPercent } from "@/lib/format";
 import { getPortalContext, type PortalContext, scopeOf } from "@/lib/portal";
@@ -40,6 +41,7 @@ function hrefFor(range: number, path?: string) {
 
 function Detail({ page, ctx, sample, range }: { page: LandingPage; ctx: PortalContext; sample: boolean; range: number }) {
   const { src, url, open } = previewSource(ctx, sample, page.path);
+  const say = sayOf(ctx);
   return (
     <>
       <Link href={hrefFor(range)} className={s.scrim} scroll={false} aria-label="Close page" tabIndex={-1} />
@@ -68,7 +70,7 @@ function Detail({ page, ctx, sample, range }: { page: LandingPage; ctx: PortalCo
             <Metric label="Share of entries" value={formatPercent(page.share)} help={HELP.share} />
             <Metric label="Bounce rate" value={formatPercent(page.bounceRate)} help={HELP.bounce} />
             <Metric label="Average active visit" value={formatDuration(page.avgActiveSeconds)} help={HELP.active} />
-            <Metric label="Form sends" value={formatPercent(page.formRate, 1)} help={HELP.forms} />
+            <Metric label="Form sends" value={formatPercent(page.formRate, 1)} help={say(HELP.forms, "Share of visits starting here that sent a form anywhere on your site before they left, like a free pass or tour request.")} />
             <div className={s.soon}>
               <span className="pill">Coming next</span>
               <p>Click, scroll and cursor heatmaps painted over this page, by device.</p>
@@ -89,7 +91,8 @@ async function LandingPages({ searchParams }: { searchParams: Promise<{ range?: 
   const sample = repos.mode === "sample";
   const pages = await repos.analytics.landingPages(range);
   const open = params.p ? pages.find((p) => p.path === params.p) : undefined;
-  const domain = ctx.sites[0]?.domain ?? "your site";
+  const say = sayOf(ctx);
+  const domain = ctx.sites[0]?.domain ?? say("your site", "your club's site");
 
   return (
     <>
@@ -103,7 +106,7 @@ async function LandingPages({ searchParams }: { searchParams: Promise<{ range?: 
       {pages.length === 0 ? (
         <div className={`card ${s.empty}`}>
           <h2>No landing pages yet</h2>
-          <p className="muted">Once the tracking script is on {domain}, every page people arrive on shows up here with a live preview.</p>
+          <p className="muted">{say(`Once the tracking script is on ${domain}, every page people arrive on shows up here with a live preview.`, `Once the tracking script is on ${domain}, every page people arrive on, like your free pass or class schedule page, shows up here with a live preview.`)}</p>
         </div>
       ) : (
         <ul className={s.grid} data-testid="landing-pages">

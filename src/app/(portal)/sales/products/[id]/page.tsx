@@ -5,9 +5,11 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { salesGate } from "@/components/sales/gate";
 import { type EditorProduct, ProductEditor } from "@/components/sales/product-editor";
+import { Said } from "@/components/sales/said";
 import { PageHeader } from "@/components/ui";
 import { may } from "@/config/roles";
 import { withTenant } from "@/lib/db";
+import { sayOf } from "@/lib/edition";
 import { appUrl, demoMode } from "@/lib/env";
 import { getPortalContext, scopeOf } from "@/lib/portal";
 import { sampleCatalog } from "@/lib/sample/sales";
@@ -15,7 +17,9 @@ import { DEFAULT_BOXES } from "@/lib/sales/settings";
 import { getProduct } from "@/lib/sales/products";
 import { getSalesSettings } from "@/lib/sales/store";
 
-export const metadata: Metadata = { title: "Product" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: sayOf(await getPortalContext())("Product", "Membership") };
+}
 
 const BLANK: EditorProduct = { id: null, slug: "", name: "", description: "", status: "draft", category: "", taxCode: "", options: [], photos: [], seo: { title: "", description: "" }, variants: [{ options: {}, sku: "", priceCents: 0, compareAtCents: null, weightOz: 0, box: "", unitsPerBox: 1, shipsAlone: false, flatShipCents: null, active: true }] };
 
@@ -42,7 +46,7 @@ async function Body({ params }: { params: Promise<{ id: string }> }) {
   }
   return (
     <>
-      <PageHeader title={product.name || "New product"} />
+      <PageHeader title={product.name || sayOf(ctx)("New product", "New membership or pack")} />
       <ProductEditor product={product} boxes={boxes} shopBase={`${appUrl()}/p/${ctx.tenant.slug}/shop`} canEdit={may(ctx.member.role, "sales.edit")} demo={demo} currency={currency} />
     </>
   );
@@ -53,7 +57,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     <>
       <Link href="/sales/products" className="link" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 14, fontSize: "var(--bo-text-sm)" }}>
         <ArrowLeft aria-hidden="true" style={{ width: 15, height: 15 }} />
-        Products
+        <Said b="Products" f="Memberships" />
       </Link>
       <Suspense fallback={null}>
         <Body params={params} />

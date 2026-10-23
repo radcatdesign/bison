@@ -4,7 +4,7 @@ import "server-only";
 import { sql } from "kysely";
 import { isUuid, type TenantScope, withTenant } from "@/lib/db";
 import type { SubscriberSource, SubscriberStatus, UnsubscribeReason } from "@/lib/db/types";
-import { sampleLists, type SampleTenant, sampleSubscribers } from "@/lib/sample/marketing";
+import { sampleLists, sampleSeriesHistory, type SampleTenant, sampleSubscribers } from "@/lib/sample/marketing";
 
 export const PAGE_SIZE = 50;
 
@@ -45,6 +45,7 @@ export function sampleSubscribersRepo(tenant: SampleTenant, now = new Date()): S
   const all = sampleSubscribers(tenant, now).sort((a, b) => b.subscribedAt.getTime() - a.subscribedAt.getTime());
   const lists = sampleLists(tenant);
   const names = new Map(lists.map((l) => [l.id, l.name]));
+  const history = sampleSeriesHistory(tenant.industry);
   const toRow = (s: (typeof all)[number]): SubscriberRow => ({ id: s.id, email: s.email, name: s.name, kind: s.kind, status: s.status, source: s.source, subscribedAt: s.subscribedAt, lists: s.listIds.map((id) => names.get(id) ?? "") });
   return {
     mode: "sample",
@@ -77,8 +78,8 @@ export function sampleSubscribersRepo(tenant: SampleTenant, now = new Date()): S
         unsubscribedAt: s.unsubscribedAt,
         unsubscribeReason: s.status === "bounced" ? "bounce" : s.status === "unsubscribed" ? "link" : null,
         listIds: s.listIds,
-        runs: [{ sequence: "Welcome series", status: s.subscribedAt.getTime() > now.getTime() - 8 * DAY ? "active" : "done", startedAt: s.subscribedAt }],
-        sends: [{ subject: "Welcome! Here's what to expect", kind: "series", status: "delivered", at: s.subscribedAt }],
+        runs: [{ sequence: history.series, status: s.subscribedAt.getTime() > now.getTime() - 8 * DAY ? "active" : "done", startedAt: s.subscribedAt }],
+        sends: [{ subject: history.subject, kind: "series", status: "delivered", at: s.subscribedAt }],
         offer: null,
       };
     },

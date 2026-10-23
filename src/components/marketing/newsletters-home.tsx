@@ -7,10 +7,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useTransition } from "react";
 import { createNewsletterAction, deleteTemplateAction } from "@/app/(portal)/marketing/newsletters/actions";
+import { useEditionKey } from "@/components/edition";
+import { editionOfIndustry } from "@/config/editions";
 import { renderEmail } from "@/lib/email/render";
 import { type BrandKit, type EmailDoc, emptyEmailDoc } from "@/lib/email/schema";
-import { EMAIL_TEMPLATES } from "@/lib/email/templates";
-import { sampleSendStats } from "@/lib/sample/marketing";
+import { emailTemplatesFor } from "@/lib/email/templates";
+import { sampleSendStats, sampleSentNewsletter } from "@/lib/sample/marketing";
 import { useDemoMarketing } from "./demo-setup";
 import { type DemoNewsletter, demoId, writeDemo } from "./demo-store";
 import { EmailFrame } from "./email-frame";
@@ -38,6 +40,8 @@ type Props = {
   canEdit: boolean;
   subscribed: number;
   timeZone: string;
+  /** The company's kind of business, for the demo's example newsletter. */
+  industry: string;
 };
 
 const STATUS: Record<string, { label: string; tone: string }> = {
@@ -50,21 +54,23 @@ const STATUS: Record<string, { label: string; tone: string }> = {
 };
 
 /** The demo starts with one newsletter that went out, so the results have something to show. */
-export function demoSeedNewsletter(site: string, subscribed: number, now = Date.now()): DemoNewsletter {
-  const t = EMAIL_TEMPLATES[0];
-  const doc = JSON.parse(JSON.stringify(t.doc(site)).replace(/\[Add a headline for this month\]/g, "Night swims are back").replace(/\[Add [^\]]+\]/g, "More on our site")) as EmailDoc;
-  return { id: "example", subject: "October news: night swims are back", preheader: "Three projects we loved this month.", doc, status: "sent", scheduledFor: null, sentAt: new Date(now - 9 * 86_400_000).toISOString(), audience: "Everyone subscribed", recipients: subscribed, updatedAt: new Date(now - 9 * 86_400_000).toISOString() };
+export function demoSeedNewsletter(site: string, subscribed: number, industry = "general", now = Date.now()): DemoNewsletter {
+  const t = emailTemplatesFor(editionOfIndustry(industry))[0];
+  const copy = sampleSentNewsletter(industry);
+  const doc = JSON.parse(JSON.stringify(t.doc(site)).replace(/\[Add a headline for this month\]/g, copy.headline).replace(/\[Add [^\]]+\]/g, copy.filler)) as EmailDoc;
+  return { id: "example", subject: copy.subject, preheader: copy.preheader, doc, status: "sent", scheduledFor: null, sentAt: new Date(now - 9 * 86_400_000).toISOString(), audience: "Everyone subscribed", recipients: subscribed, updatedAt: new Date(now - 9 * 86_400_000).toISOString() };
 }
 
 export function NewslettersHome(props: Props) {
   const router = useRouter();
   const demo = useDemoMarketing(props.tenantId);
+  const edition = useEditionKey();
   const [pending, start] = useTransition();
   const browser = props.storage === "browser";
 
   const cards: NewsletterCard[] = useMemo(() => {
     if (!browser) return props.newsletters;
-    const list = demo.newsletters ?? [demoSeedNewsletter(props.site, props.subscribed)];
+    const list = demo.newsletters ?? [demoSeedNewsletter(props.site, props.subscribed, props.industry)];
     const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: props.timeZone });
     return list.map((n) => {
       const stats = n.status === "sent" ? sampleSendStats(n.id, n.recipients) : null;
@@ -78,20 +84,20 @@ export function NewslettersHome(props: Props) {
         error: null,
       };
     });
-  }, [browser, demo.newsletters, props.newsletters, props.site, props.subscribed, props.timeZone]);
+  }, [browser, demo.newsletters, props.newsletters, props.site, props.subscribed, props.timeZone, props.industry]);
 
   const startDemo = (subject: string, preheader: string, doc: EmailDoc) => {
     const id = demoId("nl");
     writeDemo(props.tenantId, (d) => ({
       ...d,
-      newsletters: [{ id, subject, preheader, doc, status: "draft", scheduledFor: null, sentAt: null, audience: "Everyone subscribed", recipients: 0, updatedAt: new Date().toISOString() }, ...(d.newsletters ?? [demoSeedNewsletter(props.site, props.subscribed)])],
+      newsletters: [{ id, subject, preheader, doc, status: "draft", scheduledFor: null, sentAt: null, audience: "Everyone subscribed", recipients: 0, updatedAt: new Date().toISOString() }, ...(d.newsletters ?? [demoSeedNewsletter(props.site, props.subscribed, props.industry)])],
     }));
     router.push(`/marketing/newsletters/${id}`);
   };
 
   const savedTemplates = browser ? (demo.templates ?? []) : props.saved;
   const choices = [
-    ...EMAIL_TEMPLATES.map((t) => ({ key: `t:${t.key}`, name: t.name, description: t.description, subject: t.subject, preheader: t.preheader, doc: t.doc(props.site), form: { template: t.key }, saved: null as string | null })),
+    ...emailTemplatesFor(edition).map((t) => ({ key: `t:${t.key}`, name: t.name, description: t.description, subject: t.subject, preheader: t.preheader, doc: t.doc(props.site), form: { template: t.key }, saved: null as string | null })),
     ...savedTemplates.map((t) => ({ key: `s:${t.id}`, name: t.name, description: "One of your saved templates", subject: t.subject, preheader: "", doc: t.doc, form: { saved: t.id }, saved: t.id })),
   ];
 

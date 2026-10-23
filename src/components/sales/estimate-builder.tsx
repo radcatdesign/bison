@@ -9,7 +9,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createEstimateAction, estimateAction, saveEstimateAction, sendEstimateAction } from "@/app/(portal)/sales/actions";
+import { useEditionKey, useSay } from "@/components/edition";
 import m from "@/components/marketing/marketing.module.css";
+import type { Say } from "@/config/editions";
 import { EDITABLE, type EstimateInput, sendProblems } from "@/lib/sales/estimate-input";
 import type { BuilderExtras } from "@/lib/sales/estimate-page";
 import { formatMoney, moneyInput, parseMoney } from "@/lib/sales/money";
@@ -30,13 +32,13 @@ function inputOf(e: EstimateDetail | null, x: BuilderExtras): EstimateInput {
   return { title: e.title, client: { ...e.client, address: e.client.address ?? {} }, tradeAccountId: e.tradeAccountId, items: e.items.map((i) => ({ ...i, productId: i.productId ?? null, variantId: i.variantId ?? null })), discount: e.discount as EstimateInput["discount"], shippingCents: e.shippingCents, notes: e.notes, internalNote: e.internalNote, validUntil: e.validUntil };
 }
 
-const EVENT: Record<string, string> = {
+const eventLabels = (say: Say): Record<string, string> => ({
   created: "Started",
   edited: "Changed",
   sent: "Sent",
   email_failed: "Email didn't send",
-  viewed: "Opened by the client",
-  changes_requested: "Client asked for changes",
+  viewed: say("Opened by the client", "Opened by them"),
+  changes_requested: say("Client asked for changes", "They asked for changes"),
   approved: "Approved",
   declined: "Declined",
   invoiced: "Invoice sent",
@@ -44,7 +46,7 @@ const EVENT: Record<string, string> = {
   paid: "Paid",
   void: "Voided",
   reopened: "Reopened",
-};
+});
 
 function MoneyField({ cents, currency, onChange, label, testId }: { cents: number; currency: string; onChange: (c: number) => void; label: string; testId?: string }) {
   const [text, setText] = useState(moneyInput(cents, currency));
@@ -72,6 +74,8 @@ function MoneyField({ cents, currency, onChange, label, testId }: { cents: numbe
 
 export function EstimateBuilder({ estimate, extras, canEdit, canSend, locked, timeZone }: Props) {
   const router = useRouter();
+  const say = useSay();
+  const EVENT = eventLabels(say);
   const [input, setInput] = useState<EstimateInput>(() => inputOf(estimate, extras));
   const [save, setSave] = useState<{ state: "idle" | "saving" | "saved" | "error"; message: string }>({ state: "idle", message: "" });
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
@@ -92,7 +96,7 @@ export function EstimateBuilder({ estimate, extras, canEdit, canSend, locked, ti
   const money = (n: number) => formatMoney(n, currency);
   const totals = estimateTotals(input.items as EstimateLine[], input.discount as EstimateDiscount, input.shippingCents);
   const trade = extras.trade.find((t) => t.id === input.tradeAccountId) ?? null;
-  const problems = sendProblems(input);
+  const problems = sendProblems(input, useEditionKey());
   const fmt = useMemo(() => new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone }), [timeZone]);
 
   function change(next: EstimateInput) {
@@ -155,21 +159,25 @@ export function EstimateBuilder({ estimate, extras, canEdit, canSend, locked, ti
     <div className={s.builder} data-testid="estimate-builder">
       <div className={s.builderMain}>
         {locked && <p className="notice">{locked}</p>}
-        {!EDITABLE.has(status) && <p className="notice">This estimate is {st.label.toLowerCase()}, so it can&apos;t change. Duplicate it to start a new one from it.</p>}
+        {!EDITABLE.has(status) && (
+          <p className="notice">
+            {say("This estimate", "This quote")} is {st.label.toLowerCase()}, so it can&apos;t change. Duplicate it to start a new one from it.
+          </p>
+        )}
         {estimate?.changeRequest && status === "changes_requested" && (
           <div className="notice notice-warn" role="status" data-testid="change-request">
-            <strong>The client asked for changes:</strong> {estimate.changeRequest}
+            <strong>{say("The client asked for changes:", "They asked for changes:")}</strong> {estimate.changeRequest}
           </div>
         )}
 
         <section className="card" style={{ padding: 18 }} aria-labelledby="est-client">
           <h2 id="est-client" className={m.fieldLabel} style={{ fontSize: "var(--bo-text-md)", marginBottom: 12 }}>
-            Client
+            {say("Client", "Who it's for")}
           </h2>
           {extras.trade.length > 0 && (
             <div className={m.field}>
               <label htmlFor="est-trade" className={m.fieldLabel}>
-                Trade account <span className={m.hint}>Optional</span>
+                {say("Trade account", "Corporate account")} <span className={m.hint}>Optional</span>
               </label>
               <select
                 id="est-trade"
@@ -181,14 +189,18 @@ export function EstimateBuilder({ estimate, extras, canEdit, canSend, locked, ti
                   change({ ...input, tradeAccountId: t?.id ?? null, client: t ? { ...input.client, company: t.company, name: input.client.name || t.name, email: input.client.email || t.email, phone: input.client.phone || t.phone } : input.client });
                 }}
               >
-                <option value="">Not a trade account</option>
+                <option value="">{say("Not a trade account", "Not a corporate account")}</option>
                 {extras.trade.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.company} ({t.tierName}, {t.percentOff}% off)
                   </option>
                 ))}
               </select>
-              {trade && <span className={m.hint}>Lines you add from the catalog get {trade.company}&apos;s {trade.tierName} price. Lines already here keep theirs.</span>}
+              {trade && (
+                <span className={m.hint}>
+                  Lines you add from {say("the catalog", "your memberships")} get {trade.company}&apos;s {trade.tierName} price. Lines already here keep theirs.
+                </span>
+              )}
             </div>
           )}
           <div className={m.twoUp}>
@@ -219,7 +231,7 @@ export function EstimateBuilder({ estimate, extras, canEdit, canSend, locked, ti
           </div>
           <details style={{ marginTop: 10 }}>
             <summary className={m.linkButton} style={{ cursor: "pointer" }}>
-              Job or shipping address
+              {say("Job or shipping address", "Address")}
             </summary>
             <div className={m.twoUp} style={{ marginTop: 10 }}>
               {(
@@ -246,9 +258,9 @@ export function EstimateBuilder({ estimate, extras, canEdit, canSend, locked, ti
         <section className="card" style={{ padding: 18 }} aria-labelledby="est-lines">
           <div className={m.field}>
             <label htmlFor="est-title" className={m.fieldLabel}>
-              What it&apos;s for <span className={m.hint}>Shown at the top of the estimate</span>
+              What it&apos;s for <span className={m.hint}>{say("Shown at the top of the estimate", "Shown at the top of the quote")}</span>
             </label>
-            <input id="est-title" className="input" disabled={!editable} value={input.title} onChange={(e) => change({ ...input, title: e.target.value })} maxLength={160} placeholder="Backyard pool resurfacing" data-testid="est-title" />
+            <input id="est-title" className="input" disabled={!editable} value={input.title} onChange={(e) => change({ ...input, title: e.target.value })} maxLength={160} placeholder={say("Backyard pool resurfacing", "Corporate memberships for your staff")} data-testid="est-title" />
           </div>
           <h2 id="est-lines" className="visually-hidden">
             Lines
@@ -289,13 +301,13 @@ export function EstimateBuilder({ estimate, extras, canEdit, canSend, locked, ti
               )}
             </div>
           ))}
-          {!input.items.length && <p className="muted" style={{ margin: "10px 0" }}>No lines yet. Add from your catalog or type one in.</p>}
+          {!input.items.length && <p className="muted" style={{ margin: "10px 0" }}>{say("No lines yet. Add from your catalog or type one in.", "No lines yet. Add a membership, pack or training package, or type one in.")}</p>}
           {editable && (
             <div className={s.lineActions}>
               {extras.catalog.length > 0 && (
                 <button type="button" className="btn" onClick={() => pickRef.current?.showModal()} data-testid="est-add-catalog">
                   <Search aria-hidden="true" />
-                  Add from catalog
+                  {say("Add from catalog", "Add from Memberships")}
                 </button>
               )}
               <button type="button" className="btn" onClick={() => change({ ...input, items: [...input.items, { id: lineId(), productId: null, variantId: null, name: "", detail: "", qty: 1, unitCents: 0 }] })} data-testid="est-add-line">
@@ -351,7 +363,7 @@ export function EstimateBuilder({ estimate, extras, canEdit, canSend, locked, ti
         <section className="card" style={{ padding: 18 }} aria-label="Notes and dates">
           <div className={m.field}>
             <label htmlFor="est-notes" className={m.fieldLabel}>
-              Notes for the client <span className={m.hint}>Terms, lead times, what&apos;s included</span>
+              {say("Notes for the client", "Notes for them")} <span className={m.hint}>{say("Terms, lead times, what's included", "Start dates, cancellation, what's included")}</span>
             </label>
             <textarea id="est-notes" className={`input ${m.textarea}`} rows={4} disabled={!editable} value={input.notes} onChange={(e) => change({ ...input, notes: e.target.value })} maxLength={5000} />
           </div>
@@ -422,7 +434,7 @@ export function EstimateBuilder({ estimate, extras, canEdit, canSend, locked, ti
           )}
           {id && EDITABLE.has(status) && canSend && (
             <button type="button" className="btn btn-primary" disabled={pending} onClick={() => sendRef.current?.showModal()} data-testid="estimate-send">
-              {status === "draft" ? "Send to the client" : "Send it again"}
+              {status === "draft" ? say("Send to the client", "Send the quote") : "Send it again"}
             </button>
           )}
           {estimate?.invoiceUrl && status === "invoiced" && (
@@ -443,20 +455,20 @@ export function EstimateBuilder({ estimate, extras, canEdit, canSend, locked, ti
           )}
           {estimate?.orderId && (
             <Link className="btn" href={`/sales/orders?id=${estimate.orderId}`}>
-              Open the order
+              {say("Open the order", "Open the purchase")}
             </Link>
           )}
 
           {extras.clientUrl && (
             <div className={m.field}>
-              <span className={m.fieldLabel}>The client&apos;s page</span>
+              <span className={m.fieldLabel}>{say("The client's page", "Their page")}</span>
               <div className={s.copyRow}>
-                <input className="input mono" readOnly value={extras.clientUrl} aria-label="The client's page" data-testid="estimate-link" />
+                <input className="input mono" readOnly value={extras.clientUrl} aria-label={say("The client's page", "Their page")} data-testid="estimate-link" />
                 <button type="button" className={m.iconButton} aria-label="Copy the link" onClick={() => void navigator.clipboard?.writeText(extras.clientUrl!).then(() => setCopied(true))}>
                   <Copy aria-hidden="true" />
                 </button>
               </div>
-              <span className={m.hint}>{copied ? "Copied." : "Anyone with this link can see the estimate and answer it. Voiding it turns the link off."}</span>
+              <span className={m.hint}>{copied ? "Copied." : say("Anyone with this link can see the estimate and answer it. Voiding it turns the link off.", "Anyone with this link can see the quote and answer it. Voiding it turns the link off.")}</span>
             </div>
           )}
 
@@ -471,7 +483,7 @@ export function EstimateBuilder({ estimate, extras, canEdit, canSend, locked, ti
                   className={`${m.linkButton} ${m.danger}`}
                   disabled={pending}
                   onClick={() => {
-                    if (window.confirm("Void this estimate? The client's link stops working.")) run(() => estimateAction(id, "void"));
+                    if (window.confirm(say("Void this estimate? The client's link stops working.", "Void this quote? Their link stops working."))) run(() => estimateAction(id, "void"));
                   }}
                   data-testid="estimate-void"
                 >
@@ -521,9 +533,9 @@ export function EstimateBuilder({ estimate, extras, canEdit, canSend, locked, ti
       <dialog ref={pickRef} className={m.dialog} aria-labelledby="pick-title">
         <div className={m.dialogBody}>
           <div className={m.dialogHead}>
-            <h2 id="pick-title">Add from your catalog</h2>
+            <h2 id="pick-title">{say("Add from your catalog", "Add from your memberships")}</h2>
           </div>
-          <input className="input" autoFocus placeholder="Search by name or SKU" aria-label="Search the catalog" value={pickerQ} onChange={(e) => setPickerQ(e.target.value)} data-testid="est-pick-search" />
+          <input className="input" autoFocus placeholder="Search by name or SKU" aria-label={say("Search the catalog", "Search your memberships")} value={pickerQ} onChange={(e) => setPickerQ(e.target.value)} data-testid="est-pick-search" />
           <div className={s.picker}>
             {picks.map((p) => (
               <button key={p.variantId ?? `${p.name}-${p.sku}`} type="button" className={s.pick} onClick={() => addPick(p)} data-testid="est-pick">
@@ -564,7 +576,7 @@ export function EstimateBuilder({ estimate, extras, canEdit, canSend, locked, ti
           }}
         >
           <div className={m.dialogHead}>
-            <h2 id="send-title">{status === "draft" ? "Send the estimate" : "Send it again"}</h2>
+            <h2 id="send-title">{status === "draft" ? say("Send the estimate", "Send the quote") : "Send it again"}</h2>
           </div>
           {problems.length > 0 ? (
             <ul className="notice notice-warn" style={{ margin: 0, paddingLeft: 28 }}>
@@ -614,7 +626,7 @@ export function EstimateBuilder({ estimate, extras, canEdit, canSend, locked, ti
           <div className={m.dialogHead}>
             <h2 id="paid-title">Mark as paid</h2>
           </div>
-          <p style={{ margin: 0 }}>For a check, bank transfer or cash. It becomes an order, and the Stripe invoice is voided if there is one.</p>
+          <p style={{ margin: 0 }}>{say("For a check, bank transfer or cash. It becomes an order, and the Stripe invoice is voided if there is one.", "For a check, bank transfer or cash. It becomes a purchase, and the Stripe invoice is voided if there is one.")}</p>
           <div className={m.field}>
             <label htmlFor="paid-note" className={m.fieldLabel}>
               How it was paid <span className={m.hint}>Optional</span>

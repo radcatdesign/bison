@@ -5,6 +5,7 @@
 import { ImageUp, Monitor, RotateCcw, Smartphone, Trash2 } from "lucide-react";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { saveBrandKitAction } from "@/app/(portal)/marketing/actions";
+import { useEditionKey, useSay } from "@/components/edition";
 import { renderEmail } from "@/lib/email/render";
 import { useIsClient } from "@/lib/use-is-client";
 import { BRAND_COLOR_KEYS, BRAND_COLOR_LABELS, type BrandKit, brandKitSchema, describeIssues, EMAIL_DOC_VERSION, EMAIL_FONTS, type EmailDoc, type EmailFont } from "@/lib/email/schema";
@@ -27,6 +28,12 @@ const SAMPLE: EmailDoc = {
   ],
 };
 
+/** The same sample in a club's words. */
+const CLUB_SAMPLE: EmailDoc = {
+  ...SAMPLE,
+  sections: SAMPLE.sections.map((x) => (x.id === "box" && x.type === "highlight" ? { ...x, body: "For the one thing nobody should miss, like a class change or an event date." } : x)),
+};
+
 type Props = { initial: BrandKit; defaults: BrandKit; storage: "server" | "browser"; tenantId: string; canEdit: boolean; baseUrl: string };
 
 export function BrandKitScreen(props: Props) {
@@ -46,6 +53,8 @@ function BrandKitEditor({ initial, defaults, storage, tenantId, canEdit, baseUrl
   const [saving, startSaving] = useTransition();
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const say = useSay();
+  const sample = useEditionKey() === "fit" ? CLUB_SAMPLE : SAMPLE;
 
   const dirty = JSON.stringify(kit) !== savedJson;
   const set = <K extends keyof BrandKit>(key: K, value: BrandKit[K]) => setKit((k) => ({ ...k, [key]: value }));
@@ -53,8 +62,8 @@ function BrandKitEditor({ initial, defaults, storage, tenantId, canEdit, baseUrl
 
   const html = useMemo(() => {
     const parsed = brandKitSchema.safeParse(kit);
-    return renderEmail({ doc: SAMPLE, brand: parsed.success ? parsed.data : initial, subject: "Brand kit preview", preheader: "", baseUrl, builder: { selectedId: null, outlines: false } }).html;
-  }, [kit, initial, baseUrl]);
+    return renderEmail({ doc: sample, brand: parsed.success ? parsed.data : initial, subject: "Brand kit preview", preheader: "", baseUrl, builder: { selectedId: null, outlines: false } }).html;
+  }, [kit, initial, baseUrl, sample]);
 
   const save = () =>
     startSaving(async () => {
@@ -89,7 +98,7 @@ function BrandKitEditor({ initial, defaults, storage, tenantId, canEdit, baseUrl
       <div className={s.formCol}>
         <fieldset className={s.group} id="name" disabled={!canEdit}>
           <legend>Name</legend>
-          <TextField id="bk-business" label="Business name" value={kit.businessName} onChange={(v) => set("businessName", v)} hint="Shown in the header when there's no logo, and in the footer." />
+          <TextField id="bk-business" label={say("Business name", "Club name")} value={kit.businessName} onChange={(v) => set("businessName", v)} hint="Shown in the header when there's no logo, and in the footer." />
           <TextField id="bk-from" label="From name" value={kit.fromName} onChange={(v) => set("fromName", v)} hint="The name people see in their inbox." />
           <TextField id="bk-reply" label="Replies go to" type="email" optional value={kit.replyTo} onChange={(v) => set("replyTo", v)} hint="Leave empty to get replies at your sending address." />
         </fieldset>
@@ -119,7 +128,7 @@ function BrandKitEditor({ initial, defaults, storage, tenantId, canEdit, baseUrl
               )}
             </div>
           </div>
-          <p className={s.hint}>A PNG with a transparent background looks best. Without a logo, your business name shows instead.</p>
+          <p className={s.hint}>{say("A PNG with a transparent background looks best. Without a logo, your business name shows instead.", "A PNG with a transparent background looks best. Without a logo, your club's name shows instead.")}</p>
           {kit.logo && (
             <div className={s.field}>
               <label htmlFor="bk-logo-width" className={s.fieldLabel}>

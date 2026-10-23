@@ -29,7 +29,7 @@ async function Body({ params }: { params: Promise<{ id: string }> }) {
   let lists: { id: string; name: string; count: number }[] = sampleLists(ctx.tenant).map((l) => ({ ...l, count: 0 }));
   let brand = defaultMarketingSettings(settingsTenantOf(ctx)).brand;
   if (!demo) {
-    const [one, f, l, b] = await Promise.all([getSeries(scopeOf(ctx), id), formChoices(scopeOf(ctx)), liveSubscribersRepo(scopeOf(ctx)).lists(), withTenant(scopeOf(ctx), async (tx) => (await getMarketingSettings(tx, settingsTenantOf(ctx))).brand)]);
+    const [one, f, l, b] = await Promise.all([getSeries(scopeOf(ctx), id), formChoices(scopeOf(ctx), ctx.tenant.edition), liveSubscribersRepo(scopeOf(ctx)).lists(), withTenant(scopeOf(ctx), async (tx) => (await getMarketingSettings(tx, settingsTenantOf(ctx))).brand)]);
     series = one ? [one] : [];
     forms = f;
     lists = l;
@@ -37,7 +37,7 @@ async function Body({ params }: { params: Promise<{ id: string }> }) {
   }
   return (
     <SeriesDetail
-      c={{ storage: demo ? "browser" : "server", tenantId: ctx.tenant.id, site, canEdit: may(ctx.member.role, "marketing.edit"), triggers: triggersFor(ctx.tenant) }}
+      c={{ storage: demo ? "browser" : "server", tenantId: ctx.tenant.id, site, canEdit: may(ctx.member.role, "marketing.edit"), triggers: triggersFor(ctx.tenant), edition: ctx.tenant.edition }}
       id={id}
       server={series}
       forms={forms}

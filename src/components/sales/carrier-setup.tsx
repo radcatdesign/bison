@@ -6,6 +6,7 @@
 import { Check } from "lucide-react";
 import { useState, useTransition } from "react";
 import { connectCarrierAction, removeCarrierAction } from "@/app/(portal)/sales/actions";
+import { useSay } from "@/components/edition";
 import m from "@/components/marketing/marketing.module.css";
 
 type Conn = { connected: boolean; detail: string; keyHint: string; accountNumber: string; error: string | null };
@@ -32,6 +33,7 @@ function Status({ conn }: { conn: Conn }) {
 }
 
 function ShipStationCard({ conn, canManage, demo }: { conn: Conn; canManage: boolean; demo: boolean }) {
+  const say = useSay();
   const [key, setKey] = useState("");
   const { notice, pending, run, setNotice } = useRun();
   return (
@@ -39,7 +41,7 @@ function ShipStationCard({ conn, canManage, demo }: { conn: Conn; canManage: boo
       <span className={m.wizardNum} aria-hidden="true">{conn.connected ? <Check /> : 1}</span>
       <div className={m.wizardBody}>
         <h2 style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>ShipStation <Status conn={conn} /></h2>
-        <p className={m.hint}>Live rates from every carrier in your ShipStation account, and paid orders sent straight to ShipStation to pack and label. Needs a ShipStation plan with API access.</p>
+        <p className={m.hint}>{say("Live rates from every carrier in your ShipStation account, and paid orders sent straight to ShipStation to pack and label. Needs a ShipStation plan with API access.", "Live gear rates from every carrier in your ShipStation account, and paid purchases sent straight to ShipStation so your team can pack and label the gear. Needs a ShipStation plan with API access.")}</p>
         {conn.connected && <p className={m.hint}>{conn.detail} Key ending <span className="mono">{conn.keyHint}</span>.</p>}
         {conn.error && !conn.connected && <p className="notice notice-error">{conn.error}</p>}
         {canManage && (

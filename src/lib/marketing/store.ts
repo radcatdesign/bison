@@ -2,6 +2,7 @@ import "server-only";
 // Reading and saving marketing settings, and what a company is called and where
 // it lives, for code that runs without a portal session (the send job, public
 // signups, unsubscribe pages). All of it inside withTenant.
+import type { EditionKey } from "@/config/editions";
 import { type Database, isUuid, type Tx, withTenant } from "@/lib/db";
 import type { PortalContext } from "@/lib/portal";
 import { type MarketingSettings, readMarketingSettings, type SettingsTenant } from "./settings";
@@ -9,7 +10,7 @@ import { type MarketingSettings, readMarketingSettings, type SettingsTenant } fr
 export type MarketingPart = keyof MarketingSettings;
 
 export function settingsTenantOf(ctx: PortalContext): SettingsTenant {
-  return { name: ctx.tenant.name, industry: ctx.tenant.industry, accent: ctx.settings.accent, domain: ctx.sites[0]?.domain };
+  return { name: ctx.tenant.name, industry: ctx.tenant.industry, accent: ctx.settings.accent, domain: ctx.sites[0]?.domain, edition: ctx.tenant.edition };
 }
 
 export async function getMarketingSettings(tx: Tx, t: SettingsTenant): Promise<MarketingSettings> {
@@ -26,14 +27,14 @@ export async function saveMarketingPart<P extends MarketingPart>(tx: Tx, part: P
     .execute();
 }
 
-export type TenantInfo = SettingsTenant & { id: string; slug: string; timezone: string; sampleData: boolean; domains: string[] };
+export type TenantInfo = SettingsTenant & { id: string; slug: string; timezone: string; sampleData: boolean; domains: string[]; edition: EditionKey };
 
 /** The company behind the current transaction, for code without a portal session. */
 export async function tenantInfo(tx: Tx): Promise<TenantInfo> {
-  const t = await tx.selectFrom("tenants").select(["id", "name", "slug", "industry"]).executeTakeFirstOrThrow();
+  const t = await tx.selectFrom("tenants").select(["id", "name", "slug", "industry", "edition"]).executeTakeFirstOrThrow();
   const s = await tx.selectFrom("settings").select(["accent", "timezone", "sample_data"]).executeTakeFirstOrThrow();
   const sites = await tx.selectFrom("sites").select("domain").orderBy("created_at").execute();
-  return { id: t.id, name: t.name, slug: t.slug, industry: t.industry, accent: s.accent, timezone: s.timezone, sampleData: s.sample_data, domain: sites[0]?.domain, domains: sites.map((x) => x.domain) };
+  return { id: t.id, name: t.name, slug: t.slug, industry: t.industry, edition: t.edition, accent: s.accent, timezone: s.timezone, sampleData: s.sample_data, domain: sites[0]?.domain, domains: sites.map((x) => x.domain) };
 }
 
 /** Uploads named in a document must be this company's own. */

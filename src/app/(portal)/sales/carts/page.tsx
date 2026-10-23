@@ -4,12 +4,15 @@ import Link from "next/link";
 import { Suspense } from "react";
 import m from "@/components/marketing/marketing.module.css";
 import { salesGate } from "@/components/sales/gate";
-import { CART_STATUS, pillClass } from "@/components/sales/labels";
+import { pillClass, salesLabels } from "@/components/sales/labels";
+import { SaidHeader } from "@/components/sales/said";
 import x from "@/components/sales/screens.module.css";
 import s from "@/components/sales/sales.module.css";
-import { Card, Help, Metric, MetricStrip, PageHeader, SampleBanner, Segmented } from "@/components/ui";
+import { Card, Help, Metric, MetricStrip, SampleBanner, Segmented } from "@/components/ui";
+import { itemOf, type Say } from "@/config/editions";
 import { can } from "@/lib/access/entitlements";
 import { withTenant } from "@/lib/db";
+import { sayOf } from "@/lib/edition";
 import { demoMode } from "@/lib/env";
 import { formatAgo } from "@/lib/format";
 import { getPortalContext, type PortalContext, scopeOf } from "@/lib/portal";
@@ -19,9 +22,14 @@ import { defaultSalesSettings } from "@/lib/sales/settings";
 import { getSalesSettings } from "@/lib/sales/store";
 import type { CartRow } from "@/lib/sales/types";
 
-export const metadata: Metadata = { title: "Carts" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: sayOf(await getPortalContext())("Carts", "Unfinished joins") };
+}
 
-const NOTE = "Carts where the shopper gave an email at checkout. Left-behind carts come first, so you can follow up while they still want it.";
+const NOTE: [string, string] = [
+  "Carts where the shopper gave an email at checkout. Left-behind carts come first, so you can follow up while they still want it.",
+  "People who started joining online and gave their email at checkout. The ones who didn't finish come first, so your front desk can follow up while it's fresh.",
+];
 
 const DAY = 86_400_000;
 
@@ -33,6 +41,9 @@ const FILTERS = [
   ["inquiry", "Asked for a quote"],
 ] as const;
 type Filter = (typeof FILTERS)[number][0];
+
+const FIT_FILTERS: Record<Filter, string> = { all: "All", abandoned: "Didn't finish", ordered: "Finished", open: "Still choosing", inquiry: "Asked for a quote" };
+const filtersFor = (say: Say) => FILTERS.map(([k, label]) => [k, say(label, FIT_FILTERS[k])] as const);
 
 type Search = { status?: string };
 
@@ -59,12 +70,12 @@ async function recoveryFor(ctx: PortalContext, demo: boolean): Promise<Recovery>
   return { marketing, series: row ? { id: row.id, name: row.name, on: row.status === "on" } : null };
 }
 
-function RecoveryCard({ r, hours }: { r: Recovery; hours: number }) {
+function RecoveryCard({ r, hours, say, marketingName }: { r: Recovery; hours: number; say: Say; marketingName: string }) {
   return (
-    <Card title="Win carts back by email" testId="cart-recovery">
+    <Card title={say("Win carts back by email", "Win unfinished joins back by email")} testId="cart-recovery">
       <div className={x.recovery}>
         <p>
-          A cart counts as left behind after {hours} quiet {hours === 1 ? "hour" : "hours"} once we have the shopper&apos;s email. You can change that in{" "}
+          {say("A cart counts as left behind", "A join counts as unfinished")} after {hours} quiet {hours === 1 ? "hour" : "hours"} once we have {say("the shopper's", "their")} email. You can change that in{" "}
           <Link href="/sales/checkout#carts" className="link">
             Checkout
           </Link>
@@ -72,25 +83,27 @@ function RecoveryCard({ r, hours }: { r: Recovery; hours: number }) {
         </p>
         {!r.marketing ? (
           <>
-            <p>With Marketing, an email series can go to each person who leaves a cart, with what was in it and a link back to checkout. It stops the moment they buy.</p>
+            <p>{say("With Marketing, an email series can go to each person who leaves a cart, with what was in it and a link back to checkout. It stops the moment they buy.", `With ${marketingName}, a follow-up can go to each person who doesn't finish joining, with what they picked and a link back to checkout. It stops the moment they buy.`)}</p>
             <Link href="/marketing" className="btn" data-testid="cart-recovery-marketing">
-              See Marketing
+              See {marketingName}
               <ArrowRight aria-hidden="true" />
             </Link>
           </>
         ) : r.series ? (
           <>
             <p data-testid="cart-recovery-status">
-              {r.series.on ? `"${r.series.name}" is on. Each person who leaves a cart gets it, and it stops when they buy.` : `"${r.series.name}" starts when someone leaves a cart, but it's turned off. Turn it on to send it.`}
+              {r.series.on
+                ? say(`"${r.series.name}" is on. Each person who leaves a cart gets it, and it stops when they buy.`, `"${r.series.name}" is on. Each person who doesn't finish joining gets it, and it stops when they buy.`)
+                : say(`"${r.series.name}" starts when someone leaves a cart, but it's turned off. Turn it on to send it.`, `"${r.series.name}" starts when someone doesn't finish joining, but it's turned off. Turn it on to send it.`)}
             </p>
             <Link href={`/marketing/series/${r.series.id}`} className="btn" data-testid="cart-recovery-open">
-              Open the series
+              {say("Open the series", "Open the follow-up")}
               <ArrowRight aria-hidden="true" />
             </Link>
           </>
         ) : (
           <>
-            <p>Make an email series that starts when &quot;Someone leaves a cart&quot;. Each person who leaves one gets it, and it stops when they buy. It&apos;s optional; nothing goes out until you turn it on.</p>
+            <p>{say(`Make an email series that starts when "Someone leaves a cart". Each person who leaves one gets it, and it stops when they buy. It's optional; nothing goes out until you turn it on.`, "Make a follow-up in Email series that starts when someone leaves a cart. Each person who doesn't finish joining gets it, and it stops when they buy. It's optional; nothing goes out until you turn it on.")}</p>
             <Link href="/marketing/series" className="btn" data-testid="cart-recovery-new">
               Go to Email series
               <ArrowRight aria-hidden="true" />
@@ -107,6 +120,9 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
   const blocked = salesGate(ctx, "sales.abandoned");
   if (blocked) return blocked;
   const sp = await searchParams;
+  const say = sayOf(ctx);
+  const { CART_STATUS } = salesLabels(ctx.tenant.edition);
+  const filters = filtersFor(say);
   const filter: Filter = FILTERS.some(([k]) => k === sp.status) ? (sp.status as Filter) : "all";
   const demo = demoMode();
   const repo = salesRepo(ctx);
@@ -125,31 +141,40 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
     <>
       {repo.sample && <SampleBanner demo={demo} />}
       <MetricStrip>
-        <Metric label="Left behind, 30 days" value={left.length.toLocaleString("en-US")} testId="metric-carts-left" help={<p>Carts with an email that went quiet for {settings.store.abandonedAfterHours} hours or more without being bought, counted by when they went quiet, over the last 30 days.{repo.sample ? " Sample data is on, so this is made up." : ""}</p>} />
-        <Metric label="Left behind, value" value={money(left.reduce((n, c) => n + c.subtotalCents, 0))} help={<p>What those left-behind carts held, at the prices the shopper saw, before codes, shipping and tax.</p>} />
-        <Metric label="Bought, 30 days" value={bought.length.toLocaleString("en-US")} help={<p>Carts with an email that turned into a paid order, by when the shopper was last in the cart, over the last 30 days. Carts without an email aren&apos;t counted anywhere on this page.</p>} />
+        <Metric
+          label={say("Left behind, 30 days", "Unfinished, 30 days")}
+          value={left.length.toLocaleString("en-US")}
+          testId="metric-carts-left"
+          help={
+            <p>
+              {say("Carts with an email that went quiet for", "Joins with an email that went quiet for")} {settings.store.abandonedAfterHours} hours or more without being {say("bought", "paid for")}, counted by when they went quiet, over the last 30 days.{repo.sample ? " Sample data is on, so this is made up." : ""}
+            </p>
+          }
+        />
+        <Metric label={say("Left behind, value", "Unfinished, value")} value={money(left.reduce((n, c) => n + c.subtotalCents, 0))} help={<p>{say("What those left-behind carts held, at the prices the shopper saw, before codes, shipping and tax.", "What those unfinished joins held, at the prices they saw, before codes, shipping and tax.")}</p>} />
+        <Metric label={say("Bought, 30 days", "Finished, 30 days")} value={bought.length.toLocaleString("en-US")} help={<p>{say("Carts with an email that turned into a paid order, by when the shopper was last in the cart, over the last 30 days. Carts without an email aren't counted anywhere on this page.", "Joins with an email that turned into a paid purchase, by when the person was last in the cart, over the last 30 days. Carts without an email aren't counted anywhere on this page.")}</p>} />
       </MetricStrip>
 
       <div className={`${s.stack} ${x.gapAbove}`}>
-        <Segmented label="Show" items={FILTERS.map(([k, label]) => ({ href: k === "all" ? "/sales/carts" : `/sales/carts?status=${k}`, label, current: filter === k }))} />
-        <Card title={FILTERS.find(([k]) => k === filter)?.[1] ?? "Carts"} flush testId="cart-list">
+        <Segmented label="Show" items={filters.map(([k, label]) => ({ href: k === "all" ? "/sales/carts" : `/sales/carts?status=${k}`, label, current: filter === k }))} />
+        <Card title={filters.find(([k]) => k === filter)?.[1] ?? say("Carts", "Unfinished joins")} flush testId="cart-list">
           {rows.length === 0 ? (
             <div className={m.empty}>
-              <strong>{filter === "all" ? "No carts with an email yet." : "Nothing here."}</strong>
-              <span>{filter === "all" ? "Once shoppers reach checkout and give their email, their carts show up here, whether they buy or not." : "Try another filter."}</span>
+              <strong>{filter === "all" ? say("No carts with an email yet.", "No unfinished joins yet.") : "Nothing here."}</strong>
+              <span>{filter === "all" ? say("Once shoppers reach checkout and give their email, their carts show up here, whether they buy or not.", "Once people reach checkout and give their email, they show up here, whether they finish or not.") : "Try another filter."}</span>
             </div>
           ) : (
             <div className={x.scrollX}>
               <table className={m.table}>
                 <thead>
                   <tr>
-                    <th>Shopper</th>
+                    <th>{say("Shopper", "Person")}</th>
                     <th className={m.hideSm}>In the cart</th>
                     <th className={s.right}>
                       <span className={x.thHelp}>
                         Value
                         <Help title="Cart value">
-                          <p>The cart at the prices the shopper saw, trade prices included, before codes, shipping and tax.</p>
+                          <p>{say("The cart at the prices the shopper saw, trade prices included, before codes, shipping and tax.", "The cart at the prices they saw, corporate prices included, before codes, shipping and tax.")}</p>
                         </Help>
                       </span>
                     </th>
@@ -191,11 +216,11 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
           )}
           <div className={m.pager}>
             <span>
-              <span className="num">{rows.length.toLocaleString("en-US")}</span> {rows.length === 1 ? "cart" : "carts"}
+              <span className="num">{rows.length.toLocaleString("en-US")}</span> {rows.length === 1 ? say("cart", "join") : say("carts", "joins")}
             </span>
           </div>
         </Card>
-        <RecoveryCard r={recovery} hours={settings.store.abandonedAfterHours} />
+        <RecoveryCard r={recovery} hours={settings.store.abandonedAfterHours} say={say} marketingName={itemOf(ctx.tenant.edition, "module:marketing").name} />
       </div>
     </>
   );
@@ -204,7 +229,7 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
 export default function CartsPage({ searchParams }: { searchParams: Promise<Search> }) {
   return (
     <>
-      <PageHeader title="Carts" note={NOTE} />
+      <SaidHeader title={["Carts", "Unfinished joins"]} note={NOTE} />
       <Suspense fallback={null}>
         <Body searchParams={searchParams} />
       </Suspense>

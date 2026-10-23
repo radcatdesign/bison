@@ -18,6 +18,7 @@ import {
   unsubscribeSubscriberAction,
   updateSubscriberAction,
 } from "@/app/(portal)/marketing/actions";
+import { useSay } from "@/components/edition";
 import { kindValueFor, type SignupSettings } from "@/lib/marketing/settings";
 import type { ListRow, SubscriberDetail } from "@/lib/marketing/subscribers";
 import { useDemoMarketing } from "./demo-setup";
@@ -62,6 +63,7 @@ export function AddButtons({ lists, types, canEdit }: { lists: ListRow[]; types:
 }
 
 function AddForm({ lists, types, onDone }: { lists: ListRow[]; types: SignupSettings["types"]; onDone: () => void }) {
+  const say = useSay();
   const [result, setResult] = useState<Result | null>(null);
   const [pending, start] = useTransition();
   return (
@@ -123,7 +125,7 @@ function AddForm({ lists, types, onDone }: { lists: ListRow[]; types: SignupSett
           ))}
         </fieldset>
       )}
-      <p className={s.hint}>Only add people who asked to hear from you. If your welcome series is on, they get its first email right away.</p>
+      <p className={s.hint}>{say("Only add people who asked to hear from you. If your welcome series is on, they get its first email right away.", "Only add people who asked to hear from you. If your new lead follow-up is on, they get its first email right away.")}</p>
       <Message result={result} />
       <div className={s.dialogActions}>
         <button type="button" className="btn" onClick={onDone}>
@@ -138,6 +140,7 @@ function AddForm({ lists, types, onDone }: { lists: ListRow[]; types: SignupSett
 }
 
 function ImportForm({ lists, onDone }: { lists: ListRow[]; onDone: () => void }) {
+  const say = useSay();
   const [result, setResult] = useState<Result | null>(null);
   const [pending, start] = useTransition();
   const [listChoice, setListChoice] = useState("");
@@ -158,7 +161,12 @@ function ImportForm({ lists, onDone }: { lists: ListRow[]; onDone: () => void })
         </button>
       </div>
       <ol className={s.miniList} style={{ listStyle: "decimal", paddingLeft: 18, display: "block" }}>
-        <li style={{ display: "list-item", marginBottom: 6 }}>Export your list as a CSV from your old tool (Mailchimp: Audience, then Export; Constant Contact: Contacts, then Export) or save a spreadsheet as CSV.</li>
+        <li style={{ display: "list-item", marginBottom: 6 }}>
+          {say(
+            "Export your list as a CSV from your old tool (Mailchimp: Audience, then Export; Constant Contact: Contacts, then Export) or save a spreadsheet as CSV.",
+            "Export your list as a CSV from your old email tool or your member software, or save a spreadsheet as CSV. Only include people who agreed to get email from the club.",
+          )}
+        </li>
         <li style={{ display: "list-item", marginBottom: 6 }}>Make sure it has an Email column. Name, First name, Last name and Type columns are picked up too.</li>
         <li style={{ display: "list-item" }}>Pick the file below. Up to 5,000 people at a time.</li>
       </ol>
@@ -219,6 +227,7 @@ export function SubscriberPanel({ person, lists, types, canEdit, canDelete, clos
   const [pending, start] = useTransition();
   const fmt = (d: Date) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const run = (fn: () => Promise<Result>) => start(async () => setResult(await fn()));
+  const say = useSay();
 
   return (
     <aside className={s.panel} aria-label={`Subscriber ${person.email}`} data-testid="subscriber-panel">
@@ -251,7 +260,7 @@ export function SubscriberPanel({ person, lists, types, canEdit, canDelete, clos
           </dd>
           {person.offer && (
             <>
-              <dt>Welcome code</dt>
+              <dt>{say("Welcome code", "Intro offer code")}</dt>
               <dd>
                 <span className="mono">{person.offer.code}</span> {person.offer.redeemedAt ? `(used ${fmt(person.offer.redeemedAt)})` : "(not used yet)"}
               </dd>
@@ -378,6 +387,7 @@ export function SubscriberPanel({ person, lists, types, canEdit, canDelete, clos
 // ---- Lists ----------------------------------------------------------------------------------
 
 export function ListsEditor({ lists, canEdit, sample }: { lists: ListRow[]; canEdit: boolean; sample: boolean }) {
+  const say = useSay();
   const [name, setName] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [pending, start] = useTransition();
@@ -468,7 +478,7 @@ export function ListsEditor({ lists, canEdit, sample }: { lists: ListRow[]; canE
             <label htmlFor="new-list" className={s.fieldLabel}>
               New list
             </label>
-            <input id="new-list" className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="Homeowners, Wholesale, Event guests" />
+            <input id="new-list" className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder={say("Homeowners, Wholesale, Event guests", "Members, Trial leads, Corporate")} />
           </div>
           <button type="submit" className="btn" disabled={pending || !name.trim()} data-testid="create-list">
             <Plus aria-hidden="true" />
@@ -490,6 +500,7 @@ export function SignupEditor({ initial, canEdit, storage, tenantId }: { initial:
 }
 
 function SignupForm({ initial, canEdit, storage, tenantId }: { initial: SignupSettings; canEdit: boolean; storage: "server" | "browser"; tenantId: string }) {
+  const say = useSay();
   const [question, setQuestion] = useState(initial.question);
   const [types, setTypes] = useState(initial.types);
   const [label, setLabel] = useState("");
@@ -550,7 +561,7 @@ function SignupForm({ initial, canEdit, storage, tenantId }: { initial: SignupSe
             <label htmlFor="signup-new" className={s.fieldLabel}>
               Add a choice
             </label>
-            <input id="signup-new" className="input" value={label} onChange={(e) => setLabel(e.target.value)} maxLength={40} placeholder="Contractor" />
+            <input id="signup-new" className="input" value={label} onChange={(e) => setLabel(e.target.value)} maxLength={40} placeholder={say("Contractor", "Personal training client")} />
           </div>
           <button
             type="button"

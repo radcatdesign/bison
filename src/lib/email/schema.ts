@@ -3,6 +3,7 @@
 // builder edits it, and the renderer turns it into email-safe HTML. Everything
 // coming in is checked against these schemas first. Works in the browser too.
 import { z } from "zod";
+import type { EditionKey } from "@/config/editions";
 
 export const EMAIL_DOC_VERSION = 1;
 export const MAX_EMAIL_SECTIONS = 30;
@@ -291,8 +292,9 @@ export const brandKitSchema = z.object({
 });
 export type BrandKit = z.infer<typeof brandKitSchema>;
 
-export function defaultBrandKit(businessName: string, accent = "#3b5bff", domain?: string): BrandKit {
-  const name = businessName.trim().slice(0, 80) || "Your company";
+export function defaultBrandKit(businessName: string, accent = "#3b5bff", domain?: string, edition: EditionKey = "bison"): BrandKit {
+  const fit = edition === "fit";
+  const name = businessName.trim().slice(0, 80) || (fit ? "Your club" : "Your company");
   return {
     businessName: name,
     fromName: name,
@@ -314,9 +316,15 @@ export function defaultBrandKit(businessName: string, accent = "#3b5bff", domain
     },
     fonts: { headings: "helvetica", body: "helvetica" },
     buttonShape: "rounded",
-    signOff: `Thanks,\nThe ${name} team`,
+    signOff: fit ? `See you at the club,\nThe ${name} team` : `Thanks,\nThe ${name} team`,
     address: "",
-    footerNote: domain ? `You're getting this because you signed up at ${domain}.` : "You're getting this because you signed up with us.",
+    footerNote: fit
+      ? domain
+        ? `You're getting this because you're a member or signed up at ${domain}.`
+        : "You're getting this because you're a member or signed up with us."
+      : domain
+        ? `You're getting this because you signed up at ${domain}.`
+        : "You're getting this because you signed up with us.",
     replyTo: "",
   };
 }

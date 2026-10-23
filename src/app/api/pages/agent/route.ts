@@ -4,6 +4,7 @@
 import { CATALOG } from "@/config/catalog";
 import { may } from "@/config/roles";
 import { can } from "@/lib/access/entitlements";
+import { sayOf } from "@/lib/edition";
 import { isUuid } from "@/lib/db";
 import { demoMode, pageAgentName } from "@/lib/env";
 import { runPageAgent } from "@/lib/pages/agent";
@@ -28,8 +29,9 @@ function readHistory(value: unknown): AgentTurn[] {
 
 export async function POST(req: Request) {
   const ctx = await getPortalContext();
-  if (!can(ctx.tenant, "marketing.pages")) return refuse(403, "Pages are part of Marketing. Unlock Marketing to build pages.");
-  if (!may(ctx.member.role, "pages.edit")) return refuse(403, "Your role can't change landing pages.");
+  const say = sayOf(ctx);
+  if (!can(ctx.tenant, "marketing.pages")) return refuse(403, say("Pages are part of Marketing. Unlock Marketing to build pages.", "Funnel pages are part of Marketing. Unlock Marketing to build them."));
+  if (!may(ctx.member.role, "pages.edit")) return refuse(403, say("Your role can't change landing pages.", "Your role can't change funnel pages."));
 
   let body: { pageId?: unknown; versionId?: unknown; doc?: unknown; instruction?: unknown; history?: unknown };
   try {
@@ -77,7 +79,7 @@ export async function POST(req: Request) {
       const send = (event: AgentEvent) => controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
       try {
         const result = await runPageAgent(
-          { doc, instruction, history: readHistory(body.history), brand: ctx.tenant.name, industry: ctx.tenant.industry, domain: ctx.sites[0]?.domain ?? "" },
+          { doc, instruction, history: readHistory(body.history), brand: ctx.tenant.name, industry: ctx.tenant.industry, domain: ctx.sites[0]?.domain ?? "", edition: ctx.tenant.edition },
           send,
           req.signal,
         );

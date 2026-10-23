@@ -4,6 +4,7 @@ import "server-only";
 // and detail the dashboard shows. Network calls (email, ShipStation, Stripe)
 // happen outside transactions, and every outcome is written back to the order.
 import { sql } from "kysely";
+import { sayFor } from "@/config/editions";
 import { can, loadAccess } from "@/lib/access/entitlements";
 import { audit } from "@/lib/audit";
 import { type Database, db, isUuid, type Tx, withTenant } from "@/lib/db";
@@ -14,7 +15,7 @@ import { orderAlertEmail, salesSender, sendOne } from "./emails";
 import { pack, PackingError } from "./packing";
 import { type PaymentsProvider, paymentsProvider } from "./payments";
 import { addressComplete, type Address, EMPTY_ADDRESS } from "./settings";
-import { connectedCarrier, getSalesSettings, readPayments } from "./store";
+import { connectedCarrier, getSalesSettings, readEdition, readPayments } from "./store";
 import type { Delivery, OrderDetail, OrderItem, OrderRow } from "./types";
 
 export const MAX_FULFILLMENT_ATTEMPTS = 5;
@@ -141,14 +142,14 @@ export async function alertTeam(tenantId: string, orderId: string, database: Dat
       const o = await tx.selectFrom("orders as o").leftJoin("trade_accounts as t", (j) => j.onRef("t.id", "=", "o.trade_account_id").onRef("t.tenant_id", "=", "o.tenant_id")).selectAll("o").select("t.company").where("o.id", "=", orderId).executeTakeFirst();
       if (!o) return null;
       const settings = await getSalesSettings(tx);
-      return { o, to: settings.store.alertEmails, sender: await salesSender(tx) };
+      return { o, to: settings.store.alertEmails, sender: await salesSender(tx), edition: await readEdition(tx) };
     },
     database,
   );
   if (!prep) return { error: "No such order." };
   const { o, to, sender } = prep;
   let delivery: Delivery;
-  if (!to.length) delivery = { at: new Date().toISOString(), error: "Nobody is set to get order alerts. Add someone in Sales, Checkout." };
+  if (!to.length) delivery = { at: new Date().toISOString(), error: sayFor(prep.edition)("Nobody is set to get order alerts. Add someone in Sales, Checkout.", "Nobody is set to get purchase alerts. Add someone in Sales, Checkout.") };
   else if (!sender) delivery = await sendOne(null, { to: to.join(","), subject: "", html: "", text: "", kind: "order-alert", ref: o.id }, "");
   else {
     const items = (o.items as OrderItem[]) ?? [];
@@ -255,12 +256,13 @@ export async function afterOrderPaid(tenantId: string, orderId: string, database
 /** Refunds part or all of an order through the company's Stripe account. */
 export async function refundOrder(tenantId: string, orderId: string, amountCents: number, actor: string, database: Database = db(), payments: PaymentsProvider | null = paymentsProvider()): Promise<{ ok: boolean; message: string }> {
   if (!payments) return { ok: false, message: "Payments aren't switched on for this server." };
-  const o = await withTenant({ tenantId, userId: actor }, (tx) => tx.selectFrom("orders").selectAll().where("id", "=", orderId).executeTakeFirst(), database);
-  if (!o) return { ok: false, message: "That order isn't here anymore." };
-  if (!o.stripe_account_id || !o.stripe_payment_intent_id) return { ok: false, message: "This order wasn't paid through Stripe, so refund it where it was paid." };
+  const { o, edition } = await withTenant({ tenantId, userId: actor }, async (tx) => ({ o: await tx.selectFrom("orders").selectAll().where("id", "=", orderId).executeTakeFirst(), edition: await readEdition(tx) }), database);
+  const say = sayFor(edition);
+  if (!o) return { ok: false, message: say("That order isn't here anymore.", "That purchase isn't here anymore.") };
+  if (!o.stripe_account_id || !o.stripe_payment_intent_id) return { ok: false, message: say("This order wasn't paid through Stripe, so refund it where it was paid.", "This purchase wasn't paid through Stripe, so refund it where it was paid.") };
   const left = o.total_cents - o.refunded_cents;
   if (!Number.isInteger(amountCents) || amountCents <= 0) return { ok: false, message: "Enter how much to refund." };
-  if (amountCents > left) return { ok: false, message: `You can refund up to ${(left / 100).toFixed(2)} more on this order.` };
+  if (amountCents > left) return { ok: false, message: say(`You can refund up to ${(left / 100).toFixed(2)} more on this order.`, `You can refund up to ${(left / 100).toFixed(2)} more on this purchase.`) };
   try {
     await payments.refund(o.stripe_account_id, { paymentIntentId: o.stripe_payment_intent_id, amountCents, key: `bison-refund-${o.id}-${o.refunded_cents}-${amountCents}` });
   } catch (err) {

@@ -2,6 +2,7 @@
 // Signed-in only, with the plan and role checked here. Images are re-encoded
 // before they're saved.
 import { sql } from "kysely";
+import { itemOf, sayFor } from "@/config/editions";
 import { may } from "@/config/roles";
 import { can } from "@/lib/access/entitlements";
 import { audit } from "@/lib/audit";
@@ -19,9 +20,11 @@ const refuse = (status: number, message: string) => Response.json({ message }, {
 export async function POST(req: Request) {
   const ctx = await getPortalContext();
   const wanted = new URL(req.url).searchParams.get("kind");
+  const say = sayFor(ctx.tenant.edition);
   if (wanted === "product-image") {
-    if (!can(ctx.tenant, "sales.products")) return refuse(403, "Product photos are part of Sales. Unlock Sales to upload them.");
-    if (!may(ctx.member.role, "sales.edit")) return refuse(403, "Your role can't change products.");
+    const sales = itemOf("fit", "module:sales").name;
+    if (!can(ctx.tenant, "sales.products")) return refuse(403, say("Product photos are part of Sales. Unlock Sales to upload them.", `Membership and gear photos are part of ${sales}. Unlock ${sales} to upload them.`));
+    if (!may(ctx.member.role, "sales.edit")) return refuse(403, say("Your role can't change products.", "Your role can't change memberships."));
   } else {
     if (!can(ctx.tenant, "marketing.newsletters")) return refuse(403, "Images are part of Marketing. Unlock Marketing to upload them.");
     if (!may(ctx.member.role, "marketing.edit")) return refuse(403, "Your role can't upload images.");

@@ -8,6 +8,7 @@ import { Check, Copy } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { addSendingDomainAction, checkSendingDomainAction, removeSendingDomainAction, sendSetupTestAction, setFromAddressAction } from "@/app/(portal)/marketing/actions";
+import { useEdition, useSay } from "@/components/edition";
 import type { DomainRecord } from "@/lib/email/provider";
 import { fullName, relativeName, zoneOf } from "@/lib/marketing/dns";
 import type { SendingState } from "@/lib/marketing/sending";
@@ -76,6 +77,9 @@ function Wizard({ state, storage, tenantId, providerReady, canManage, suggested,
   const [lastChecked, setLastChecked] = useState<string | null>(state.checkedAt);
   const browser = storage === "browser";
   const client = useIsClient();
+  // `say` below posts a step's notice, so the edition's words are `words`.
+  const words = useSay();
+  const product = useEdition().productName;
 
   const verified = state.status === "verified";
   const hasDomain = Boolean(state.domain);
@@ -120,7 +124,7 @@ function Wizard({ state, storage, tenantId, providerReady, canManage, suggested,
     <div className={s.wizard} data-testid="sending-setup">
       {!providerReady && !browser && (
         <p className="notice notice-error" role="alert">
-          Email sending isn&apos;t switched on for this Bison Ops server yet (no RESEND_API_KEY). The steps below work once it is.
+          Email sending isn&apos;t switched on for this {product} server yet (no RESEND_API_KEY). The steps below work once it is.
         </p>
       )}
       {!canManage && <p className="notice">Only owners and admins can change sending. You can still send yourself a test once it&apos;s set up.</p>}
@@ -165,9 +169,9 @@ function Wizard({ state, storage, tenantId, providerReady, canManage, suggested,
               start(async () => {
                 if (browser) {
                   const d = domainInput.trim().toLowerCase();
-                  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d)) return say("domain", false, "That doesn't look like a domain. Try something like mail.yourcompany.com.");
+                  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d)) return say("domain", false, words("That doesn't look like a domain. Try something like mail.yourcompany.com.", "That doesn't look like a domain. Try something like mail.yourclub.com."));
                   writeDemo(tenantId, (x) => ({ ...x, sending: { domain: d, checked: false, tested: false } }));
-                  return say("domain", true, `Added ${d}. In your own account, Bison Ops asks Resend for the real records.`);
+                  return say("domain", true, `Added ${d}. In your own account, ${product} asks Resend for the real records.`);
                 }
                 const r = await addSendingDomainAction(domainInput);
                 say("domain", r.ok, r.message);
@@ -178,7 +182,7 @@ function Wizard({ state, storage, tenantId, providerReady, canManage, suggested,
               <label htmlFor="sending-domain-input" className={s.fieldLabel}>
                 Domain
               </label>
-              <input id="sending-domain-input" className="input" value={domainInput} onChange={(e) => setDomainInput(e.target.value)} placeholder="mail.yourcompany.com" disabled={!canManage} autoComplete="off" spellCheck={false} />
+              <input id="sending-domain-input" className="input" value={domainInput} onChange={(e) => setDomainInput(e.target.value)} placeholder={words("mail.yourcompany.com", "mail.yourclub.com")} disabled={!canManage} autoComplete="off" spellCheck={false} />
             </div>
             <button type="submit" className="btn btn-primary" disabled={pending || !canManage || !domainInput.trim()} data-testid="add-domain">
               {pending ? "Adding" : "Add domain"}
@@ -318,7 +322,7 @@ function Wizard({ state, storage, tenantId, providerReady, canManage, suggested,
       </StepCard>
 
       <StepCard n={4} id="test" state={stepState(4)} title="Send yourself a test">
-        <p>See it the way subscribers will: in your own inbox, from your own address, in your brand kit. Check that it isn&apos;t in spam.</p>
+        <p>{words("See it the way subscribers will: in your own inbox, from your own address, in your brand kit. Check that it isn't in spam.", "See it the way members and leads will: in your own inbox, from your own address, in your brand kit. Check that it isn't in spam.")}</p>
         <form
           className={s.inline}
           onSubmit={(e) => {

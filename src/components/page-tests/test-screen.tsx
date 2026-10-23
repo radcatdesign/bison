@@ -7,6 +7,7 @@ import { ArrowLeft, Check, CircleAlert, ExternalLink, FlaskConical, Monitor, Pen
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { addVersionAction, deleteTestAction, endTestAction, removeVersionAction, startTestAction, updateTestAction } from "@/app/(portal)/marketing/tests/actions";
+import { useSay } from "@/components/edition";
 import type { SignupChoices } from "@/components/landing/landing-page";
 import m from "@/components/marketing/marketing.module.css";
 import { Canvas } from "@/components/page-builder/canvas";
@@ -211,6 +212,7 @@ const DEMO = "This is a demo, so the tests here are examples and can't be change
 // ---- Before it starts ------------------------------------------------------------------------
 
 function Setup({ view, brand, editable, canPublish, demo, pending, run, onPreview }: { view: TestScreenView; brand: string; editable: boolean; canPublish: boolean; demo: boolean; pending: boolean; run: Run; onPreview: (v: VersionView) => void }) {
+  const say = useSay();
   const initial = () => ({
     name: view.name,
     hypothesis: view.hypothesis,
@@ -260,7 +262,7 @@ function Setup({ view, brand, editable, canPublish, demo, pending, run, onPrevie
                       className={`input ${s.versionName}`}
                       value={f.names[v.id] ?? ""}
                       maxLength={60}
-                      placeholder={`Name ${v.key.toUpperCase()}, like Price up front`}
+                      placeholder={`Name ${v.key.toUpperCase()}, like ${say("Price up front", "No card needed")}`}
                       aria-label={`Name for version ${v.key.toUpperCase()}`}
                       disabled={!editable || pending}
                       onChange={(e) => setF((p) => ({ ...p, names: { ...p.names, [v.id]: e.target.value } }))}
@@ -316,7 +318,7 @@ function Setup({ view, brand, editable, canPublish, demo, pending, run, onPrevie
             <div className={s.goalChoices} role="radiogroup" aria-label="What counts as a win">
               <button type="button" role="radio" aria-checked={f.goal === "form"} className={s.goalChoice} onClick={() => setF((p) => ({ ...p, goal: "form" }))} data-testid="goal-form">
                 <strong>Form sends</strong>
-                <span>Someone sends the form on the page.</span>
+                <span>{say("Someone sends the form on the page.", "Someone sends the form, like a free pass request.")}</span>
               </button>
               <button type="button" role="radio" aria-checked={f.goal === "click"} className={s.goalChoice} onClick={() => setF((p) => ({ ...p, goal: "click" }))} data-testid="goal-click">
                 <strong>Button clicks</strong>
@@ -374,7 +376,18 @@ function Setup({ view, brand, editable, canPublish, demo, pending, run, onPrevie
             <label htmlFor="t-why" className={m.fieldLabel}>
               What you expect <em>Optional</em>
             </label>
-            <textarea id="t-why" className={`input ${m.textarea}`} rows={3} maxLength={1000} value={f.hypothesis} onChange={(e) => setF((p) => ({ ...p, hypothesis: e.target.value }))} placeholder="Saying the price up front should get more quote requests, because people ask about price first." />
+            <textarea
+              id="t-why"
+              className={`input ${m.textarea}`}
+              rows={3}
+              maxLength={1000}
+              value={f.hypothesis}
+              onChange={(e) => setF((p) => ({ ...p, hypothesis: e.target.value }))}
+              placeholder={say(
+                "Saying the price up front should get more quote requests, because people ask about price first.",
+                "Saying \"no card needed\" up front should get more free pass requests, because people worry about being signed up.",
+              )}
+            />
           </div>
         </fieldset>
         {editable && (
@@ -467,6 +480,7 @@ function DeleteTest({ view, demo, pending, run }: { view: TestScreenView; demo: 
 // ---- Running and ended ------------------------------------------------------------------------
 
 function Results({ view, brand, canPublish, canEdit, demo, pending, run, onPreview }: { view: TestScreenView; brand: string; canPublish: boolean; canEdit: boolean; demo: boolean; pending: boolean; run: Run; onPreview: (v: VersionView) => void }) {
+  const say = useSay();
   const endRef = useRef<HTMLDialogElement>(null);
   const v = view.verdict;
   const running = view.status === "running";
@@ -508,7 +522,7 @@ function Results({ view, brand, canPublish, canEdit, demo, pending, run, onPrevi
       </section>
 
       <MetricStrip>
-        <Metric label="Visitors" value={int(view.totals.visitors)} testId="metric-visitors" help={<p>People who opened the page while the test ran, across every version. Each person counts once a day. Bots, link previews and people signed in to Bison Ops in that browser aren&apos;t counted.</p>} />
+        <Metric label="Visitors" value={int(view.totals.visitors)} testId="metric-visitors" help={<p>{say("People who opened the page while the test ran, across every version. Each person counts once a day. Bots, link previews and people signed in to Bison Ops in that browser aren't counted.", "People who opened the page while the test ran, across every version. Each person counts once a day. Bots, link previews and people signed in to Fit Funnels in that browser aren't counted.")}</p>} />
         <Metric label={view.goalLabel} value={int(view.totals.conversions)} testId="metric-conversions" help={<p>Visitors who {view.goalVerb}, across every version. Each person counts once a day, however many times they did it.</p>} />
         <Metric label={running ? "Days running" : "Days it ran"} value={int(view.days)} testId="metric-days" help={<p>Counted from {view.startedLabel ?? "the start"}, including today. A test needs at least {MIN_DAYS} days so weekdays and weekends both count.</p>} />
       </MetricStrip>

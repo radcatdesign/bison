@@ -2,6 +2,10 @@
 
 What each part of Bison Ops does, what grants it, and how far it's built. Feature keys are in `src/config/features.ts`.
 
+## Editions
+
+Everything below ships in two editions from one app (see `architecture.md`, Editions): **Bison Ops** for businesses that sell from their website, and **Fit Funnels** for gyms, health clubs and fitness studios, with its own name, mark, accent (`#f76b15`), templates, sample data and words. Fit Funnels renames, without changing what they do: Contacts to Leads, Pages to Funnel pages, Welcome offer to Intro offer, Sales (the module) to Membership sales, Estimates to Quotes, Orders to Purchases, Products to Memberships (memberships, class packs, personal training and gear), Discount codes to Promo codes, Trade accounts to Corporate accounts, and Carts to Unfinished joins. Add-ons: Membership calculator, Plan builder, Member library and Club gallery. Prices and limits are the same in both.
+
 ## Platform (Phase 0, built)
 
 - **Tenancy.** One database, `tenant_id` on every row, row-level security on every table. See `architecture.md`.

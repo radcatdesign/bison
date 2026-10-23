@@ -4,7 +4,9 @@
 // arrows, or add a new one after the open section.
 import { ArrowDown, ArrowUp, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { findPlaceholders, type PageDoc, SECTION_LABELS, SECTION_TYPES, type Section, type SectionType } from "@/lib/pages/schema";
+import { useEditionKey } from "@/components/edition";
+import { sayFor } from "@/config/editions";
+import { findPlaceholders, type PageDoc, SECTION_TYPES, type Section, sectionLabel, type SectionType } from "@/lib/pages/schema";
 import s from "./builder.module.css";
 import { SectionForm } from "./section-form";
 
@@ -20,6 +22,13 @@ const TYPE_NOTES: Record<SectionType, string> = {
   cta: "A closing band with a button",
   text: "Paragraphs of plain text",
 };
+
+/** What a type is for, in the company's words. */
+function typeNote(type: SectionType, say: (bison: string, fit: string) => string): string {
+  if (type === "quote") return say(TYPE_NOTES.quote, "One real member quote");
+  if (type === "form") return say(TYPE_NOTES.form, "Collects leads into your inbox");
+  return TYPE_NOTES[type];
+}
 
 function summary(section: Section): string {
   switch (section.type) {
@@ -49,6 +58,8 @@ type Props = {
 };
 
 export function SectionsPanel({ doc, selectedId, onSelect, onCommit, onAdd, onRemove, onMove }: Props) {
+  const edition = useEditionKey();
+  const say = sayFor(edition);
   const [adding, setAdding] = useState(false);
   const openRef = useRef<HTMLLIElement>(null);
   const lastKey = useRef<string>("");
@@ -70,7 +81,7 @@ export function SectionsPanel({ doc, selectedId, onSelect, onCommit, onAdd, onRe
                 <ChevronRight aria-hidden="true" className={s.chev} />
                 <span className={s.sectionText}>
                   <span className={s.sectionType}>
-                    {SECTION_LABELS[section.type]}
+                    {sectionLabel(section.type, edition)}
                     {flagged.has(section.id) && <span className={s.flag}>To fill in</span>}
                   </span>
                   <span className={s.sectionSummary}>{summary(section)}</span>
@@ -122,8 +133,8 @@ export function SectionsPanel({ doc, selectedId, onSelect, onCommit, onAdd, onRe
                   setAdding(false);
                 }}
               >
-                <strong>{SECTION_LABELS[type]}</strong>
-                <span>{TYPE_NOTES[type]}</span>
+                <strong>{sectionLabel(type, edition)}</strong>
+                <span>{typeNote(type, say)}</span>
               </button>
             ))}
           </div>

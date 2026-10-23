@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { CATALOG } from "@/config/catalog";
+import { itemOf } from "@/config/editions";
 import type { ModeKey } from "@/config/modes";
 import { daysLeft } from "@/lib/access/entitlements";
 import { gateMode } from "@/lib/gate";
@@ -21,7 +21,7 @@ export async function ModulePage({ mode, title, note, planned, ready = [] }: { m
   const state = ctx.tenant.access.states[key];
   const status =
     state.via === "trial" && state.trialEndsAt
-      ? `${CATALOG[key].name} trial: ${daysLeft(state.trialEndsAt)} days left.`
+      ? `${itemOf(ctx.tenant.edition, key).name} trial: ${daysLeft(state.trialEndsAt)} days left.`
       : state.pastDue
         ? "Your last payment didn't go through. Update your card in Settings to keep this on."
         : null;

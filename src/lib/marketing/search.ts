@@ -2,6 +2,7 @@
 // Built from its own content: the business details it filled in, its brand kit,
 // and its published landing pages. Pure functions, so the screens can preview
 // exactly what the public files serve.
+import type { EditionKey } from "@/config/editions";
 import type { BrandKit } from "@/lib/email/schema";
 import type { PageDoc, Section } from "@/lib/pages/schema";
 import type { SearchSettings } from "./settings";
@@ -9,7 +10,7 @@ import type { SearchSettings } from "./settings";
 export type SearchPage = { slug: string; title: string; doc: PageDoc; publishedAt: Date };
 /** An active product, when the company has Sales. Its page is /p/<company>/shop/<slug>. */
 export type SearchProduct = { slug: string; name: string; summary: string; price: string; updatedAt: Date };
-export type SearchContext = { name: string; tenantSlug: string; site: string | null; base: string; brand: BrandKit; search: SearchSettings; pages: SearchPage[]; products?: SearchProduct[] };
+export type SearchContext = { name: string; tenantSlug: string; site: string | null; base: string; brand: BrandKit; search: SearchSettings; pages: SearchPage[]; products?: SearchProduct[]; edition?: EditionKey };
 
 /** AI crawlers named in robots.txt when a company turns them off. */
 export const AI_BOTS = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-User", "Claude-SearchBot", "anthropic-ai", "PerplexityBot", "Perplexity-User", "Google-Extended", "Applebot-Extended", "CCBot", "Bytespider", "meta-externalagent", "Amazonbot", "cohere-ai"];
@@ -96,7 +97,7 @@ export function buildLlmsTxt(c: SearchContext): string {
     out.push("");
   }
   if (c.products?.length) {
-    out.push("## Products", "");
+    out.push(c.edition === "fit" ? "## Memberships, packs and gear" : "## Products", "");
     for (const p of c.products) out.push(`- [${clean(p.name)}](${productPage(c, p.slug)}): ${p.price}${p.summary ? `. ${clean(p.summary)}` : ""}`);
     out.push("");
   }

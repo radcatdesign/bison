@@ -7,7 +7,9 @@ import s from "@/components/marketing/marketing.module.css";
 import { CopyBlock, SearchBusinessScreen } from "@/components/marketing/search-screen";
 import { SetupFor } from "@/components/marketing/setup-for";
 import { Card, PageHeader } from "@/components/ui";
+import { itemOf } from "@/config/editions";
 import { may } from "@/config/roles";
+import { editionOf, sayOf } from "@/lib/edition";
 import { appUrl, demoMode } from "@/lib/env";
 import { buildLlmsFull, buildLlmsTxt, buildSitemap, checkPage, filesBase, organizationData, pageTitle, pageUrl, robotsLines, type SearchContext } from "@/lib/marketing/search";
 import { loadSearchContext } from "@/lib/marketing/search-load";
@@ -32,7 +34,7 @@ async function Body() {
   const c: SearchContext = demo
     ? (() => {
         const d = defaultMarketingSettings(settingsTenantOf(ctx));
-        return { name: ctx.tenant.name, tenantSlug: ctx.tenant.slug, site: ctx.sites[0]?.domain ?? null, base: appUrl(), brand: d.brand, search: d.search, pages: [] };
+        return { name: ctx.tenant.name, tenantSlug: ctx.tenant.slug, site: ctx.sites[0]?.domain ?? null, base: appUrl(), brand: d.brand, search: d.search, pages: [], edition: ctx.tenant.edition };
       })()
     : await loadSearchContext(ctx.tenant.id);
   const base = filesBase(c);
@@ -41,6 +43,9 @@ async function Body() {
     { name: "llms.txt", note: "A short summary of your business and pages, for AI assistants.", text: buildLlmsTxt(c) },
     { name: "llms-full.txt", note: "The full text of every published page.", text: buildLlmsFull(c) },
   ];
+  const say = sayOf(ctx);
+  const product = editionOf(ctx).productName;
+  const sales = itemOf(ctx.tenant.edition, "module:sales").name;
   const snippet = `<script type="application/ld+json">\n${JSON.stringify({ "@context": "https://schema.org", ...organizationData(c) }, null, 2).replace(/</g, "\\u003c")}\n</script>`;
 
   return (
@@ -50,12 +55,12 @@ async function Body() {
       <div style={{ display: "grid", gap: 22 }}>
         <SearchBusinessScreen initial={c.search} storage={demo ? "browser" : "server"} tenantId={ctx.tenant.id} canEdit={may(ctx.member.role, "marketing.edit")} />
 
-        <Card title="Your landing pages" note="Each published page gets its title, description, social card and structured data on its own." id="pages" testId="search-pages">
+        <Card title={say("Your landing pages", "Your funnel pages")} note="Each published page gets its title, description, social card and structured data on its own." id="pages" testId="search-pages">
           {c.pages.length === 0 ? (
             <p className="muted">
               {demo ? "In the demo, pages can't go live, so nothing is listed here. " : "No published pages yet. "}
               <Link href="/marketing/pages" className="link">
-                Open Pages
+                {say("Open Pages", "Open Funnel pages")}
               </Link>
             </p>
           ) : (
@@ -113,7 +118,11 @@ async function Body() {
           </div>
         </Card>
 
-        <Card title="On your own website" note="Your main site isn't hosted by Bison Ops, so these are for you or your web person to add there." id="site">
+        <Card
+          title={say("On your own website", "On your club's own website")}
+          note={say("Your main site isn't hosted by Bison Ops, so these are for you or your web person to add there.", `Your club's main site isn't hosted by ${product}, so these are for you or your web person to add there.`)}
+          id="site"
+        >
           <div style={{ display: "grid", gap: 18 }}>
             <CopyBlock label="Add to robots.txt on your site" value={robotsLines(c)} testId="robots-lines" />
             <CopyBlock label="Add to the <head> of your home page (business details for search engines)" value={snippet} testId="org-snippet" />
@@ -123,9 +132,12 @@ async function Body() {
           </div>
         </Card>
 
-        <Card title="Coming with Sales">
+        <Card title={`Coming with ${sales}`}>
           <p className="muted" style={{ fontSize: "var(--bo-text-sm)" }}>
-            Product feeds for Google Merchant Center and similar shopping listings are built from your products, so they arrive with the Sales module. Pre-rendered pages for sites built as single-page apps are an optional extra; ask us if your site needs it.
+            {say(
+              "Product feeds for Google Merchant Center and similar shopping listings are built from your products, so they arrive with the Sales module. Pre-rendered pages for sites built as single-page apps are an optional extra; ask us if your site needs it.",
+              `Shopping feeds for Google Merchant Center and similar listings are built from your memberships, packs and gear, so they arrive with ${sales}. Pre-rendered pages for sites built as single-page apps are an optional extra; ask us if your site needs it.`,
+            )}
           </p>
         </Card>
       </div>

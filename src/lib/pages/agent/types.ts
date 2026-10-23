@@ -1,5 +1,6 @@
 // What the page agent takes in and streams back. Shared by the Claude agent,
 // the offline stand-in, the API route and the editor.
+import type { EditionKey } from "@/config/editions";
 import type { PageDoc } from "../schema";
 
 export type AgentTurn = { role: "user" | "agent"; text: string };
@@ -12,6 +13,8 @@ export type AgentInput = {
   brand: string;
   industry: string;
   domain: string;
+  /** The company's edition. Fit Funnels clubs get club words and club pages. Bison Ops when left out. */
+  edition?: EditionKey;
 };
 
 export type AgentEvent =

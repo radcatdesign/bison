@@ -3,20 +3,26 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { marketingGate } from "@/components/marketing/gate";
 import s from "@/components/marketing/marketing.module.css";
+import { EditionPageHeader } from "@/components/marketing/edition-header";
 import { CodeActions, type CodeView, OfferSettingsScreen } from "@/components/marketing/offer-screen";
 import { SetupFor } from "@/components/marketing/setup-for";
 import { Card, Metric, MetricStrip, PageHeader } from "@/components/ui";
+import { itemOf } from "@/config/editions";
 import { may } from "@/config/roles";
 import { withTenant } from "@/lib/db";
 import { appUrl, demoMode } from "@/lib/env";
 import { liveOfferRepo, sampleOfferRepo } from "@/lib/marketing/offer";
 import { defaultMarketingSettings, offerSummary } from "@/lib/marketing/settings";
 import { getMarketingSettings, settingsTenantOf } from "@/lib/marketing/store";
+import { sayOf } from "@/lib/edition";
 import { getPortalContext, scopeOf } from "@/lib/portal";
 
-export const metadata: Metadata = { title: "Welcome offer" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: sayOf(await getPortalContext())("Welcome offer", "Intro offer") };
+}
 
 const NOTE = "An optional one-time code for each new subscriber, for their first order. It shows in your welcome email.";
+const CLUB_NOTE = "An optional one-time code for each new lead, for their first membership, class pack or intro deal. It shows in your new lead follow-up.";
 
 async function Body({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const ctx = await getPortalContext();
@@ -48,21 +54,30 @@ async function Body({ searchParams }: { searchParams: Promise<{ q?: string }> })
     expired: Boolean(c.expiresAt && c.expiresAt < now && !c.redeemedAt),
   }));
   const canEdit = may(ctx.member.role, "marketing.edit");
+  const say = sayOf(ctx);
 
   return (
     <>
-      <PageHeader title="Welcome offer" note={NOTE} />
+      <PageHeader title={say("Welcome offer", "Intro offer")} note={say(NOTE, CLUB_NOTE)} />
       <SetupFor ctx={ctx} tool="offer" />
       <OfferSettingsScreen initial={loaded.settings.offer} storage={demo ? "browser" : "server"} tenantId={ctx.tenant.id} canEdit={canEdit} brand={loaded.settings.brand} baseUrl={appUrl()} timeZone={tz} inEmail={loaded.inEmail} now={now.toISOString()} />
 
       <div style={{ height: 28 }} />
       <MetricStrip>
-        <Metric label="Codes given out" value={stats.total.toLocaleString("en-US")} help={<p>Every welcome code issued, one per person who signed up while the offer was on.</p>} />
+        <Metric label="Codes given out" value={stats.total.toLocaleString("en-US")} help={<p>{say("Every welcome code issued, one per person who signed up while the offer was on.", "Every intro offer code issued, one per lead who signed up while the offer was on.")}</p>} />
         <Metric label="New in 30 days" value={stats.issued30.toLocaleString("en-US")} help={<p>Codes issued in the last 30 days.</p>} />
-        <Metric label="Used" value={stats.total ? `${Math.round((stats.used / stats.total) * 100)}%` : "0%"} help={<p>Share of codes marked used, by your team here or, once Sales is on, at checkout. {stats.used.toLocaleString("en-US")} so far.</p>} />
+        <Metric
+          label="Used"
+          value={stats.total ? `${Math.round((stats.used / stats.total) * 100)}%` : "0%"}
+          help={
+            <p>
+              {say("Share of codes marked used, by your team here or, once Sales is on, at checkout.", `Share of codes marked used, by your front desk here or, once ${itemOf("fit", "module:sales").name} is on, at checkout.`)} {stats.used.toLocaleString("en-US")} so far.
+            </p>
+          }
+        />
       </MetricStrip>
       <div style={{ height: 20 }} />
-      <Card title="Look up a code" note="When someone uses a code, find it here and mark it used, so it can't be used twice." flush testId="codes">
+      <Card title="Look up a code" note={say("When someone uses a code, find it here and mark it used, so it can't be used twice.", "When someone uses a code, online or at the front desk, find it here and mark it used, so it can't be used twice.")} flush testId="codes">
         <form className={s.toolbar} action="/marketing/offer" style={{ padding: "14px 14px 0" }}>
           <input name="q" className="input" defaultValue={q} placeholder="A code, or an email address" aria-label="Find a code" />
           <button type="submit" className="btn">
@@ -115,7 +130,7 @@ async function Body({ searchParams }: { searchParams: Promise<{ q?: string }> })
 
 export default function OfferPage({ searchParams }: PageProps<"/marketing/offer">) {
   return (
-    <Suspense fallback={<PageHeader title="Welcome offer" note={NOTE} />}>
+    <Suspense fallback={<EditionPageHeader title={["Welcome offer", "Intro offer"]} note={[NOTE, CLUB_NOTE]} />}>
       <Body searchParams={searchParams as Promise<{ q?: string }>} />
     </Suspense>
   );

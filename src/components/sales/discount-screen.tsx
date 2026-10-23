@@ -6,6 +6,7 @@
 import { Plus, Shuffle } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 import { deleteDiscountAction, saveDiscountAction } from "@/app/(portal)/sales/actions";
+import { useEditionKey } from "@/components/edition";
 import m from "@/components/marketing/marketing.module.css";
 import { Card, Help } from "@/components/ui";
 import { type DiscountRule, type DiscountUsage, discountSentence, normalizeCode } from "@/lib/sales/discounts";
@@ -14,6 +15,7 @@ import { pillClass, type Tone } from "./labels";
 import x from "./screens.module.css";
 import s from "./sales.module.css";
 import { DEMO_MESSAGE } from "@/config/demo-text";
+import { type Say, sayFor } from "@/config/editions";
 
 /** Same words as the server's demo answer. lib/demo is server-only, so it can't be imported here. */
 
@@ -37,10 +39,10 @@ type Form = {
 
 const BLANK: Form = { code: "", kind: "percent", value: "", usage: "unlimited", tradeAccountId: "", maxUses: "", minOrder: "", startsOn: "", endsOn: "", note: "", active: true };
 
-const USAGE: [DiscountUsage, string, string][] = [
-  ["unlimited", "Anyone, any number of times", "Good for a sale or a code you share widely."],
-  ["per_account", "Once per customer", "Each email address or trade account can use it one time."],
-  ["single_use", "One time only", "The first order that uses it is the only one."],
+const usageChoices = (say: Say): [DiscountUsage, string, string][] => [
+  ["unlimited", "Anyone, any number of times", say("Good for a sale or a code you share widely.", "Good for a challenge, an open house or a code you share widely.")],
+  ["per_account", say("Once per customer", "Once per person"), say("Each email address or trade account can use it one time.", "Each email address or corporate account can use it one time.")],
+  ["single_use", "One time only", say("The first order that uses it is the only one.", "The first purchase that uses it is the only one.")],
 ];
 
 // ---- Dates in the company's time zone ----------------------------------------------------------
@@ -122,6 +124,9 @@ function randomCode(): string {
 }
 
 export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeAccounts }: Props) {
+  const edition = useEditionKey();
+  const say = sayFor(edition);
+  const USAGE = usageChoices(say);
   const ref = useRef<HTMLDialogElement>(null);
   const [editing, setEditing] = useState<DiscountItem | null>(null);
   const [f, setF] = useState<Form>(BLANK);
@@ -143,7 +148,7 @@ export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeA
     start(async () => {
       if (demo) return setNotice({ ok: false, text: DEMO_MESSAGE });
       if (f.kind === "amount" && f.value.trim() && parseMoney(f.value, currency) === null) return setNotice({ ok: false, text: "Enter the amount off as an amount, like 25 or 25.50." });
-      if (f.minOrder.trim() && parseMoney(f.minOrder, currency) === null) return setNotice({ ok: false, text: "Enter the minimum order as an amount, like 50, or leave it empty." });
+      if (f.minOrder.trim() && parseMoney(f.minOrder, currency) === null) return setNotice({ ok: false, text: say("Enter the minimum order as an amount, like 50, or leave it empty.", "Enter the minimum purchase as an amount, like 50, or leave it empty.") });
       const r = await saveDiscountAction(editing?.id ?? null, inputOf(f, currency, timeZone));
       if (!r.ok) return setNotice({ ok: false, text: r.message });
       setListNotice(r.message);
@@ -156,13 +161,13 @@ export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeA
       if (demo) return setNotice({ ok: false, text: DEMO_MESSAGE });
       const r = await deleteDiscountAction(editing.id);
       if (!r.ok) return setNotice({ ok: false, text: r.message });
-      setListNotice(`${editing.code} is deleted. Orders that used it keep their discount.`);
+      setListNotice(say(`${editing.code} is deleted. Orders that used it keep their discount.`, `${editing.code} is deleted. Purchases that used it keep their discount.`));
       ref.current?.close();
     });
 
   // An existing code can point at an account that's paused now; keep it in the list so the form shows it.
-  const accounts = editing?.tradeAccountId && !tradeAccounts.some((t) => t.id === editing.tradeAccountId) ? [...tradeAccounts, { id: editing.tradeAccountId, company: editing.tradeAccountName || "A trade account" }] : tradeAccounts;
-  const sentence = discountSentence(ruleOf(f, currency, timeZone, accounts), currency, timeZone);
+  const accounts = editing?.tradeAccountId && !tradeAccounts.some((t) => t.id === editing.tradeAccountId) ? [...tradeAccounts, { id: editing.tradeAccountId, company: editing.tradeAccountName || say("A trade account", "A corporate account") }] : tradeAccounts;
+  const sentence = discountSentence(ruleOf(f, currency, timeZone, accounts), currency, timeZone, edition);
   const usesLabel = (r: DiscountItem) => `${r.uses.toLocaleString("en-US")}${r.usage === "single_use" ? " of 1" : r.maxUses ? ` of ${r.maxUses.toLocaleString("en-US")}` : ""}`;
 
   return (
@@ -188,7 +193,7 @@ export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeA
         {rows.length === 0 ? (
           <div className={m.empty}>
             <strong>No codes yet.</strong>
-            <span>Make one for a sale, a newsletter or a single customer. It works at checkout and on nothing else.</span>
+            <span>{say("Make one for a sale, a newsletter or a single customer. It works at checkout and on nothing else.", "Make one for a challenge, a newsletter, a referral or a single member. It works at checkout and on nothing else.")}</span>
           </div>
         ) : (
           <div className={x.scrollX}>
@@ -200,7 +205,7 @@ export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeA
                     <span className={x.thHelp}>
                       Uses
                       <Help title="Uses">
-                        <p>Paid orders that used the code, out of its limit when it has one. A checkout that&apos;s open with the code holds one use until it&apos;s paid or runs out of time, so two people can&apos;t spend a one-time code at once. Those show as &quot;at checkout&quot;.</p>
+                        <p>{say("Paid orders that used the code", "Paid purchases that used the code")}, out of its limit when it has one. A checkout that&apos;s open with the code holds one use until it&apos;s paid or runs out of time, so two people can&apos;t spend a one-time code at once. Those show as &quot;at checkout&quot;.</p>
                       </Help>
                     </span>
                   </th>
@@ -214,7 +219,7 @@ export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeA
                       <button type="button" className={x.rowButton} onClick={() => open(r)} aria-label={`Open ${r.code}`}>
                         <span className={x.codeCell}>
                           <strong>{r.code}</strong>
-                          <span>{discountSentence(r, currency, timeZone)}</span>
+                          <span>{discountSentence(r, currency, timeZone, edition)}</span>
                           {r.note && <span>Team note: {r.note}</span>}
                         </span>
                       </button>
@@ -248,7 +253,7 @@ export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeA
           }}
         >
           <div className={m.dialogHead}>
-            <h2 id="discount-title">{editing ? `Edit ${editing.code}` : "New discount code"}</h2>
+            <h2 id="discount-title">{editing ? `Edit ${editing.code}` : say("New discount code", "New promo code")}</h2>
           </div>
           <fieldset disabled={!canEdit || pending} className={x.plainFieldset}>
             <div className={m.field}>
@@ -256,13 +261,13 @@ export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeA
                 Code
               </label>
               <div className={x.codeRow}>
-                <input id="dc-code" className="input mono" maxLength={40} value={f.code} placeholder="SPRING20" autoCapitalize="characters" spellCheck={false} onChange={(e) => set("code", e.target.value.toUpperCase().replace(/\s+/g, ""))} data-testid="discount-code" />
+                <input id="dc-code" className="input mono" maxLength={40} value={f.code} placeholder={say("SPRING20", "FIRSTMONTH")} autoCapitalize="characters" spellCheck={false} onChange={(e) => set("code", e.target.value.toUpperCase().replace(/\s+/g, ""))} data-testid="discount-code" />
                 <button type="button" className="btn" onClick={() => set("code", randomCode())}>
                   <Shuffle aria-hidden="true" />
                   Make one up
                 </button>
               </div>
-              <span className={m.hint}>Letters, numbers and dashes. Shoppers type it in the cart, and capitals don&apos;t matter.</span>
+              <span className={m.hint}>{say("Letters, numbers and dashes. Shoppers type it in the cart, and capitals don't matter.", "Letters, numbers and dashes. People type it in the cart when they join, and capitals don't matter.")}</span>
             </div>
 
             <div className={m.field}>
@@ -282,7 +287,11 @@ export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeA
                 </div>
                 <input className="input num" inputMode="decimal" aria-label={f.kind === "percent" ? "Percent off" : "Amount off"} value={f.value} placeholder={f.kind === "percent" ? "10" : "25.00"} onChange={(e) => set("value", e.target.value)} data-testid="discount-value" />
               </div>
-              <span className={m.hint}>{f.kind === "percent" ? "Percent off the products, before shipping and tax. 100 makes the order free, shipping included." : "Off the products, before shipping and tax. It never takes off more than the order."}</span>
+              <span className={m.hint}>
+                {f.kind === "percent"
+                  ? say("Percent off the products, before shipping and tax. 100 makes the order free, shipping included.", "Percent off memberships, packs and gear, before shipping and tax. 100 makes the purchase free, shipping included.")
+                  : say("Off the products, before shipping and tax. It never takes off more than the order.", "Off what's in the cart, before shipping and tax. It never takes off more than the purchase.")}
+              </span>
             </div>
 
             <div className={m.field}>
@@ -305,7 +314,7 @@ export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeA
             {accounts.length > 0 && (
               <div className={m.field}>
                 <label htmlFor="dc-trade" className={m.fieldLabel}>
-                  Only for one trade account <em>Optional</em>
+                  {say("Only for one trade account", "Only for one corporate account")} <em>Optional</em>
                 </label>
                 <select id="dc-trade" className="select" value={f.tradeAccountId} onChange={(e) => set("tradeAccountId", e.target.value)} data-testid="discount-trade">
                   <option value="">Anyone</option>
@@ -315,7 +324,7 @@ export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeA
                     </option>
                   ))}
                 </select>
-                <span className={m.hint}>They have to be signed in to their trade account for it to work.</span>
+                <span className={m.hint}>{say("They have to be signed in to their trade account for it to work.", "They have to be signed in to their corporate account for it to work.")}</span>
               </div>
             )}
 
@@ -332,7 +341,7 @@ export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeA
               )}
               <div className={m.field}>
                 <label htmlFor="dc-min" className={m.fieldLabel}>
-                  Orders of at least <em>Optional</em>
+                  {say("Orders of at least", "Purchases of at least")} <em>Optional</em>
                 </label>
                 <input id="dc-min" className="input num" inputMode="decimal" value={f.minOrder} placeholder="Any amount" onChange={(e) => set("minOrder", e.target.value)} data-testid="discount-min" />
               </div>
@@ -357,7 +366,7 @@ export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeA
               <label htmlFor="dc-note" className={m.fieldLabel}>
                 Team note <em>Optional</em>
               </label>
-              <input id="dc-note" className="input" maxLength={500} value={f.note} placeholder="For the spring newsletter" onChange={(e) => set("note", e.target.value)} data-testid="discount-note" />
+              <input id="dc-note" className="input" maxLength={500} value={f.note} placeholder={say("For the spring newsletter", "For the summer challenge")} onChange={(e) => set("note", e.target.value)} data-testid="discount-note" />
               <span className={m.hint}>Only your team sees this.</span>
             </div>
 
@@ -370,7 +379,7 @@ export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeA
           <p className={s.sentence} aria-live="polite" data-testid="discount-sentence">
             {sentence}
           </p>
-          <p className={m.hint}>Codes are private. They only work when someone types them, and nothing lists them in your shop.</p>
+          <p className={m.hint}>{say("Codes are private. They only work when someone types them, and nothing lists them in your shop.", "Codes are private. They only work when someone types them, and nothing lists them in your online store.")}</p>
 
           {notice && (
             <p className={`notice ${notice.ok ? "notice-ok" : "notice-error"}`} role={notice.ok ? "status" : "alert"} data-testid="discount-notice">
@@ -381,7 +390,7 @@ export function DiscountScreen({ rows, currency, timeZone, canEdit, demo, tradeA
           {confirming && editing && (
             <div className={x.confirm} role="alert">
               <span>
-                Delete {editing.code}? It stops working right away. Orders that used it keep their discount.
+                Delete {editing.code}? It stops working right away. {say("Orders that used it keep their discount.", "Purchases that used it keep their discount.")}
               </span>
               <div>
                 <button type="button" className={`btn ${x.dangerButton}`} disabled={pending} onClick={remove} data-testid="discount-delete-confirm">

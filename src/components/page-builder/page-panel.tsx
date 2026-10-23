@@ -2,6 +2,7 @@
 
 // The look of the page, its address, search details and whether it's live.
 import { useState } from "react";
+import { useSay } from "@/components/edition";
 import type { PageStatus } from "@/lib/pages/repo";
 import type { PageDoc, PageTheme } from "@/lib/pages/schema";
 import s from "./builder.module.css";
@@ -48,6 +49,8 @@ function Choice<T extends string>({ label, value, options, onChange }: { label: 
 }
 
 export function PagePanel({ doc, meta, lookOnly, inTest, storage, publicBase, canPublish, accentDefault, onTheme, onSeo, onRename, onUnpublish, onDelete }: Props) {
+  const say = useSay();
+  const inbox = say("Contacts", "Leads");
   const [title, setTitle] = useState(meta.title);
   const [slug, setSlug] = useState(meta.slug);
   const [renameMsg, setRenameMsg] = useState<Result | null>(null);
@@ -170,9 +173,9 @@ export function PagePanel({ doc, meta, lookOnly, inTest, storage, publicBase, ca
           Publishing
         </h2>
         {storage === "browser" ? (
-          <p className={s.hint}>This is a demo, so pages stay in your browser. In your own account, Publish puts the page at {publicBase.replace(/^https?:\/\//, "")}{meta.slug} and its form sends land in Contacts.</p>
+          <p className={s.hint}>This is a demo, so pages stay in your browser. In your own account, Publish puts the page at {publicBase.replace(/^https?:\/\//, "")}{meta.slug} and its form sends land in {inbox}.</p>
         ) : meta.status === "draft" ? (
-          <p className={s.hint}>Not live yet. Publish puts it at {publicBase.replace(/^https?:\/\//, "")}{meta.slug}. Form sends land in Contacts.</p>
+          <p className={s.hint}>Not live yet. Publish puts it at {publicBase.replace(/^https?:\/\//, "")}{meta.slug}. Form sends land in {inbox}.</p>
         ) : (
           <>
             <p className={s.hint}>

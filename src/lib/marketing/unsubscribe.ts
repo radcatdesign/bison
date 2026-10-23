@@ -2,6 +2,7 @@ import "server-only";
 // The public side of unsubscribing. A signed link names one send; the send
 // names the person and the company. Nothing here needs a session.
 import { sql } from "kysely";
+import type { EditionKey } from "@/config/editions";
 import { type Database, db, withTenant } from "@/lib/db";
 import type { UnsubscribeReason } from "@/lib/db/types";
 import { checkUnsubscribeToken } from "@/lib/email/tokens";
@@ -15,6 +16,8 @@ export type UnsubscribeView = {
   unsubscribed: boolean;
   /** Only someone who unsubscribed with a link can undo it with a link. */
   canResubscribe: boolean;
+  /** The company's edition, so the page reads in its words. */
+  edition: EditionKey;
 };
 
 export function maskEmail(email: string): string {
@@ -48,6 +51,7 @@ export async function viewUnsubscribe(token: unknown, database: Database = db())
         accent: brand.colors.accent,
         unsubscribed: Boolean(row),
         canResubscribe: Boolean(row) && !hit.expired && (row!.reason === "link" || row!.reason === "one-click"),
+        edition: info.edition,
       };
     },
     database,

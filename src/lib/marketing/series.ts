@@ -3,6 +3,7 @@ import "server-only";
 // gets, series and their steps for the screens, turning a series on and off,
 // and starting one by hand for a list. Everything inside withTenant.
 import { sql } from "kysely";
+import { type EditionKey, itemOf, sayFor } from "@/config/editions";
 import { can } from "@/lib/access/entitlements";
 import { audit } from "@/lib/audit";
 import { isUuid, type TenantScope, type Tx, withTenant } from "@/lib/db";
@@ -12,7 +13,7 @@ import { EMAIL_DOC_VERSION, type EmailDoc } from "@/lib/email/schema";
 import { checkContent, NewsletterInputError } from "./newsletters";
 import { replanRuns } from "./people";
 import { loadSendSetup, readDoc, sendBlocker } from "./send";
-import { starterSeries } from "./starter";
+import { extraStarterSeries, starterSeries } from "./starter";
 
 export class SeriesInputError extends Error {}
 
@@ -26,10 +27,20 @@ export const TRIGGERS: Record<SequenceTrigger, { label: string; note: string; re
   manual: { label: "You start it for a list", note: "Nothing starts it on its own. Press Start and pick who.", ready: true },
 };
 
+/** The same triggers in Fit Funnels words. */
+const CLUB_TRIGGERS: typeof TRIGGERS = {
+  joined: { label: "Someone joins your list", note: "From a signup form on a funnel page, or added by hand. Imports can start it too, if you tick the box.", ready: true },
+  form: { label: "Someone sends a form", note: "Pick which form, like your free pass or tour request. They don't have to be on your list.", ready: true },
+  estimate: { label: "Someone gets a quote", note: `Starts when you send a quote from ${itemOf("fit", "module:sales").name}. Good for a nudge a few days later.`, ready: true },
+  cart: { label: "Someone leaves a join unfinished", note: `Starts when someone who gave their email leaves a membership or pack in the cart without paying. Needs ${itemOf("fit", "module:sales").name}.`, ready: true },
+  manual: { label: "You start it for a list", note: "Nothing starts it on its own. Press Start and pick who, like your Members list.", ready: true },
+};
+
 /** The triggers as this company sees them: the Sales ones only start once it has Sales. */
-export function triggersFor(tenant: Parameters<typeof can>[0]): typeof TRIGGERS {
+export function triggersFor(tenant: Parameters<typeof can>[0] & { edition?: EditionKey }): typeof TRIGGERS {
   const sales = can(tenant, "sales.orders");
-  return { ...TRIGGERS, estimate: { ...TRIGGERS.estimate, ready: sales }, cart: { ...TRIGGERS.cart, ready: sales } };
+  const base = tenant.edition === "fit" ? CLUB_TRIGGERS : TRIGGERS;
+  return { ...base, estimate: { ...base.estimate, ready: sales }, cart: { ...base.cart, ready: sales } };
 }
 
 export function isTrigger(v: unknown): v is SequenceTrigger {
@@ -37,10 +48,10 @@ export function isTrigger(v: unknown): v is SequenceTrigger {
 }
 
 /** Creates the starter welcome series once per company, turned off. Safe to call on every visit. */
-export async function ensureStarterSeries(tx: Tx, site: string | undefined): Promise<void> {
+export async function ensureStarterSeries(tx: Tx, site: string | undefined, edition: EditionKey = "bison"): Promise<void> {
   const existing = await tx.selectFrom("sequences").select("id").where("starter", "=", true).executeTakeFirst();
   if (existing) return;
-  const starter = starterSeries(site);
+  const starter = starterSeries(site, edition);
   const row = await tx
     .insertInto("sequences")
     .values({ name: starter.name, trigger: "joined", status: "off", starter: true })
@@ -52,6 +63,14 @@ export async function ensureStarterSeries(tx: Tx, site: string | undefined): Pro
     .insertInto("sequence_steps")
     .values(starter.steps.map((s) => ({ sequence_id: row.id, delay_days: s.delayDays, subject: s.subject, preheader: s.preheader, doc: JSON.stringify(s.doc) })))
     .execute();
+  // Made once, with the starter: anything else the edition starts with (welcome to the club in Fit Funnels).
+  for (const extra of extraStarterSeries(site, edition)) {
+    const made = await tx.insertInto("sequences").values({ name: extra.name, trigger: extra.trigger, status: "off" }).returning("id").executeTakeFirstOrThrow();
+    await tx
+      .insertInto("sequence_steps")
+      .values(extra.steps.map((s) => ({ sequence_id: made.id, delay_days: s.delayDays, subject: s.subject, preheader: s.preheader, doc: JSON.stringify(s.doc) })))
+      .execute();
+  }
 }
 
 export type StepSummary = { id: string; delayDays: number; subject: string; preheader: string; doc: EmailDoc; problems: number; sent: number };
@@ -97,9 +116,9 @@ async function readSeries(tx: Tx, only?: string): Promise<SeriesSummary[]> {
   }));
 }
 
-export async function listSeries(scope: TenantScope, site: string | undefined): Promise<SeriesSummary[]> {
+export async function listSeries(scope: TenantScope, site: string | undefined, edition: EditionKey = "bison"): Promise<SeriesSummary[]> {
   return withTenant(scope, async (tx) => {
-    await ensureStarterSeries(tx, site);
+    await ensureStarterSeries(tx, site, edition);
     return readSeries(tx);
   });
 }
@@ -173,11 +192,11 @@ export async function setSeriesStatus(scope: TenantScope, id: string, on: boolea
   });
 }
 
-export async function deleteSeries(scope: TenantScope, id: string): Promise<void> {
+export async function deleteSeries(scope: TenantScope, id: string, edition: EditionKey = "bison"): Promise<void> {
   if (!isUuid(id)) return;
   await withTenant(scope, async (tx) => {
     const r = await tx.deleteFrom("sequences").where("id", "=", id).where("starter", "=", false).returning("id").executeTakeFirst();
-    if (!r) throw new SeriesInputError("The welcome series can be turned off, but not deleted.");
+    if (!r) throw new SeriesInputError(sayFor(edition)("The welcome series can be turned off, but not deleted.", "The new lead follow-up can be turned off, but not deleted."));
     await tx.updateTable("email_sends").set({ status: "canceled", error: "The series was deleted." }).where("sequence_id", "is", null).where("kind", "=", "series").where("status", "=", "queued").execute();
     await audit(tx, { action: "series.deleted", targetType: "series", targetId: id });
   });
@@ -305,14 +324,14 @@ export async function startSeriesForList(scope: TenantScope, seriesId: string, l
 }
 
 /** Forms a series can be started by: landing page forms, plus any form that has sent something. */
-export async function formChoices(scope: TenantScope): Promise<{ value: string; label: string }[]> {
+export async function formChoices(scope: TenantScope, edition: EditionKey = "bison"): Promise<{ value: string; label: string }[]> {
   return withTenant(scope, async (tx) => {
     const pages = await tx.selectFrom("pages").select(["slug", "title", "doc"]).execute();
     const seen = await tx.selectFrom("submissions").select(["form_key", "form_type"]).where("status", "=", "received").groupBy(["form_key", "form_type"]).limit(50).execute();
     const out = new Map<string, string>();
     for (const p of pages) {
       const doc = p.doc as { sections?: { type?: string }[] };
-      if (doc?.sections?.some((s) => s.type === "form")) out.set(`page:${p.slug}`, `${p.title} (landing page)`);
+      if (doc?.sections?.some((s) => s.type === "form")) out.set(`page:${p.slug}`, `${p.title} (${sayFor(edition)("landing page", "funnel page")})`);
     }
     for (const s of seen) if (!out.has(s.form_key)) out.set(s.form_key, s.form_type && s.form_type !== "general" ? `${s.form_type} (${s.form_key})` : s.form_key);
     return [...out].map(([value, label]) => ({ value, label }));

@@ -4,23 +4,26 @@ import Link from "next/link";
 import { may } from "@/config/roles";
 import { can } from "@/lib/access/entitlements";
 import { withTenant } from "@/lib/db";
+import { sayOf } from "@/lib/edition";
 import { demoMode } from "@/lib/env";
 import { type PortalContext, scopeOf } from "@/lib/portal";
 import { salesForContact } from "@/lib/sales/contact-share";
 import { formatMoney } from "@/lib/sales/money";
 import { ShareContact } from "./contact-share";
-import { CART_STATUS, ESTIMATE_STATUS, ORDER_STATUS, pillClass } from "./labels";
+import { pillClass, salesLabels } from "./labels";
 import s from "./sales.module.css";
 
 export async function ContactSales({ ctx, contactId, titleClass }: { ctx: PortalContext; contactId: string; titleClass: string }) {
   const sales = can(ctx.tenant, "sales.orders");
   const share = can(ctx.tenant, "contacts.share");
   if (!sales && !share) return null;
+  const say = sayOf(ctx);
+  const { CART_STATUS, ESTIMATE_STATUS, ORDER_STATUS } = salesLabels(ctx.tenant.edition);
   if (demoMode() || ctx.settings.sampleData) {
     return (
       <div data-testid="contact-sales">
         <h3 className={titleClass}>{sales ? "Sales" : "Share this person"}</h3>
-        <p className="muted">{sales ? "Orders, estimates and carts for this person, and links to share their page, show here once sample data is off." : "Links to share this person's page show here once sample data is off."}</p>
+        <p className="muted">{sales ? say("Orders, estimates and carts for this person, and links to share their page, show here once sample data is off.", "Purchases, quotes and unfinished joins for this person, and links to share their page, show here once sample data is off.") : "Links to share this person's page show here once sample data is off."}</p>
       </div>
     );
   }
@@ -36,7 +39,7 @@ export async function ContactSales({ ctx, contactId, titleClass }: { ctx: Portal
       {sales && (
         <>
           <div>
-            <h3 className={titleClass}>Orders</h3>
+            <h3 className={titleClass}>{say("Orders", "Purchases")}</h3>
             {data.orders.length ? (
               <ul className={s.lines}>
                 {data.orders.map((o) => (
@@ -49,11 +52,11 @@ export async function ContactSales({ ctx, contactId, titleClass }: { ctx: Portal
                 ))}
               </ul>
             ) : (
-              <p className="muted">No orders yet.</p>
+              <p className="muted">{say("No orders yet.", "No purchases yet.")}</p>
             )}
           </div>
           <div>
-            <h3 className={titleClass}>Estimates</h3>
+            <h3 className={titleClass}>{say("Estimates", "Quotes")}</h3>
             {data.estimates.length ? (
               <ul className={s.lines}>
                 {data.estimates.map((e) => (
@@ -67,13 +70,13 @@ export async function ContactSales({ ctx, contactId, titleClass }: { ctx: Portal
               </ul>
             ) : (
               <p className="muted">
-                No estimates. <Link href="/sales/estimates/new">Start one</Link>
+                {say("No estimates.", "No quotes.")} <Link href="/sales/estimates/new">Start one</Link>
               </p>
             )}
           </div>
           {data.carts.length > 0 && (
             <div>
-              <h3 className={titleClass}>Carts</h3>
+              <h3 className={titleClass}>{say("Carts", "Unfinished joins")}</h3>
               <ul className={s.lines}>
                 {data.carts.map((c, i) => (
                   <li key={i}>

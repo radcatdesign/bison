@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { CheckoutSettings } from "@/components/sales/checkout-settings";
 import { salesGate } from "@/components/sales/gate";
+import { SaidHeader } from "@/components/sales/said";
 import { SalesSetupFor } from "@/components/sales/setup";
-import { PageHeader } from "@/components/ui";
 import { may } from "@/config/roles";
 import { withTenant } from "@/lib/db";
 import { demoTeam } from "@/lib/demo";
@@ -14,7 +14,10 @@ import { getSalesSettings, readCarrier, readPayments } from "@/lib/sales/store";
 
 export const metadata: Metadata = { title: "Checkout" };
 
-const NOTE = "Your shop link, who hears about orders, tax, big orders and estimate defaults, and how everything ships.";
+const NOTE: [string, string] = [
+  "Your shop link, who hears about orders, tax, big orders and estimate defaults, and how everything ships.",
+  "Your online store link, who hears about purchases, tax, big purchases and quote defaults, and how gear ships. Memberships and packs don't ship.",
+];
 
 async function Body() {
   const ctx = await getPortalContext();
@@ -41,7 +44,7 @@ async function Body() {
 export default function CheckoutSettingsPage() {
   return (
     <>
-      <PageHeader title="Checkout" note={NOTE} />
+      <SaidHeader title={["Checkout", "Checkout"]} note={NOTE} />
       <Suspense fallback={null}>
         <Body />
       </Suspense>

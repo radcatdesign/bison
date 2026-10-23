@@ -1,6 +1,7 @@
 // What the estimate builder sends to the server. Pure, so the builder and the
 // server check it the same way.
 import { z } from "zod";
+import { type EditionKey, sayFor } from "@/config/editions";
 import { describeIssues } from "@/lib/email/schema";
 import { addressSchema } from "./settings";
 
@@ -52,9 +53,9 @@ export function parseEstimate(input: unknown): EstimateInput {
 }
 
 /** What's missing before an estimate can go to the client. */
-export function sendProblems(e: EstimateInput): string[] {
+export function sendProblems(e: EstimateInput, edition: EditionKey = "bison"): string[] {
   const out: string[] = [];
-  if (!e.client.email) out.push("Add the client's email.");
+  if (!e.client.email) out.push(sayFor(edition)("Add the client's email.", "Add the email of the person you're quoting."));
   if (!e.items.length) out.push("Add at least one line.");
   if (e.items.some((i) => /\[Add [^\]]+\]/.test(`${i.name} ${i.detail}`)) || /\[Add [^\]]+\]/.test(e.notes)) out.push("Fill in the yellow spots.");
   return out;

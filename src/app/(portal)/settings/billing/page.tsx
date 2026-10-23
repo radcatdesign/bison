@@ -7,6 +7,7 @@ import { resetDemoAction, startTrialAction, subscribeAction } from "@/app/(porta
 import { ActionForm } from "@/components/ui/action-form";
 import { Card, PageHeader } from "@/components/ui";
 import { CATALOG, formatPrice, isPaidItemKey, type Limits } from "@/config/catalog";
+import { itemOf } from "@/config/editions";
 import { MODES } from "@/config/modes";
 import { may, seesMode } from "@/config/roles";
 import { daysLeft } from "@/lib/access/entitlements";
@@ -35,13 +36,21 @@ const LIMIT_LABELS: Record<keyof Limits, string> = {
   tradeAccounts: "Trade accounts",
 };
 
+/** The limits a club reads differently. */
+const CLUB_LIMIT_LABELS: Partial<Record<keyof Limits, string>> = {
+  pageAgentRunsPerMonth: "Funnel page agent requests a month",
+  products: "Memberships, packs and gear",
+  tradeAccounts: "Corporate accounts",
+};
+
 async function Billing({ searchParams }: { searchParams: Promise<{ item?: string; done?: string }> }) {
   const ctx = await getPortalContext();
   const params = await searchParams;
   const key = params.item ?? params.done;
   if (!isPaidItemKey(key)) redirect("/settings#plan");
 
-  const item = CATALOG[key];
+  const item = { ...CATALOG[key], ...itemOf(ctx.tenant.edition, key) };
+  const fit = ctx.tenant.edition === "fit";
   const state = ctx.tenant.access.states[key];
   const canBuy = may(ctx.member.role, "billing.manage");
   const limits = Object.entries(item.limits) as [keyof Limits, number][];
@@ -129,7 +138,7 @@ async function Billing({ searchParams }: { searchParams: Promise<{ item?: string
             <dl className={s.limits}>
               {limits.map(([k, v]) => (
                 <div key={k}>
-                  <dt>{LIMIT_LABELS[k]}</dt>
+                  <dt>{(fit && CLUB_LIMIT_LABELS[k]) || LIMIT_LABELS[k]}</dt>
                   <dd className="num">{formatInt(v)}</dd>
                 </div>
               ))}

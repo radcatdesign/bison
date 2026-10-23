@@ -3,6 +3,7 @@
 // marketing_settings, one JSON document per part, each checked here.
 // The schemas work in the browser too, for the forms that edit them.
 import { z } from "zod";
+import type { EditionKey } from "@/config/editions";
 import { type BrandKit, defaultBrandKit, describeIssues, readBrandKit } from "@/lib/email/schema";
 import { presetFor } from "@/lib/sample/industries";
 
@@ -68,10 +69,14 @@ export function offerSummary(o: Pick<OfferSettings, "kind" | "value">, currency 
 }
 
 /** The line under each code: what it's worth, who it's for and when it ends. */
-export function offerTerms(o: { kind: "percent" | "amount"; value: number; fine?: string }, expiresAt: Date | null, timeZone = "America/Los_Angeles"): string {
+export function offerTerms(o: { kind: "percent" | "amount"; value: number; fine?: string }, expiresAt: Date | null, timeZone = "America/Los_Angeles", edition: EditionKey = "bison"): string {
   const ends = expiresAt ? ` Use it by ${new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone }).format(expiresAt)}.` : "";
-  return `${offerSummary(o)} your first order. First-time buyers only, one per person.${ends}${o.fine ? ` ${o.fine}` : ""}`;
+  const who = edition === "fit" ? "your first purchase. New members only, one per person." : "your first order. First-time buyers only, one per person.";
+  return `${offerSummary(o)} ${who}${ends}${o.fine ? ` ${o.fine}` : ""}`;
 }
+
+/** What a new company's codes start with. */
+export const offerPrefixFor = (edition: EditionKey | undefined): string => (edition === "fit" ? "INTRO" : "WELCOME");
 
 // ---- Search pack ---------------------------------------------------------------
 
@@ -83,8 +88,16 @@ export const BUSINESS_TYPES = {
   FoodEstablishment: "Food and drink",
   ProfessionalService: "Professional service",
   Organization: "Company (no storefront)",
+  ExerciseGym: "Gym or fitness studio",
 } as const;
 export type BusinessType = keyof typeof BUSINESS_TYPES;
+
+/** The kinds a company picks from: clubs see the gym type first; Bison Ops doesn't list it unless it's already chosen. */
+export function businessTypesFor(edition: EditionKey | undefined, current?: BusinessType): BusinessType[] {
+  const all = Object.keys(BUSINESS_TYPES) as BusinessType[];
+  if (edition === "fit") return ["ExerciseGym", ...all.filter((t) => t !== "ExerciseGym")];
+  return all.filter((t) => t !== "ExerciseGym" || current === "ExerciseGym");
+}
 
 const httpsUrl = z.string().trim().max(300).regex(/^https:\/\/[^\s<>"']+$/, "Use a full address starting with https://");
 
@@ -105,6 +118,7 @@ export const searchSettingsSchema = z.object({
 export type SearchSettings = z.infer<typeof searchSettingsSchema>;
 
 export function defaultBusinessType(industry: string): BusinessType {
+  if (industry === "gym" || industry === "studio") return "ExerciseGym";
   return industry === "pools" ? "HomeAndConstructionBusiness" : industry === "coffee" ? "CafeOrCoffeeShop" : "LocalBusiness";
 }
 
@@ -112,13 +126,13 @@ export function defaultBusinessType(industry: string): BusinessType {
 
 export type MarketingSettings = { brand: BrandKit; signup: SignupSettings; offer: OfferSettings; search: SearchSettings };
 
-export type SettingsTenant = { name: string; industry: string; accent: string; domain?: string };
+export type SettingsTenant = { name: string; industry: string; accent: string; domain?: string; edition?: EditionKey };
 
 export function defaultMarketingSettings(t: SettingsTenant): MarketingSettings {
   return {
-    brand: defaultBrandKit(t.name, t.accent, t.domain),
+    brand: defaultBrandKit(t.name, t.accent, t.domain, t.edition),
     signup: { question: "I am a", types: presetFor(t.industry).signupTypes },
-    offer: offerSettingsSchema.parse({}),
+    offer: offerSettingsSchema.parse(t.edition === "fit" ? { prefix: offerPrefixFor(t.edition) } : {}),
     search: searchSettingsSchema.parse({ businessType: defaultBusinessType(t.industry) }),
   };
 }
