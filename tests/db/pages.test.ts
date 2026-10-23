@@ -136,7 +136,7 @@ describe("form sends from a published page", () => {
     const email = `visitor-${Date.now()}@example.com`;
 
     const ok = await submitPageForm(aSlug, slug, { formId: "form", fields: { name: "Vi Sitor", email: email.toUpperCase(), message: "Pricing for 600 sq ft?", company: "not on this form" }, token: formToken(id, Date.now() - 5000) }, app());
-    expect(ok).toEqual({ ok: true, message: "Thanks. We'll email your quote within one business day." });
+    expect(ok).toEqual({ ok: true, message: "Thanks. We'll email your quote within one business day.", tenantId: A, queued: false });
 
     const mine = await withTenant({ tenantId: A }, (tx) => tx.selectFrom("contacts").selectAll().where("email", "=", email).executeTakeFirst(), app());
     expect(mine).toMatchObject({ name: "Vi Sitor", is_new: true });
@@ -176,5 +176,23 @@ describe("form sends from a published page", () => {
     await publishPage({ tenantId: A }, id, "x", app());
     expect(await submitPageForm(aSlug, slug, { formId: "nope", fields: { email: "a@b.co" } }, app())).toMatchObject({ ok: false, status: 400 });
     expect(await submitPageForm(aSlug, slug, { formId: "form", fields: { email: "not an email" } }, app())).toMatchObject({ ok: false, status: 400 });
+  });
+});
+
+describe("signup forms on published pages", () => {
+  it("add people to the email list with their I am a answer, and ignore made-up answers", async () => {
+    const signupDoc = { ...doc, sections: doc.sections.map((s) => (s.type === "form" ? { ...s, fields: ["name", "email", "kind"] as typeof s.fields, subscribe: true } : s)) };
+    const { id, slug } = await createPage({ tenantId: A }, { title: "Signup check", doc: signupDoc, actor: "" }, app());
+    await publishPage({ tenantId: A }, id, "x", app());
+    const aSlug = await slugOf(A);
+    const email = `signup-${Date.now()}@example.com`;
+    await submitPageForm(aSlug, slug, { formId: "form", fields: { name: "Sam Signup", email, kind: "homeowner" }, token: formToken(id, Date.now() - 5000) }, app());
+    const sub = await withTenant({ tenantId: A }, (tx) => tx.selectFrom("subscribers").select(["name", "kind", "source", "source_detail"]).where("email", "=", email).executeTakeFirstOrThrow(), app());
+    expect(sub).toEqual({ name: "Sam Signup", kind: "homeowner", source: "page", source_detail: `page:${slug}` });
+
+    const other = `signup-odd-${Date.now()}@example.com`;
+    await submitPageForm(aSlug, slug, { formId: "form", fields: { name: "Odd", email: other, kind: "astronaut" }, token: formToken(id, Date.now() - 5000) }, app());
+    const odd = await withTenant({ tenantId: A }, (tx) => tx.selectFrom("subscribers").select("kind").where("email", "=", other).executeTakeFirstOrThrow(), app());
+    expect(odd.kind).toBe("");
   });
 });

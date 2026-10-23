@@ -7,6 +7,7 @@ import { ArrowLeft, Eye, ExternalLink, Monitor, Palette, Redo2, Rows3, Smartphon
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import type { SignupChoices } from "@/components/landing/landing-page";
 import type { Device } from "@/components/page-preview";
 import type { AgentEvent } from "@/lib/pages/agent/types";
 import { applyOp, type PageOp } from "@/lib/pages/ops";
@@ -33,6 +34,8 @@ type Props = {
   canPublish: boolean;
   agentName: "claude" | "stand-in";
   autoBuild: string | null;
+  /** The "I am a..." choices, so form previews show them. */
+  signup?: SignupChoices | null;
 };
 
 type Tab = "agent" | "sections" | "page" | "preview";
@@ -63,7 +66,7 @@ export function Editor(props: Props) {
   return <EditorCore {...props} initial={initial} />;
 }
 
-function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, agentName, autoBuild }: Props & { initial: EditorInitial }) {
+function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, agentName, autoBuild, signup }: Props & { initial: EditorInitial }) {
   const router = useRouter();
   const store = useMemo(() => (storage === "server" ? serverStore : browserStore(tenant.id, publicBase)), [storage, tenant.id, publicBase]);
 
@@ -446,7 +449,7 @@ function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, 
       </aside>
 
       <section className={s.canvasArea} aria-label="Preview">
-        <Canvas doc={doc} brand={tenant.name} device={tab === "preview" ? "phone" : device} selectedId={tab === "sections" ? selectedId : null} onSelect={(id) => {
+        <Canvas doc={doc} brand={tenant.name} signup={signup} device={tab === "preview" ? "phone" : device} selectedId={tab === "sections" ? selectedId : null} onSelect={(id) => {
           select(id, false);
           if (tab !== "preview") setTab("sections");
         }} scrollTo={scrollTo} />

@@ -1,4 +1,6 @@
+import { after } from "next/server";
 import { demoMode } from "@/lib/env";
+import { runEmailWork } from "@/lib/marketing/worker";
 import { submitPageForm } from "@/lib/pages/submit";
 import { allow, clientIp } from "@/lib/rate-limit";
 
@@ -42,6 +44,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ tenant:
   }
   try {
     const result = await submitPageForm(tenant, slug, (body ?? {}) as Record<string, unknown>);
+    // Day 0 of a series goes right away, not whenever the job next runs.
+    if (result.ok && result.queued && result.tenantId) after(() => runEmailWork({ tenantId: result.tenantId, budgetMs: 30_000 }).then(() => undefined));
     return Response.json({ message: result.message }, { status: result.ok ? 200 : result.status });
   } catch (err) {
     console.error("page form failed", err);

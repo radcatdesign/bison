@@ -2,11 +2,11 @@
 
 import { type FormEvent, useState } from "react";
 import type { SectionOf } from "@/lib/pages/schema";
-import { FormFields, formClasses } from "./landing-page";
+import { FormFields, formClasses, type SignupChoices } from "./landing-page";
 
 /** The working form on a published landing page. Sends to Contacts. */
 /** `token` is signed by the server when the page renders; it tells the server how long the form was open. */
-export function PageForm({ section, endpoint, token }: { section: SectionOf<"form">; endpoint: string; token: string }) {
+export function PageForm({ section, endpoint, token, signup }: { section: SectionOf<"form">; endpoint: string; token: string; signup?: SignupChoices | null }) {
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
 
@@ -40,7 +40,7 @@ export function PageForm({ section, endpoint, token }: { section: SectionOf<"for
 
   return (
     <form className={formClasses.form} onSubmit={onSubmit} data-testid="page-form">
-      <FormFields section={section} disabled={state === "sending"} />
+      <FormFields section={section} disabled={state === "sending"} signup={signup} />
       <label className={formClasses.trap} aria-hidden="true">
         Leave this empty
         <input name="website" tabIndex={-1} autoComplete="off" />

@@ -109,7 +109,7 @@ export function emailProblems(doc: EmailDoc, subject: string, preheader = ""): {
     if ((s.type === "photo" || s.type === "header-photo" || s.type === "photo-text") && !s.image) out.push({ sectionId: s.id, text: "A photo section has no photo yet." });
     if (s.type === "text" && !s.body && !s.heading) out.push({ sectionId: s.id, text: "A text section is empty." });
   }
-  const PLACEHOLDER = /\[Add [^\]]{1,80}\]/g;
+  const PLACEHOLDER = /\[Add [^\]]{1,200}\]/g;
   for (const m of subject.matchAll(PLACEHOLDER)) out.push({ sectionId: null, text: `Fill in ${m[0]} in the subject.` });
   for (const m of preheader.matchAll(PLACEHOLDER)) out.push({ sectionId: null, text: `Fill in ${m[0]} in the preview text.` });
   for (const s of doc.sections) {

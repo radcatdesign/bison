@@ -41,6 +41,8 @@ export type BuilderProps = {
   actions?: (ctx: { content: EmailContent; problems: { sectionId: string | null; text: string }[]; flush: () => Promise<boolean>; showProblems: () => void }) => ReactNode;
   /** Shown above the sections list, like a series step's day. */
   extraSettings?: ReactNode;
+  /** Something saved along with the email that the builder doesn't own, like that day. A change saves too. */
+  dirtyKey?: string;
 };
 
 type Tab = "sections" | "email" | "preview";
@@ -60,7 +62,12 @@ export function EmailBuilder(props: BuilderProps) {
   // How many steps undo and redo have, kept in state so the buttons update.
   const [steps, setSteps] = useState({ past: 0, future: 0 });
   const rerender = () => setSteps({ past: history.current.past.length, future: history.current.future.length });
-  const savedJson = useRef(JSON.stringify(initial));
+  const stamp = (c: EmailContent) => `${JSON.stringify(c)}|${props.dirtyKey ?? ""}`;
+  const stampRef = useRef(stamp);
+  useEffect(() => {
+    stampRef.current = stamp;
+  });
+  const savedJson = useRef(stamp(initial));
   const contentRef = useRef(content);
   useEffect(() => {
     contentRef.current = content;
@@ -123,7 +130,7 @@ export function EmailBuilder(props: BuilderProps) {
 
   // ---- Saving on its own ----
   const flush = useCallback(async (): Promise<boolean> => {
-    const json = JSON.stringify(contentRef.current);
+    const json = stampRef.current(contentRef.current);
     if (json === savedJson.current) return true;
     setSaveState("saving");
     const r = await save(contentRef.current);
@@ -137,18 +144,19 @@ export function EmailBuilder(props: BuilderProps) {
     return false;
   }, [save]);
 
+  const current = stamp(content);
   useEffect(() => {
     if (readOnly) return;
-    if (JSON.stringify(content) === savedJson.current) return;
+    if (current === savedJson.current) return;
     setSaveState("saving");
     const timer = setTimeout(() => void flush(), 800);
     return () => clearTimeout(timer);
-  }, [content, flush, readOnly]);
+  }, [current, flush, readOnly]);
 
   // Leaving with unsaved changes asks first.
   useEffect(() => {
     const onLeave = (e: BeforeUnloadEvent) => {
-      if (JSON.stringify(contentRef.current) !== savedJson.current) e.preventDefault();
+      if (stampRef.current(contentRef.current) !== savedJson.current) e.preventDefault();
     };
     window.addEventListener("beforeunload", onLeave);
     return () => window.removeEventListener("beforeunload", onLeave);

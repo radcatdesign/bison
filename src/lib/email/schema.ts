@@ -223,7 +223,7 @@ export function fileIdsIn(doc: EmailDoc): string[] {
 // Same rule as pages: [Add ...] marks something only the company knows, and an
 // email can't go out while any are left.
 
-const PLACEHOLDER = /\[Add [^\]]{1,80}\]/g;
+const PLACEHOLDER = /\[Add [^\]]{1,200}\]/g;
 
 export function findEmailPlaceholders(doc: EmailDoc, subject = ""): { sectionId: string | null; text: string }[] {
   const found: { sectionId: string | null; text: string }[] = [];

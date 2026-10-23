@@ -38,7 +38,7 @@ export function esc(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-const PLACEHOLDER = /\[Add [^\]]{1,80}\]/g;
+const PLACEHOLDER = /\[Add [^\]]{1,200}\]/g;
 const INLINE = /\[([^\]\n]{1,200})\]\(([^)\s]{1,500})\)|\*\*([^*\n]{1,500})\*\*|\{(first name|business name)\}/gi;
 const SAFE_LINK = /^(https?:\/\/|mailto:|tel:)/i;
 

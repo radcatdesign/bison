@@ -2,8 +2,7 @@ import "server-only";
 // Reading and saving marketing settings, and what a company is called and where
 // it lives, for code that runs without a portal session (the send job, public
 // signups, unsubscribe pages). All of it inside withTenant.
-import type { Tx } from "@/lib/db";
-import { isUuid } from "@/lib/db";
+import { type Database, isUuid, type Tx, withTenant } from "@/lib/db";
 import type { PortalContext } from "@/lib/portal";
 import { type MarketingSettings, readMarketingSettings, type SettingsTenant } from "./settings";
 
@@ -44,4 +43,9 @@ export async function ownFiles(tx: Tx, ids: string[]): Promise<boolean> {
   if (!wanted.length) return true;
   const rows = await tx.selectFrom("files").select("id").where("id", "in", wanted).execute();
   return rows.length === wanted.length;
+}
+
+/** The "I am a..." choices for public forms. */
+export async function signupChoicesFor(tenantId: string, database?: Database): Promise<{ question: string; types: { value: string; label: string }[] }> {
+  return withTenant({ tenantId }, async (tx) => (await getMarketingSettings(tx, await tenantInfo(tx))).signup, database);
 }

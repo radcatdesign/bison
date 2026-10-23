@@ -9,7 +9,7 @@
 // rendered by React and links are checked by the schema.
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { LandingPage } from "@/components/landing/landing-page";
+import { LandingPage, type SignupChoices } from "@/components/landing/landing-page";
 import { DEVICES, type Device } from "@/components/page-preview";
 import type { PageDoc } from "@/lib/pages/schema";
 import s from "./builder.module.css";
@@ -47,9 +47,10 @@ type Props = {
   outlines?: boolean;
   testId?: string;
   title?: string;
+  signup?: SignupChoices | null;
 };
 
-export function Canvas({ doc, brand, device = "desktop", selectedId = null, onSelect, scrollTo, thumb, outlines = true, testId, title = "Page preview" }: Props) {
+export function Canvas({ doc, brand, device = "desktop", selectedId = null, onSelect, scrollTo, thumb, outlines = true, testId, title = "Page preview", signup }: Props) {
   const [stageRef, size] = useSize<HTMLDivElement>();
   // Card previews only load once they're near the screen, so a long list stays fast.
   const [seen, setSeen] = useState(!thumb);
@@ -156,7 +157,7 @@ export function Canvas({ doc, brand, device = "desktop", selectedId = null, onSe
             style={{ transform: `scale(${scale})`, pointerEvents: thumb ? "none" : "auto", opacity: mount ? 1 : 0 }}
             data-testid={testId ?? (thumb ? undefined : "builder-frame")}
           />
-          {mount && createPortal(<LandingPage doc={doc} brand={brand} selectedId={outlines ? selectedId : null} builder={!thumb && outlines} />, mount)}
+          {mount && createPortal(<LandingPage doc={doc} brand={brand} signup={signup} selectedId={outlines ? selectedId : null} builder={!thumb && outlines} />, mount)}
         </div>
       )}
     </div>

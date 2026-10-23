@@ -14,7 +14,8 @@ type Field =
   | { key: string; label: string; kind: "cta"; optional?: boolean }
   | { key: string; label: string; kind: "items"; itemFields: { key: string; label: string; kind: "text" | "textarea" }[]; min: number; max: number; noun: string }
   | { key: string; label: string; kind: "list"; max: number; noun: string }
-  | { key: string; label: string; kind: "fields" };
+  | { key: string; label: string; kind: "fields" }
+  | { key: string; label: string; kind: "toggle"; text: string; hint?: string };
 
 const SPECS: Record<Section["type"], Field[]> = {
   hero: [
@@ -61,6 +62,7 @@ const SPECS: Record<Section["type"], Field[]> = {
     { key: "fields", label: "Fields", kind: "fields" },
     { key: "submit", label: "Button", kind: "text" },
     { key: "success", label: "Message after sending", kind: "textarea", rows: 2 },
+    { key: "subscribe", label: "Email list", kind: "toggle", text: "Add to email list", hint: "Everyone who sends this form also joins your email list and gets your welcome series. The choices for \"I am a\" are set in Marketing, Subscribers." },
   ],
   cta: [
     { key: "headline", label: "Headline", kind: "textarea", rows: 2 },
@@ -73,7 +75,7 @@ const SPECS: Record<Section["type"], Field[]> = {
   ],
 };
 
-const FIELD_NAMES: Record<string, string> = { name: "Name", email: "Email", phone: "Phone", company: "Company", message: "Message" };
+const FIELD_NAMES: Record<string, string> = { name: "Name", email: "Email", phone: "Phone", company: "Company", message: "Message", kind: "I am a..." };
 
 /** Optional text fields left empty are removed rather than saved as "". */
 function clean(raw: Raw, type: Section["type"]): Raw {
@@ -241,6 +243,17 @@ export function SectionForm({ section, onCommit, onEditStart }: { section: Secti
               </fieldset>
             );
           }
+          case "toggle":
+            return (
+              <div key={f.key} className={s.field}>
+                <span className={s.fieldLabel}>{f.label}</span>
+                <label className={s.check}>
+                  <input type="checkbox" checked={raw[f.key] === true} onChange={(e) => update(f.key, e.target.checked)} data-testid={`toggle-${f.key}`} />
+                  {f.text}
+                </label>
+                {f.hint && <span className={s.hint}>{f.hint}</span>}
+              </div>
+            );
           case "fields": {
             const chosen = (Array.isArray(raw[f.key]) ? raw[f.key] : []) as string[];
             return (

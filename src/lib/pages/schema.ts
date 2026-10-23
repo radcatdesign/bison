@@ -24,7 +24,8 @@ export type Cta = z.infer<typeof ctaSchema>;
 
 const sectionId = z.string().regex(/^[a-z][a-z0-9-]{0,39}$/, "Section ids are lowercase letters, numbers and dashes.");
 
-export const FORM_FIELDS = ["name", "email", "phone", "company", "message"] as const;
+/** "kind" is the "I am a..." question, with the choices set in Marketing > Subscribers. */
+export const FORM_FIELDS = ["name", "email", "phone", "company", "message", "kind"] as const;
 export type FormField = (typeof FORM_FIELDS)[number];
 
 export const heroSchema = z.object({
@@ -96,11 +97,13 @@ export const formSchema = z.object({
   fields: z
     .array(z.enum(FORM_FIELDS))
     .min(1)
-    .max(5)
+    .max(6)
     .refine((f) => f.includes("email"), "A form needs an email field so you can reply.")
     .refine((f) => new Set(f).size === f.length, "Each field can only appear once."),
   submit: text(40),
   success: text(200),
+  /** Also adds people who send it to the email list (with Marketing). */
+  subscribe: z.boolean().optional(),
 });
 
 export const ctaSectionSchema = z.object({

@@ -8,6 +8,9 @@ import { demoMode, pageAgentName } from "@/lib/env";
 import { gateMode } from "@/lib/gate";
 import { agentTurns, getPage } from "@/lib/pages/repo";
 import { publicPageUrl } from "@/lib/pages/urls";
+import { withTenant } from "@/lib/db";
+import { defaultMarketingSettings } from "@/lib/marketing/settings";
+import { getMarketingSettings, settingsTenantOf } from "@/lib/marketing/store";
 import { getPortalContext, scopeOf } from "@/lib/portal";
 
 export const metadata: Metadata = { title: "Edit page" };
@@ -32,6 +35,7 @@ async function EditorBody({ params, searchParams }: { params: Params; searchPara
     canPublish: may(ctx.member.role, "pages.publish"),
     agentName: pageAgentName(),
     autoBuild,
+    signup: demoMode() ? defaultMarketingSettings(settingsTenantOf(ctx)).signup : (await withTenant(scopeOf(ctx), (tx) => getMarketingSettings(tx, settingsTenantOf(ctx)))).signup,
   };
 
   if (demoMode()) return <Editor {...shared} initial={null} storage="browser" />;

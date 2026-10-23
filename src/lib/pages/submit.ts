@@ -3,11 +3,13 @@ import "server-only";
 // form: one contact per email address, one submission per send.
 import { sql } from "kysely";
 import { type Database, db, withTenant } from "@/lib/db";
+import { signUp, startSeries } from "@/lib/marketing/people";
+import { getMarketingSettings, tenantInfo } from "@/lib/marketing/store";
 import { checkFormToken } from "./form-token";
 import { getPublishedPage } from "./repo";
 
 export type SubmitInput = { formId?: unknown; fields?: unknown; trap?: unknown; token?: unknown };
-export type SubmitResult = { ok: true; message: string } | { ok: false; status: number; message: string };
+export type SubmitResult = { ok: true; message: string; tenantId?: string; queued?: boolean } | { ok: false; status: number; message: string };
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -23,6 +25,7 @@ export async function submitPageForm(tenantSlug: string, pageSlug: string, input
     const v = given[f];
     if (typeof v === "string" && v.trim()) fields[f] = v.trim().slice(0, f === "message" ? 2000 : 200);
   }
+  if (fields.kind !== undefined) fields.kind = fields.kind.toLowerCase().slice(0, 40);
   const email = (fields.email ?? "").toLowerCase();
   if (!EMAIL.test(email) || email.length > 254) return { ok: false, status: 400, message: "Enter your email address so they can reply." };
   fields.email = email;
@@ -33,16 +36,19 @@ export async function submitPageForm(tenantSlug: string, pageSlug: string, input
   const token = checkFormToken(input.token, page.pageId, now);
   const spamReason = trapped ? "hidden field filled" : token === "too-fast" ? "sent too fast" : token === "missing" ? "no form token" : token === "expired" ? "form token expired" : null;
 
-  await withTenant(
-    { tenantId: page.tenantId },
+  const queued = await withTenant(
+    { tenantId: page.tenantId, userId: "public:page-form" },
     async (tx) => {
       if (spamReason) {
         await tx
           .insertInto("submissions")
           .values({ contact_id: null, form_key: `page:${page.slug}`, form_type: "landing-page", fields: JSON.stringify(fields), status: "spam", spam_reason: spamReason, alert: "{}" })
           .execute();
-        return;
+        return false;
       }
+      // "I am a..." only keeps values the company set up; anything else is dropped.
+      const settings = await getMarketingSettings(tx, await tenantInfo(tx));
+      if (fields.kind !== undefined && !settings.signup.types.some((t) => t.value === fields.kind)) delete fields.kind;
       const contact = await tx
         .insertInto("contacts")
         .values({ email, name: fields.name ?? "", phone: fields.phone ?? "" })
@@ -61,8 +67,20 @@ export async function submitPageForm(tenantSlug: string, pageSlug: string, input
         .insertInto("submissions")
         .values({ contact_id: contact.id, form_key: `page:${page.slug}`, form_type: "landing-page", fields: JSON.stringify(fields), alert: "{}" })
         .execute();
+
+      let started = 0;
+      let subscriberId: string | null = null;
+      if (form.subscribe) {
+        const r = await signUp(tx, { email, name: fields.name ?? "", kind: fields.kind ?? "", source: "page", detail: `page:${page.slug}`, offer: settings.offer });
+        if (r.ok) {
+          subscriberId = r.id;
+          started += r.created || r.resubscribed ? 1 : 0;
+        }
+      }
+      started += await startSeries(tx, "form", { email, name: fields.name ?? "", subscriberId }, `page:${page.slug}`);
+      return started > 0;
     },
     database,
   );
-  return { ok: true, message: form.success };
+  return { ok: true, message: form.success, tenantId: page.tenantId, queued };
 }

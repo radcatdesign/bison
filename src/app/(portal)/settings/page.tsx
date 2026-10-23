@@ -16,7 +16,7 @@ import s from "./settings.module.css";
 export const metadata: Metadata = { title: "Settings" };
 
 const INTEGRATIONS = [
-  { provider: "resend", name: "Email sending", breaks: "Form alerts and replies can't be emailed until your sending domain is verified." },
+  { provider: "resend", name: "Email sending", breaks: "Newsletters, series and form alerts can't be emailed until your sending domain is verified.", href: "/settings/email" },
   { provider: "stripe-connect", name: "Your Stripe account", breaks: "Needed for Sales. Checkout and invoices pay into this account." },
   { provider: "shipstation", name: "ShipStation", breaks: "Needed for live shipping rates and sending paid orders to fulfillment." },
 ];
@@ -143,7 +143,16 @@ async function SettingsBody() {
                         <span className="muted">{status === "connected" ? "Working." : row?.last_error || i.breaks}</span>
                       </>
                     }
-                    side={<span className={status === "connected" ? "pill pill-good" : status === "needs_attention" ? "pill pill-warn" : "pill"}>{label}</span>}
+                    side={
+                      <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span className={status === "connected" ? "pill pill-good" : status === "needs_attention" ? "pill pill-warn" : "pill"}>{label}</span>
+                        {"href" in i && i.href && (
+                          <Link href={i.href} className="btn" data-testid={`connect-${i.provider}`}>
+                            {status === "connected" ? "Details" : "Set up"}
+                          </Link>
+                        )}
+                      </span>
+                    }
                   />
                 );
               })}

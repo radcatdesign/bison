@@ -11,6 +11,9 @@ import s from "./landing-page.module.css";
 
 export type FormRenderer = (section: SectionOf<"form">) => ReactNode;
 
+/** The "I am a..." question and its choices, from Marketing > Subscribers. */
+export type SignupChoices = { question: string; types: { value: string; label: string }[] };
+
 type Props = {
   doc: PageDoc;
   brand: string;
@@ -19,6 +22,7 @@ type Props = {
   builder?: boolean;
   /** The public page passes a working form; the editor shows a static one. */
   renderForm?: FormRenderer;
+  signup?: SignupChoices | null;
 };
 
 /** Text with any [Add ...] placeholders marked so they're easy to spot. */
@@ -50,13 +54,28 @@ function Button({ cta, kind = "primary" }: { cta: Cta; kind?: "primary" | "secon
   );
 }
 
-const FIELD_LABELS: Record<FormField, string> = { name: "Name", email: "Email", phone: "Phone", company: "Company", message: "Message" };
+const FIELD_LABELS: Record<FormField, string> = { name: "Name", email: "Email", phone: "Phone", company: "Company", message: "Message", kind: "I am a" };
 
 /** The fields of a page form. Shared by the static editor form and the live one. */
-export function FormFields({ section, disabled }: { section: SectionOf<"form">; disabled?: boolean }) {
+export function FormFields({ section, disabled, signup }: { section: SectionOf<"form">; disabled?: boolean; signup?: SignupChoices | null }) {
   return (
     <>
-      {section.fields.map((f) => (
+      {section.fields.map((f) =>
+        f === "kind" ? (
+          signup && signup.types.length > 0 ? (
+            <label key={f} className={s.field}>
+              <span>{signup.question}</span>
+              <select name="kind" disabled={disabled} defaultValue="">
+                <option value="">Choose one</option>
+                {signup.types.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null
+        ) : (
         <label key={f} className={f === "message" ? `${s.field} ${s.fieldWide}` : s.field}>
           <span>{FIELD_LABELS[f]}</span>
           {f === "message" ? (
@@ -72,17 +91,18 @@ export function FormFields({ section, disabled }: { section: SectionOf<"form">; 
             />
           )}
         </label>
-      ))}
+        ),
+      )}
     </>
   );
 }
 
 export const formClasses = { form: s.form, submit: s.primary, done: s.formDone, error: s.formError, trap: s.trap };
 
-function StaticForm({ section }: { section: SectionOf<"form"> }) {
+function StaticForm({ section, signup }: { section: SectionOf<"form">; signup?: SignupChoices | null }) {
   return (
     <form className={s.form} data-static="true">
-      <FormFields section={section} />
+      <FormFields section={section} signup={signup} />
       <button type="submit" className={s.primary}>
         <T>{section.submit}</T>
       </button>
@@ -150,7 +170,7 @@ function Heading({ title, intro }: { title?: string; intro?: string }) {
   );
 }
 
-function SectionBody({ section, renderForm }: { section: Section; renderForm?: FormRenderer }) {
+function SectionBody({ section, renderForm, signup }: { section: Section; renderForm?: FormRenderer; signup?: SignupChoices | null }) {
   switch (section.type) {
     case "hero":
       return <Hero section={section} />;
@@ -298,7 +318,7 @@ function SectionBody({ section, renderForm }: { section: Section; renderForm?: F
                 </p>
               )}
             </div>
-            <div className={s.formCard}>{renderForm ? renderForm(section) : <StaticForm section={section} />}</div>
+            <div className={s.formCard}>{renderForm ? renderForm(section) : <StaticForm section={section} signup={signup} />}</div>
           </div>
         </div>
       );
@@ -339,7 +359,7 @@ function SectionBody({ section, renderForm }: { section: Section; renderForm?: F
   }
 }
 
-export function LandingPage({ doc, brand, selectedId, builder, renderForm }: Props) {
+export function LandingPage({ doc, brand, selectedId, builder, renderForm, signup }: Props) {
   const { theme } = doc;
   const vars = { "--lp-accent": theme.accent, "--lp-accent-ink": accentInk(theme.accent) } as CSSProperties;
   const heroCta = doc.sections.find((x): x is SectionOf<"hero"> => x.type === "hero")?.primary;
@@ -374,7 +394,7 @@ export function LandingPage({ doc, brand, selectedId, builder, renderForm }: Pro
             data-section={builder ? section.id : undefined}
             data-selected={builder && selectedId === section.id ? "true" : undefined}
           >
-            <SectionBody section={section} renderForm={renderForm} />
+            <SectionBody section={section} renderForm={renderForm} signup={signup} />
           </section>
         ))}
       </main>

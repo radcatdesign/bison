@@ -18,7 +18,8 @@ import { BrandKitError, EMAIL_DOC_VERSION, parseBrandKit } from "@/lib/email/sch
 import { detectColumns, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS, parseCsv, rowsFromCsv } from "@/lib/marketing/csv";
 import { importPeople, normalizeEmail, resubscribeEmail, signUp, subscriberCount, unsubscribeEmail } from "@/lib/marketing/people";
 import { FROM_LOCAL, isVerified, NO_SENDING, normalizeSendingDomain, readSending, writeSending } from "@/lib/marketing/sending";
-import { parseWith, searchSettingsSchema, SettingsInputError, signupSettingsSchema } from "@/lib/marketing/settings";
+import { markCode } from "@/lib/marketing/offer";
+import { offerSettingsSchema, parseWith, searchSettingsSchema, SettingsInputError, signupSettingsSchema } from "@/lib/marketing/settings";
 import { getMarketingSettings, ownFiles, saveMarketingPart, settingsTenantOf } from "@/lib/marketing/store";
 import { sendTestEmail } from "@/lib/marketing/test-send";
 import { getPortalContext, type PortalContext, scopeOf } from "@/lib/portal";
@@ -410,4 +411,49 @@ export async function markSetupStepAction(stepKey: string, done: boolean): Promi
   });
   refresh();
   return { ok: true, message: done ? "Marked as done." : "Marked as not done." };
+}
+
+// ---- Welcome offer ------------------------------------------------------------------------
+
+export async function saveOfferAction(input: unknown): Promise<MarketingResult> {
+  const { ctx, error } = await guard("marketing.edit", "marketing.welcome-offer");
+  if (error) return { ok: false, message: error };
+  try {
+    const offer = parseWith(offerSettingsSchema, input);
+    await withTenant(scopeOf(ctx), async (tx) => {
+      await saveMarketingPart(tx, "offer", offer);
+      await audit(tx, { action: "marketing.offer", detail: { on: offer.on, kind: offer.kind, value: offer.value } });
+    });
+    refresh();
+    return { ok: true, message: offer.on ? "Saved. Everyone who signs up from now gets their own code." : "Saved. The offer is off, so new signups don't get a code." };
+  } catch (err) {
+    return failed(err, "Couldn't save the offer. Try again.");
+  }
+}
+
+export async function markCodeAction(id: string, used: boolean, note: string): Promise<MarketingResult> {
+  const { ctx, error } = await guard("marketing.edit", "marketing.welcome-offer", { data: true });
+  if (error) return { ok: false, message: error };
+  const ok = await markCode(scopeOf(ctx), id, used, String(note ?? ""));
+  if (!ok) return { ok: false, message: "That code doesn't exist." };
+  refresh();
+  return { ok: true, message: used ? "Marked as used." : "Marked as not used." };
+}
+
+// ---- Search pack ---------------------------------------------------------------------------
+
+export async function saveSearchAction(input: unknown): Promise<MarketingResult> {
+  const { ctx, error } = await guard("marketing.edit", "marketing.seo");
+  if (error) return { ok: false, message: error };
+  try {
+    await withTenant(scopeOf(ctx), async (tx) => {
+      const current = await getMarketingSettings(tx, settingsTenantOf(ctx));
+      const next = parseWith(searchSettingsSchema, { ...(input as object), submitted: current.search.submitted });
+      await saveMarketingPart(tx, "search", next);
+    });
+    refresh();
+    return { ok: true, message: "Saved. Your pages, sitemap and llms.txt use it now." };
+  } catch (err) {
+    return failed(err, "Couldn't save the business details. Try again.");
+  }
 }

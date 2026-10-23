@@ -20,7 +20,7 @@ export type PageTemplate = {
   seo: (ctx: TemplateContext) => { title: string; description: string };
 };
 
-const form = (id: string, heading: string, body: string, fields: FormField[], submit: string, success: string): Section => ({
+const form = (id: string, heading: string, body: string, fields: FormField[], submit: string, success: string, subscribe = false): Section => ({
   id,
   type: "form",
   heading,
@@ -28,6 +28,7 @@ const form = (id: string, heading: string, body: string, fields: FormField[], su
   fields,
   submit,
   success,
+  ...(subscribe ? { subscribe: true } : {}),
 });
 
 export const PAGE_TEMPLATES: PageTemplate[] = [
@@ -117,7 +118,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         body: "No spam. One email when it's ready, and that's it.",
         cta: { label: "Get early access", href: "#form" },
       },
-      form("form", "Join the waitlist", "Leave your email and we'll let you know.", ["name", "email"], "Join", "You're on the list. We'll be in touch."),
+      form("form", "Join the waitlist", "Leave your email and we'll let you know.", ["name", "email", "kind"], "Join", "You're on the list. We'll be in touch.", true),
     ],
     seo: ({ brand }) => ({ title: `Coming soon from ${brand}`, description: `Join the waitlist and be first to try what ${brand} is launching.` }),
   },
@@ -311,7 +312,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         bullets: ["[Add what's in it]", "[Add what's in it]", "[Add what's in it]"],
         cta: { label: "Get the guide", href: "#form" },
       },
-      form("form", "Get the free guide", "We'll email it to you right away.", ["name", "email"], "Send me the guide", "It's on its way. Check your inbox."),
+      form("form", "Get the free guide", "We'll email it to you right away.", ["name", "email", "kind"], "Send me the guide", "It's on its way. Check your inbox.", true),
     ],
     seo: ({ brand }) => ({ title: `Free guide from ${brand}`, description: `A short, free guide from ${brand}.` }),
   },

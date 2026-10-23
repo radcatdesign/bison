@@ -72,7 +72,7 @@ export function demoId(prefix: string): string {
 /** What the demo visitor has done so far, for the setup steps. */
 export function demoSetupFacts(d: DemoMarketing, base: { subscribers: number; lists: number }): SetupFacts {
   const starter = d.series?.find((s) => s.starter);
-  const PLACEHOLDER = /\[Add [^\]]{1,80}\]/;
+  const PLACEHOLDER = /\[Add [^\]]{1,200}\]/;
   return {
     canManageSettings: true,
     sending: { domain: Boolean(d.sending?.domain), verified: Boolean(d.sending?.checked), tested: Boolean(d.sending?.tested || d.tested) },
