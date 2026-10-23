@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/ui";
 import { may } from "@/config/roles";
 import { withTenant } from "@/lib/db";
 import { appUrl, demoMode } from "@/lib/env";
-import { formChoices, getSeries, TRIGGERS } from "@/lib/marketing/series";
+import { formChoices, getSeries, triggersFor } from "@/lib/marketing/series";
 import { defaultMarketingSettings } from "@/lib/marketing/settings";
 import { getMarketingSettings, settingsTenantOf } from "@/lib/marketing/store";
 import { liveSubscribersRepo } from "@/lib/marketing/subscribers";
@@ -37,7 +37,7 @@ async function Body({ params }: { params: Promise<{ id: string }> }) {
   }
   return (
     <SeriesDetail
-      c={{ storage: demo ? "browser" : "server", tenantId: ctx.tenant.id, site, canEdit: may(ctx.member.role, "marketing.edit"), triggers: TRIGGERS }}
+      c={{ storage: demo ? "browser" : "server", tenantId: ctx.tenant.id, site, canEdit: may(ctx.member.role, "marketing.edit"), triggers: triggersFor(ctx.tenant) }}
       id={id}
       server={series}
       forms={forms}

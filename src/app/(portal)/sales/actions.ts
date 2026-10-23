@@ -18,6 +18,7 @@ import { SampleModeError } from "@/lib/repo/types";
 import { CarrierError } from "@/lib/sales/carriers";
 import { parseProduct, ProductInputError } from "@/lib/sales/catalog";
 import { disconnectPayments, refreshPayments } from "@/lib/sales/connect";
+import { createShare, revokeShare, ShareError } from "@/lib/sales/contact-share";
 import { DiscountError, deleteDiscount, saveDiscount } from "@/lib/sales/discount-codes";
 import { DiscountInputError, parseDiscount } from "@/lib/sales/discounts";
 import { salesSender, sendOne, tradeLinkEmail } from "@/lib/sales/emails";
@@ -52,7 +53,7 @@ async function guard(action: Action, feature: FeatureKey, opts: { data?: boolean
   return { ctx, error: null };
 }
 
-const KNOWN = [ProductInputError, ProductError, DiscountError, DiscountInputError, EstimateError, EstimateInputError, OrderError, SalesInputError, TradeError, ImportError, RemoteError, CarrierError];
+const KNOWN = [ShareError, ProductInputError, ProductError, DiscountError, DiscountInputError, EstimateError, EstimateInputError, OrderError, SalesInputError, TradeError, ImportError, RemoteError, CarrierError];
 
 function failed(err: unknown, fallback: string): SalesResult {
   if (KNOWN.some((K) => err instanceof K)) return { ok: false, message: (err as Error).message };
@@ -422,4 +423,34 @@ export async function removeCarrierAction(key: "shipstation" | "ups"): Promise<S
 export async function shopUrlFor(): Promise<string> {
   const ctx = await getPortalContext();
   return `${appUrl()}/p/${ctx.tenant.slug}/shop`;
+}
+
+// ---- Sharing a contact ------------------------------------------------------------------------
+
+export async function shareContactAction(contactId: string, days: number): Promise<SalesResult> {
+  const { ctx, error } = await guard("contacts.edit", "contacts.share", { data: true });
+  if (error) return { ok: false, message: error };
+  try {
+    const share = await withTenant(scopeOf(ctx), async (tx) => {
+      const sh = await createShare(tx, contactId, days, actor(ctx));
+      await audit(tx, { action: "contact.shared", targetType: "contact", targetId: contactId, detail: { days } });
+      return sh;
+    });
+    refresh();
+    return { ok: true, message: `Link made. It works until ${share.expiresAt.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: ctx.settings.timezone })}.`, id: share.id, url: share.url };
+  } catch (err) {
+    return failed(err, "Couldn't make the link. Try again.");
+  }
+}
+
+export async function revokeShareAction(shareId: string): Promise<SalesResult> {
+  const { ctx, error } = await guard("contacts.edit", "contacts.share", { data: true });
+  if (error) return { ok: false, message: error };
+  const done = await withTenant(scopeOf(ctx), async (tx) => {
+    const ok = await revokeShare(tx, shareId);
+    if (ok) await audit(tx, { action: "contact.share_revoked", targetType: "contact_share", targetId: shareId });
+    return ok;
+  });
+  refresh();
+  return done ? { ok: true, message: "Turned off. That link stops working now." } : { ok: false, message: "That link was already off." };
 }

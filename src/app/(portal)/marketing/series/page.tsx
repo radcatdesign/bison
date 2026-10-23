@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/ui";
 import { may } from "@/config/roles";
 import { withTenant } from "@/lib/db";
 import { appUrl, demoMode } from "@/lib/env";
-import { formChoices, listSeries, TRIGGERS } from "@/lib/marketing/series";
+import { formChoices, listSeries, triggersFor } from "@/lib/marketing/series";
 import { defaultMarketingSettings } from "@/lib/marketing/settings";
 import { getMarketingSettings, settingsTenantOf } from "@/lib/marketing/store";
 import { getPortalContext, scopeOf } from "@/lib/portal";
@@ -35,7 +35,7 @@ async function Body({ searchParams }: { searchParams: Promise<{ error?: string }
           {error.slice(0, 200)}
         </p>
       )}
-      <SeriesList c={{ storage: demo ? "browser" : "server", tenantId: ctx.tenant.id, site, canEdit: may(ctx.member.role, "marketing.edit"), triggers: TRIGGERS }} server={series} forms={forms} brand={brand} baseUrl={appUrl()} />
+      <SeriesList c={{ storage: demo ? "browser" : "server", tenantId: ctx.tenant.id, site, canEdit: may(ctx.member.role, "marketing.edit"), triggers: triggersFor(ctx.tenant) }} server={series} forms={forms} brand={brand} baseUrl={appUrl()} />
     </>
   );
 }

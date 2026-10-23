@@ -3,6 +3,13 @@
 import {
   AppWindow,
   BadgePercent,
+  Boxes,
+  ClipboardList,
+  Package,
+  ShoppingCart,
+  Tag,
+  Truck,
+  UserRoundCheck,
   ListChecks,
   Mail,
   Palette,
@@ -50,6 +57,14 @@ const PAGE_ICONS: Record<string, LucideIcon> = {
   "/marketing/offer": BadgePercent,
   "/marketing/search": ScanSearch,
   "/sales": Receipt,
+  "/sales/setup": ListChecks,
+  "/sales/estimates": ClipboardList,
+  "/sales/orders": Package,
+  "/sales/products": Boxes,
+  "/sales/discounts": Tag,
+  "/sales/trade": UserRoundCheck,
+  "/sales/carts": ShoppingCart,
+  "/sales/checkout": Truck,
 };
 
 function activeMode(pathname: string, modes: NavMode[]): NavMode | undefined {

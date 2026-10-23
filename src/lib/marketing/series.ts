@@ -3,6 +3,7 @@ import "server-only";
 // gets, series and their steps for the screens, turning a series on and off,
 // and starting one by hand for a list. Everything inside withTenant.
 import { sql } from "kysely";
+import { can } from "@/lib/access/entitlements";
 import { audit } from "@/lib/audit";
 import { isUuid, type TenantScope, type Tx, withTenant } from "@/lib/db";
 import type { SequenceTrigger } from "@/lib/db/types";
@@ -20,10 +21,16 @@ export const MAX_STEPS = 12;
 export const TRIGGERS: Record<SequenceTrigger, { label: string; note: string; ready: boolean }> = {
   joined: { label: "Someone joins your list", note: "From a signup form, or added by hand. Imports can start it too, if you tick the box.", ready: true },
   form: { label: "Someone sends a form", note: "Pick which form. They don't have to be on your list.", ready: true },
-  estimate: { label: "Someone saves an estimate", note: "Starts once Sales is on and estimates are being saved.", ready: false },
-  cart: { label: "Someone leaves a cart", note: "Starts once Sales is on and your shop is taking orders.", ready: false },
+  estimate: { label: "Someone gets an estimate", note: "Starts when you send an estimate from Sales. Good for a nudge a few days later.", ready: true },
+  cart: { label: "Someone leaves a cart", note: "Starts when a shopper who gave their email leaves a cart in your shop. Needs Sales.", ready: true },
   manual: { label: "You start it for a list", note: "Nothing starts it on its own. Press Start and pick who.", ready: true },
 };
+
+/** The triggers as this company sees them: the Sales ones only start once it has Sales. */
+export function triggersFor(tenant: Parameters<typeof can>[0]): typeof TRIGGERS {
+  const sales = can(tenant, "sales.orders");
+  return { ...TRIGGERS, estimate: { ...TRIGGERS.estimate, ready: sales }, cart: { ...TRIGGERS.cart, ready: sales } };
+}
 
 export function isTrigger(v: unknown): v is SequenceTrigger {
   return typeof v === "string" && v in TRIGGERS;

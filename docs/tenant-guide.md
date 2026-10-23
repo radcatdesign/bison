@@ -20,6 +20,8 @@ A new account starts with sample data, so every screen shows how it works before
 
 In Marketing, sample data covers the people: subscribers, welcome codes and results. Your newsletters, series, brand kit and settings save either way, so you can set everything up first. Sending to your list waits until sample data is off, because the list on screen is made up. Tests to yourself work any time.
 
+In Sales, sample data covers orders, estimates, carts and trade accounts. Your products, discount codes and settings save either way, and your shop works for real, so you can set it all up and place a test order first.
+
 ## What the numbers mean
 
 Every number has a **?** next to it. Tap it to see exactly how it's counted. A few worth knowing:
@@ -70,7 +72,7 @@ Pick a template or start blank, then click any part of the email to change it. T
 
 ### 6. Welcome offer (optional)
 
-A one-time code for each new subscriber's first order: a percent or amount off, how many days it lasts, and any fine print. Add a "Welcome offer code" section to your first welcome email and turn the offer on; each person sees their own code. Until Sales is set up, look a code up on this page when someone uses it and mark it used.
+A one-time code for each new subscriber's first order: a percent or amount off, how many days it lasts, and any fine print. Add a "Welcome offer code" section to your first welcome email and turn the offer on; each person sees their own code. With Sales, your shop checks codes at checkout on its own (first order only). Without it, look a code up on this page when someone uses it and mark it used.
 
 ### 7. Search pack
 
@@ -88,13 +90,67 @@ Pages are in Marketing. Describe the page you want in plain words: who it's for,
 
 Desktop, tablet and phone buttons show the page at each size. On a phone, Preview is its own tab.
 
+## Setting up Sales
+
+Open **Sales**, then **Setup**. Like Marketing, it lists every step in order, ticks each off when it's really done, and each tool shows its own steps at the top of its page. Plan on about an hour, most of it adding products.
+
+### 1. Payments (Settings, Payments)
+
+An owner or admin connects your company's own Stripe account. Every payment from your shop and every invoice goes straight to it; Bison Ops never holds your money and takes no cut.
+
+1. **Connect Stripe.** Bison Ops sends you to Stripe to make an account or use the one you have. Stripe asks for your business details and bank account. You never paste a key.
+2. **Check it's live.** Back in Bison Ops, it shows whether Stripe can take payments yet, or what Stripe still needs from you.
+3. **Sales tax (optional).** Turn on Stripe Tax in your Stripe Dashboard and add where you're registered to collect, then turn on tax in Sales, Checkout.
+
+### 2. Products
+
+Import them or add them one at a time.
+
+- **Import** a spreadsheet saved as CSV (Name and Price, plus anything else you have), a Shopify export, your Shopify store's address, or the product feed you give Google. Rows with the same name become one product with options. Importing again updates what you imported before.
+- **Options** like Size and Color make a version for each combination, each with its own price, was price (for a sale), SKU and weight.
+- **Weights and boxes** let checkout charge real shipping. Set what each version weighs, which box it goes in and how many fit. Mark anything that ships in its own box, or give it its own flat shipping charge.
+- **Photos.** Upload them or paste image addresses. The first one is what people see in your shop and when it's shared.
+- **Active** products show in your shop and each has its own page, with share buttons and the details search engines read.
+
+### 3. Shipping (Settings, Shipping)
+
+Add where you ship from, check your boxes, and choose how to charge: live rates from **ShipStation** or **UPS**, a flat rate, or free. You can add a handling charge and free shipping over an amount. Connect ShipStation and paid orders go there to be packed and labeled. Carrier keys are saved encrypted and can't be read back, only replaced.
+
+### 4. Checkout (Sales, Checkout)
+
+Who hears about each order (owners and admins until you change it), the countries you ship to, a line under the Pay button like your returns policy, and, if you'd rather quote big orders yourself, an order limit. Above it, "Check out" becomes "Ask for a quote", and the cart lands in Estimates as a draft.
+
+### 5. Your first order
+
+Open your shop (the **Your shop** button on the Sales overview), add something to the cart and check out. Every paid order is in **Orders**, with the payment in Stripe, where it is in ShipStation, the team email, and refunds.
+
+### 6. Estimates
+
+Start one, add lines from your catalog or type them in, then send it. Your client gets an email with a link to their own page, where they approve it by typing their name, ask for changes, or decline. When they approve, the invoice goes out with a Pay link. When they pay, it's an order. If they pay by check, mark it paid. Every step shows in the estimate's history.
+
+### 7. Discount codes (optional)
+
+Percent or amount off, for anyone or one trade account, once per buyer, once ever or unlimited, with a total limit, a minimum order and dates. Each code is spelled out in a sentence before you save it. Codes are private: they only work when someone types one. A code that takes the whole order off ships it free with no payment.
+
+### 8. Trade accounts (optional)
+
+Share your trade page (Sales, Trade accounts has the address) with builders, designers and resellers. When you approve someone, they get an email with a link that signs them in, no password, and they see their own prices across the shop. Tiers give better prices as they buy more over 12 months, or you can set someone's tier yourself. Pausing an account signs them out everywhere.
+
+### Carts and following up
+
+**Carts** shows everyone who gave their email at checkout, with left-behind carts first. With Marketing, make an email series that starts when "Someone leaves a cart" to win them back.
+
+### Sharing a contact
+
+Open a contact in **Contacts** and make a share link to send someone outside your team, like an installer. It shows who they are, what they sent and what they've bought, for 1, 7 or 30 days, and you can turn it off any time.
+
 ## Your team
 
 | Role | Sees | Can |
 |---|---|---|
-| Owner | Everything | Everything, including the plan, email sending setup and deleting the account |
-| Admin | Everything | Everything except the plan, including email sending setup |
-| Sales | Analyze and Sales | Work contacts, send email, issue refunds |
+| Owner | Everything | Everything, including the plan, email sending, Stripe, shipping and deleting the account |
+| Admin | Everything | Everything except the plan, including email sending, Stripe and shipping |
+| Sales | Analyze and Sales | Work contacts, send email, run estimates, orders, products and codes, issue refunds, share contacts |
 | Marketing | Analyze and Marketing | Work contacts, build and send newsletters and series, manage subscribers, build and publish landing pages |
 | Viewer | Analyze | Look only |
 

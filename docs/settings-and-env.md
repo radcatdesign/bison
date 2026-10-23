@@ -67,11 +67,23 @@ Copy `.env.example` to `.env.local` for local work. Tests use `.env.test` (commi
 
 Unsubscribe links are signed with `SECRETS_KEYS`. Keep old key versions in the list after rotating, or unsubscribe links in emails already sent stop working.
 
+### Sales (each company's own Stripe account and carriers)
+
+| Variable | Required | What it does |
+|---|---|---|
+| `STRIPE_SECRET_KEY` | For Sales payments | The same Bison Ops Stripe key, with Connect turned on. Companies' accounts are made and used through it; their money never touches the Bison Ops balance. Without it, Sales still builds and saves, and checkout and invoices say payments aren't switched on yet. |
+| `STRIPE_PUBLISHABLE_KEY` | For Sales payments | Bison Ops' publishable key. The shop's checkout page loads Stripe's payment form with it, on the company's own account. |
+| `STRIPE_CONNECT_WEBHOOK_SECRET` | For Sales payments | Signing secret of a Connect webhook (events on connected accounts) at `/api/webhooks/stripe-connect`. Turn on `account.updated`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`, `invoice.paid` and `charge.refunded`. |
+| `PAYMENTS_PROVIDER` | No | `stand-in` plays Stripe in memory for tests and local work, with pages at `/api/dev/payments` for onboarding, paying a checkout and paying an invoice. Refused on Vercel production; its pages never run on any Vercel deployment. |
+| `SHIPPING_PROVIDER` | No | `stand-in` answers for ShipStation and UPS (rates and orders) in tests and local work. Never on Vercel. Real carrier keys are each company's own, entered in Settings, Shipping, and encrypted. |
+
+Estimate links, trade sign-in links and shared contact links are signed with `SECRETS_KEYS`, like unsubscribe links.
+
 ### Jobs and app
 
 | Variable | Required | What it does |
 |---|---|---|
-| `CRON_SECRET` | On Vercel | Vercel Cron sends it as a bearer token to `/api/cron/daily` and `/api/cron/email`. The daily job briefly locks the events table while it adds or drops a month, so it runs at 2:17 AM Pacific; it runs the email job too, as a backstop. `/api/cron/email` sends scheduled newsletters and series emails and should run every 5 minutes: on Vercel Pro add it to `vercel.json`, on the free plan point an outside scheduler at it with the same bearer token. |
+| `CRON_SECRET` | On Vercel | Vercel Cron sends it as a bearer token to `/api/cron/daily` and `/api/cron/email`. The daily job briefly locks the events table while it adds or drops a month, so it runs at 2:17 AM Pacific; it runs the email job too, as a backstop. `/api/cron/email` sends scheduled newsletters and series emails, and runs the sales job (left-behind carts, code holds, ShipStation retries); it should run every 5 minutes: on Vercel Pro add it to `vercel.json`, on the free plan point an outside scheduler at it with the same bearer token. |
 | `APP_URL` | Yes | The dashboard's public URL, used in Stripe return links and in published page addresses (`/p/<company>/<page>`). |
 | `PW_CHROMIUM_PATH` | No | Points Playwright at a Chromium other than its own download. |
 | `E2E_PORT` | No | Port for the end-to-end test server. Default 3100. |
@@ -92,6 +104,10 @@ Unsubscribe links are signed with `SECRETS_KEYS`. Keep old key versions in the l
 | Welcome offer | Marketing, Welcome offer | Off | Percent or amount off, days it lasts, code prefix and fine print. Codes go out in the welcome email. |
 | Search pack | Marketing, Search pack | Built from business details | Business summary, services, areas served, contact details, and whether AI crawlers may read the pages. |
 | Setup progress | Worked out on each visit | Nothing done | Every step ticks off from what's saved or verified. The one exception, submitting the sitemap to Google and Bing, is a "Mark as done" saved in `marketing_settings.search`. |
+| Payments | Settings, Payments | Not connected | The company's own Stripe account through Connect. Owners and admins connect it; only an owner can disconnect. The account id is in the `integrations` row for `stripe`. |
+| Shipping | Settings, Shipping | Flat, free | Ship-from address, boxes (three to start), rates from a carrier, flat or free, handling, free over an amount, and ShipStation for fulfillment. Carrier keys are encrypted and can't be read back. Stored in `sales_settings.shipping` and `integrations`. |
+| Store and checkout | Sales, Checkout | USD, shop on | Currency, whether the shop list shows, who gets order emails (owners and admins until set), countries, phone, Stripe Tax, a note under Pay, the order limit that turns checkout into a quote request, estimate terms and how long they're good, and when a cart counts as left behind (4 hours). Stored in `sales_settings.store`. |
+| Trade program | Sales, Trade accounts | Open, three tiers | Whether new applications are taken, a few lines for the application page, and tiers by 12-month spend (Trade 10%, Pro 15% from $5,000, Partner 20% from $20,000). Stored in `sales_settings.trade`. |
 
 ## Product config (in code, no deploy needed to read, one deploy to change)
 
@@ -103,6 +119,7 @@ Unsubscribe links are signed with `SECRETS_KEYS`. Keep old key versions in the l
 | `src/config/modes.ts` | The three modes and their pages. |
 | `src/config/releases.ts` | The Updates page. |
 | `src/lib/marketing/setup-steps.ts` | Every Marketing setup step, its words and what marks it done. |
+| `src/lib/sales/setup-steps.ts` | Every Sales setup step, its words and what marks it done. |
 | `src/lib/email/templates.ts` | Newsletter and series templates. |
 | `src/config/brand.ts` | Product name and default colors, for white-label later. |
 | `src/lib/sample/industries.ts` | What sample data looks like per industry. |

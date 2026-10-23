@@ -7,7 +7,7 @@ import { may } from "@/config/roles";
 import { withTenant } from "@/lib/db";
 import { demoTeam } from "@/lib/demo";
 import { appUrl, demoMode } from "@/lib/env";
-import { getStep, TRIGGERS } from "@/lib/marketing/series";
+import { getStep, triggersFor } from "@/lib/marketing/series";
 import { defaultMarketingSettings } from "@/lib/marketing/settings";
 import { getMarketingSettings, settingsTenantOf } from "@/lib/marketing/store";
 import { getPortalContext, scopeOf } from "@/lib/portal";
@@ -21,7 +21,7 @@ async function Body({ params }: { params: Promise<{ id: string; stepId: string }
   const { id, stepId } = await params;
   const demo = demoMode();
   const site = ctx.sites[0]?.domain ? `https://${ctx.sites[0].domain}` : "https://example.com";
-  const c = { storage: demo ? ("browser" as const) : ("server" as const), tenantId: ctx.tenant.id, site, canEdit: may(ctx.member.role, "marketing.edit"), triggers: TRIGGERS };
+  const c = { storage: demo ? ("browser" as const) : ("server" as const), tenantId: ctx.tenant.id, site, canEdit: may(ctx.member.role, "marketing.edit"), triggers: triggersFor(ctx.tenant) };
   if (demo) {
     return <StepEditor c={c} seriesId={id} stepId={stepId} server={null} brand={defaultMarketingSettings(settingsTenantOf(ctx)).brand} baseUrl={appUrl()} team={demoTeam(ctx).map((m) => ({ email: m.email, name: m.name }))} me={ctx.member.email} />;
   }

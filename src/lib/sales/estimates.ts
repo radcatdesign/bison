@@ -408,19 +408,21 @@ export async function recordEstimatePaid(tx: Tx, id: string, p: PaidInput): Prom
 }
 
 /** For payments taken outside Stripe: a check, cash, a bank transfer. */
-export async function markEstimatePaid(tenantId: string, id: string, actor: string, note: string, database: Database = db()): Promise<{ ok: boolean; message: string; orderId?: string }> {
+export async function markEstimatePaid(tenantId: string, id: string, actor: string, note: string, database: Database = db(), payments: PaymentsProvider | null = paymentsProvider()): Promise<{ ok: boolean; message: string; orderId?: string }> {
   const r = await withTenant(
     { tenantId, userId: actor },
     async (tx) => {
-      const e = await tx.selectFrom("estimates").select(["status", "total_cents"]).where("id", "=", id).executeTakeFirst();
+      const e = await tx.selectFrom("estimates").select(["status", "total_cents", "stripe_invoice_id"]).where("id", "=", id).executeTakeFirst();
       if (!e) return { ok: false, message: "That estimate isn't here anymore." } as const;
       if (!["approved", "invoiced", "sent", "viewed"].includes(e.status)) return { ok: false, message: e.status === "paid" ? "It's already paid." : "Only approved or sent estimates can be marked paid." } as const;
       const paid = await recordEstimatePaid(tx, id, { invoiceId: null, paymentIntentId: null, totalCents: e.total_cents, taxCents: 0, accountId: null, actor, note: note.trim() ? `Paid outside Stripe: ${note.trim()}` : "Paid outside Stripe" });
-      return paid ? ({ ok: true, ...paid } as const) : ({ ok: false, message: "Couldn't record the payment." } as const);
+      return paid ? ({ ok: true, ...paid, invoiceId: e.stripe_invoice_id, conn: await readPayments(tx) } as const) : ({ ok: false, message: "Couldn't record the payment." } as const);
     },
     database,
   );
   if (!r.ok) return r;
+  // The Stripe invoice is still open, so the client could pay it twice. Void it.
+  if (r.invoiceId && r.conn.accountId && payments) await payments.voidInvoice(r.conn.accountId, r.invoiceId).catch((err) => console.error("Voiding the paid invoice failed", err));
   if (r.created) await afterOrderPaid(tenantId, r.orderId, database);
   return { ok: true, message: `Marked paid. It's order #${r.orderNumber}.`, orderId: r.orderId };
 }

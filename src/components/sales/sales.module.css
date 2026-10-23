@@ -171,6 +171,7 @@
 }
 
 .lineHead {
+  margin-top: 16px;
   padding: 0 0 6px;
   color: var(--bo-ink-3);
   font-size: var(--bo-text-xs);

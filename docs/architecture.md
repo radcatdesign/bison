@@ -1,6 +1,6 @@
 # Bison Ops architecture
 
-Status: Phase 0 (foundation) and Marketing (Phase 3) built. This document covers the whole platform so later phases fit the same frame. Sections marked **Planned** are designed but not built yet.
+Status: Phase 0 (foundation), Sales (Phase 2) and Marketing (Phase 3) built. This document covers the whole platform so later phases fit the same frame. Sections marked **Planned** are designed but not built yet.
 
 ## The shape of it
 
@@ -97,6 +97,15 @@ Built so far (all with RLS):
 | `offer_codes` | Welcome codes, one per email ever | `code`, `email`, `discount_kind`, `discount`, `expires_at`, `redeemed_at`, `redeemed_note` |
 | `email_sends` | Every email to one person, and the send queue (no delete grant) | `kind` (newsletter, series, test), `status`, `attempts`, `next_attempt_at`, `locked_until`, `provider_id` |
 | `worker_runs` | System table: when each background job last ran | `name`, `last_run_at`, `last_result` |
+| `sales_settings` | One row per tenant, each column a JSON document checked by `src/lib/sales/settings.ts` | `store` (currency, shop on, alert emails, checkout, order limit, estimate terms), `shipping` (from address, boxes, rate source, carrier, flat rates, free-over, fulfillment), `trade` (open, intro, tiers) |
+| `products`, `product_variants` | The catalog | `slug` (unique per tenant), `status`, `options`, `photos`, `seo`, `source`; `options`, `sku` (unique per tenant), `price_cents`, `compare_at_cents`, `weight_oz`, `box`, `units_per_box`, `ships_alone`, `flat_ship_cents`, `active` |
+| `discounts` | Private codes | `code`, `percent_off` or `amount_off_cents`, `usage` (unlimited, single_use, per_account), `max_uses`, `min_order_cents`, `starts_on`, `ends_on`, `trade_account_id`, `note`, `active` |
+| `discount_redemptions` | Every use of a code, held during checkout | `discount_id` or `offer_code_id`, `status` (reserved, used, released), `reserved_until`, `email`, `cart_id`, `order_id` |
+| `carts` | A shopper's cart, priced on the server | `items`, `priced` (json), `email`, `discount_code`, `trade_account_id`, `status` (open, checkout, abandoned, ordered, inquiry), `checkout_session_id`, `last_active_at` |
+| `orders` | Paid orders from the shop, free orders and paid estimates (no delete grant) | `number` (from 1001), `source`, `status`, `fulfillment`, `items`, totals, `ship_to`, `stripe_account_id`, `stripe_checkout_session_id`, `stripe_payment_intent_id`, `stripe_invoice_id`, `alert`, `fulfillment_detail` |
+| `estimates`, `estimate_events` | Quotes and their history | `number` (from 101), `status`, `client`, `items`, `discount`, totals, `valid_until`, `link_version`, `approved_name`, `change_request`, `stripe_invoice_id`, `invoice_url`; `kind`, `actor`, `detail` (insert and read only) |
+| `trade_accounts` | Wholesale buyers | `company`, `email` (unique per tenant), `status` (applied, approved, declined, paused), `tier_override`, `note`, `details`, `session_version` |
+| `contact_shares` | Expiring links to one contact's page | `contact_id`, `expires_at`, `revoked_at`, `created_by` |
 
 **Planned**, added in the phase that needs them, each with the same RLS pattern: `visits`, `heat_points`, contact lists, `messages` (Phase 1); `products`, `estimates`, `orders`, `discounts`, `trade_accounts` (Phase 2); `assistant_chats`, `assistant_lessons`, `usage_counters` (Phase 4); `translations`, `push_subscriptions` (Phase 5); `jobs` (queue table, Phase 1).
 
@@ -200,6 +209,25 @@ One Resend account sends for every tenant; each tenant sends From its own verifi
 - **Images** are served at `/f/<id>` by `resolve_public_file()`, with a one-year immutable cache header and `nosniff`.
 - **Sample mode** covers subscribers, codes and results (`src/lib/sample/marketing.ts`); content and settings save either way, and sending to a list is refused while sample data is on.
 
+## Sales
+
+Each company sells through its own Stripe account (Connect). Bison Ops never holds the money, takes no fee on it, and never sees card details.
+
+- **Connecting Stripe.** Settings, Payments makes a connected account with the Accounts v2 API (full Stripe Dashboard, Stripe collects fees and covers losses, the same split as a Standard account) and sends an owner or admin through Stripe's hosted onboarding (`account_onboarding` account links). The account id lives in the tenant's `integrations` row (`provider = stripe`, nothing secret). `account.updated` on the Connect webhook keeps "can take payments" and Stripe Tax status current. Nobody pastes a key.
+- **The shop** lives at `/p/<company>/shop` (list), `/shop/<product>` (each product, with Product or ProductGroup structured data, Open Graph tags and share buttons), `/checkout`, `/order` (thank you), `/trade` (apply and sign in) and `/products.xml` (a Google Merchant feed). Products are in the sitemap and `llms.txt` too. `resolve_sales_tenant()` finds the company from the address only while it has Sales. The pages use their own neutral look with the company's accent color (`src/components/shop`).
+- **Carts are an id in the browser.** `POST /p/<company>/cart` takes one change (add, set, remove, code, view) and answers the priced cart. Prices, trade pricing, codes and the order limit are worked out on the server (`src/lib/sales/pricing.ts`, pure) every time; the browser never sends a price.
+- **Checkout** is a Stripe Checkout Session in `elements` mode on the company's account, shown inside the shop's own page with Stripe.js (`initCheckoutElementsSdk`, loaded with the connected account). The session is made with `permissions.update_shipping_details: server_only`: when the shopper finishes their address, the page asks `/checkout/shipping`, which packs the cart (`packing.ts`: weight per box, ships-alone items, flat-rate items), gets live rates from the company's carrier, and sets the shipping details and options on the session. Stripe Tax is on when the company turns it on and its Stripe account has it active. Codes become a one-off coupon on that session.
+- **Recording the order.** `checkout.session.completed` on the Connect webhook (`/api/webhooks/stripe-connect`, verified with `STRIPE_CONNECT_WEBHOOK_SECRET`, tenant found with `resolve_tenant_by_connect_account()`) reads the session fresh from Stripe and turns the cart into an order. The thank-you page does the same if it gets there first, so nothing waits on the webhook and a missed webhook never loses an order. Either way it's idempotent. Then the team gets an email and, with ShipStation on, the order goes to ShipStation (retried by the sales job up to 5 times).
+- **Codes** are private to Bison Ops, not Stripe promotion codes. Single-use and per-account codes are held for the cart while its checkout is open (`discount_redemptions.status = reserved`), spent when the order is recorded, and let go when the checkout expires, the cart changes, or the sales job finds an old hold. A code that covers everything skips Stripe and places a free order with just an address. Welcome codes from Marketing are checked here too, first purchase only.
+- **Order limits.** Over the amount or quantity limit, checkout becomes a quote request: a contact, a submission, a draft estimate with the cart's lines, and an email to the team.
+- **Carriers** sit behind a `Carrier` interface (`carriers.ts`): ShipStation API v2 (`API-Key`, `/v2/rates`, `/v2/shipments` with `create_sales_order`), UPS (OAuth client credentials, Rating API Shop), and a stand-in (`SHIPPING_PROVIDER=stand-in`). Keys are encrypted in `integrations` and the inputs are write-only once saved. If live rates fail, checkout says so rather than guessing a price.
+- **Estimates.** The builder saves as you type. Sending emails a signed link (`/e/<token>`, purpose `estimate:v<link_version>`, 180 days; voiding bumps the version so old links stop). The client page marks it viewed, and the client approves by typing their full name, asks for changes, or declines. Approval checks the page they read is the latest (`seen`), then makes a Stripe invoice on the company's account (`collection_method: send_invoice`, `auto_advance: false`, finalized, so the Pay link works and Stripe sends nothing on its own). `invoice.paid` marks it paid, makes an order, emails the team and sends it to fulfillment. Marking paid by hand voids the open invoice so it can't be paid twice. Every step is a row in `estimate_events`. Only drafts can be deleted, enforced by a trigger.
+- **Trade accounts.** Buyers apply at `/p/<company>/trade` (signed timing token, hidden field, rate limit). Approving emails a sign-in link (`/trade/enter?t=`, purpose `trade-link:v<session_version>`, 24 hours), which sets an httpOnly cookie for that shop's path only, good for 30 days (`trade-session:v<session_version>`). Every request checks the account is still approved; pausing or declining bumps `session_version`, signing them out everywhere. The tier comes from 12-month spend (`tierFor`) unless the team sets one.
+- **Left-behind carts.** The sales job (`runSalesWork`, run by both crons, tenants from `due_sales_tenants()`) marks carts with an email that have been quiet for the company's hours as abandoned, starts the Marketing "Someone leaves a cart" series when the company has Marketing, lets go of old code holds, and retries fulfillment.
+- **Sharing a contact.** A row in `contact_shares` and a signed link (`/s/<token>`) that works until `expires_at` (1, 7 or 30 days) or until it's turned off. `resolve_contact_share()` returns the tenant only for a live link, and the page also checks the company still has contact sharing. It shows the person, what they sent, and their orders, estimates and carts, never team notes.
+- **Payments stand-in.** `PAYMENTS_PROVIDER=stand-in` plays Stripe in memory for tests and local work: onboarding, checkout (`/api/dev/payments`), invoices (`/api/dev/payments/invoice`) and refunds. It's refused on Vercel.
+- **Sample mode** covers orders, estimates, carts and trade accounts (`src/lib/sample/sales.ts`); the catalog, codes and settings are content and save either way.
+
 ## Search pack
 
 Published pages get `generateMetadata` (title, description, canonical, Open Graph and Twitter cards), an `opengraph-image` drawn per page, and LocalBusiness and FAQ structured data from the business details. Per tenant, `/p/<tenant>/sitemap.xml`, `/llms.txt` and `/llms-full.txt` are route handlers built live from published pages and `marketing_settings.search`, found with `resolve_marketing_tenant()` (active tenants with Marketing only). The dashboard's `robots.txt` allows `/p/` only and disallows each AI crawler for the pages of tenants that turned AI off (`ai_blocked_tenant_slugs()`).
@@ -218,7 +246,7 @@ Published pages get `generateMetadata` (title, description, canonical, Open Grap
 - An invite made in Bison Ops (email plus role) becomes active when that email joins the Clerk org. Anyone else lands as `pending` until an owner or admin approves them. Someone removed and added back starts over as `pending`.
 - Only a Clerk org admin can set up the Bison Ops account for an organization.
 - The dev sign-in never runs on any Vercel deployment (production or preview) and only signs in made-up `dev_` people.
-- Tenant checkout and invoices (Phase 2) use Stripe Connect Standard accounts and never touch the Bison Ops Stripe account.
+- Tenant checkout and invoices use each tenant's own connected Stripe account and never touch the Bison Ops Stripe account's balance.
 
 ## Environment
 

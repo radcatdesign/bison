@@ -1,0 +1,253 @@
+/* Styles for the discount codes, trade accounts and carts screens. Colors, type and spacing come from tokens.css. */
+
+.plainFieldset {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.gapAbove {
+  margin-top: 24px;
+}
+
+.gapBelow {
+  margin-bottom: 18px;
+}
+
+.thHelp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pushLeft {
+  margin-right: auto;
+}
+
+.tightCol {
+  display: grid;
+  gap: 8px;
+}
+
+.block {
+  display: block;
+}
+
+.scrollX {
+  overflow-x: auto;
+}
+
+.codeCell {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.codeCell strong {
+  font-family: var(--bo-font-mono);
+  font-size: var(--bo-text-sm);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.codeCell span {
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-xs);
+  line-height: 1.45;
+}
+
+.rowButton {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rowButton:hover strong {
+  color: var(--bo-accent-text);
+}
+
+.wideDialog {
+  width: min(640px, calc(100vw - 32px));
+}
+
+.dialogScroll {
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+}
+
+.codeRow {
+  display: flex;
+  gap: 8px;
+}
+
+.codeRow .input {
+  flex: 1;
+  min-width: 0;
+  text-transform: uppercase;
+}
+
+.valueRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 160px);
+  align-items: center;
+  gap: 10px;
+}
+
+.confirm {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--bo-line-strong);
+  border-radius: var(--bo-r-control);
+  background: var(--bo-raised);
+  font-size: var(--bo-text-sm);
+}
+
+.dangerButton {
+  border-color: var(--bo-bad);
+  color: var(--bo-bad);
+}
+
+.confirm div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---- Trade accounts ---- */
+
+.contents {
+  display: contents;
+}
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  border: 0;
+  background: var(--bo-scrim);
+  cursor: default;
+}
+
+.applications {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.application {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-r-card);
+  background: var(--bo-surface);
+}
+
+.applicationHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.applicationHead strong {
+  font-size: var(--bo-text-md);
+}
+
+.applicationHead span {
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tierHead,
+.tierRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px 110px 34px;
+  align-items: center;
+  gap: 8px;
+}
+
+.tierHead {
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-xs);
+  font-weight: 600;
+}
+
+.tierRow .input {
+  width: 100%;
+}
+
+.tierList {
+  display: grid;
+  gap: 8px;
+}
+
+.spend {
+  display: grid;
+  gap: 4px;
+}
+
+.spend small {
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-xs);
+}
+
+/* ---- Carts ---- */
+
+.recovery {
+  display: grid;
+  gap: 10px;
+  font-size: var(--bo-text-sm);
+}
+
+.recovery p {
+  color: var(--bo-ink-2);
+  line-height: 1.5;
+}
+
+.personLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.personLink:hover strong {
+  color: var(--bo-accent-text);
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .tierHead {
+    display: none;
+  }
+
+  .tierRow {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 34px;
+  }
+
+  .tierRow > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  .valueRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

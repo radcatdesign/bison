@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { setContactStatus } from "@/app/(portal)/actions";
+import { ContactSales } from "@/components/sales/contact-sales";
 import { ActionForm } from "@/components/ui/action-form";
 import { PageHeader, SampleBanner } from "@/components/ui";
 import { may } from "@/config/roles";
@@ -105,6 +106,8 @@ async function Panel({ id, repos, ctx }: { id: string; repos: Repos; ctx: Portal
             <dd>{formatAgo(contact.lastSeenAt)}</dd>
           </div>
         </dl>
+
+        <ContactSales ctx={ctx} contactId={contact.id} titleClass={s.timelineTitle} />
 
         <div className={s.timeline}>
           <h3 className={s.timelineTitle}>What they sent</h3>

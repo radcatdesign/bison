@@ -9,7 +9,7 @@ import { DEV_PEOPLE, DEV_TENANTS } from "@/lib/auth/dev-people";
 import type { Identity } from "@/lib/auth/identity";
 import type { PortalContext } from "@/lib/portal";
 
-export const DEMO_MESSAGE = "This is a demo with made-up data, so nothing is saved.";
+export { DEMO_MESSAGE } from "@/config/demo-text";
 
 const DAY = 86_400_000;
 

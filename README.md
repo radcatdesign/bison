@@ -2,7 +2,7 @@
 
 A multi-tenant platform from Bison (by RADCAT) that plugs into any company's website: analytics, a contacts inbox, and paid modules for sales, marketing and an AI assistant.
 
-**Status:** Phase 0 (foundation) and the Marketing module are built and tested. See `docs/architecture.md` for how it fits together and `docs/decisions.md` for open questions.
+**Status:** Phase 0 (foundation), the Sales module and the Marketing module are built and tested. See `docs/architecture.md` for how it fits together and `docs/decisions.md` for open questions.
 
 ## Run it locally
 
@@ -38,7 +38,7 @@ Database tests connect as the real app role, so they test row-level security its
 
 ## Demo deploy (no database)
 
-Set one environment variable on the Vercel project, `DEMO_MODE=1`, and leave `DATABASE_URL` unset. The site shows two made-up companies with sample data, a picker to sign in as any of four made-up people, and saves nothing on the server. Owners can unlock Marketing, Sales and add-ons with a trial or subscription to see them open up, and set up all of Marketing: brand kit, newsletters, email series, welcome offer, search pack and landing pages. It all stays in their own browser, and sending is pretend. Add `ANTHROPIC_API_KEY` (with a spend limit) to let the demo's page agent use Claude. `pnpm test:e2e:demo` tests it.
+Set one environment variable on the Vercel project, `DEMO_MODE=1`, and leave `DATABASE_URL` unset. The site shows two made-up companies with sample data, a picker to sign in as any of four made-up people, and saves nothing on the server. Owners can unlock Marketing, Sales and add-ons with a trial or subscription to see them open up, set up all of Marketing (brand kit, newsletters, email series, welcome offer, search pack and landing pages), look through sample estimates, orders, trade accounts and carts, and shop each made-up company's catalog up to paying. It all stays in their own browser, and sending is pretend. Add `ANTHROPIC_API_KEY` (with a spend limit) to let the demo's page agent use Claude. `pnpm test:e2e:demo` tests it.
 
 ## Deploy (Vercel + Neon)
 

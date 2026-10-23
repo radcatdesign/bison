@@ -4,6 +4,25 @@ export type Release = { version: string; date: string; title: string; changes: s
 
 export const RELEASES: Release[] = [
   {
+    version: "0.4.0",
+    date: "2026-10-23",
+    title: "Sales",
+    changes: [
+      "Sales Setup walks you through payments, products, shipping, checkout, estimates, codes and trade accounts, step by step. Each step ticks off as soon as it's really done.",
+      "Connect your own Stripe account from Settings. Every payment goes straight to you, and Bison Ops takes no cut. No keys to paste.",
+      "Products with sizes, colors and other options, a price and sale price for each version, photos, and what each one weighs and ships in. Import a spreadsheet, a Shopify export, your Shopify store or a product feed.",
+      "Your shop: a page for every product with share buttons and the details Google reads, a cart, and checkout with Stripe right on the page. Shipping is priced live from ShipStation or UPS, or flat or free. Sales tax through Stripe Tax if you want it.",
+      "Every paid order emails your team and, with ShipStation connected, lands there ready to pack. Refund all or part of an order from its page.",
+      "Estimates your clients approve by typing their name on their own page. They can ask for changes or decline too. Approval sends the invoice with a Pay link, and paying turns it into an order.",
+      "Discount codes for a percent or amount off, once per buyer, once ever or unlimited, with limits, a minimum order and dates. Each one is spelled out in a sentence before you save it. A code that covers everything ships free with no payment.",
+      "Big orders can turn into quote requests instead, landing as a draft estimate.",
+      "Trade accounts: buyers apply, you approve, and they sign in with an emailed link to see their own prices. Prices step up as they buy more over the year.",
+      "Carts people left behind, and an email series that follows up when you have Marketing.",
+      "Share one contact's page, with their orders and estimates, at a link that expires.",
+      "In the demo, look through sample orders and estimates and shop the made-up catalog up to paying.",
+    ],
+  },
+  {
     version: "0.3.0",
     date: "2026-10-23",
     title: "Marketing",

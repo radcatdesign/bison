@@ -251,3 +251,45 @@ test("marketing: subscribers, series, offer and search pack show sample data and
   await expect(page.getByTestId("step-search.describe")).toHaveAttribute("data-done", "true");
   await expect(page.getByTestId("step-search.contact")).toHaveAttribute("data-done", "true");
 });
+
+test("sales: made-up estimates, orders and trade accounts, and a shop to try", async ({ page }) => {
+  const t = (id: string) => page.getByTestId(id).filter({ visible: true });
+  await pick(page, "dev_cora");
+  await page.goto("/sales");
+  await page.getByTestId("unlock").click();
+  await page.getByTestId("start-trial").getByRole("button").click();
+  await page.getByTestId("open-mode").click();
+  await expect(t("module-sales")).toBeVisible();
+
+  await page.goto("/sales/estimates?status=all");
+  await t("estimate-row").first().getByRole("link").click();
+  await expect(t("estimate-builder")).toContainText("This is a demo");
+
+  await page.goto("/sales/orders");
+  await t("order-row").first().getByRole("link").click();
+  await expect(t("order-panel")).toBeVisible();
+  await t("order-alert-again").click();
+  await expect(t("order-notice")).toHaveText("This is a demo with made-up data, so nothing is saved.");
+
+  for (const [path, row] of [
+    ["/sales/discounts", "discount-row"],
+    ["/sales/trade", "trade-row"],
+    ["/sales/carts", "cart-row"],
+  ] as const) {
+    await page.goto(path);
+    await expect(t(row).first()).toBeVisible();
+  }
+
+  // The shop works with the made-up catalog, up to paying.
+  await page.goto("/p/ridgelineroasters/shop");
+  await t("shop-card").first().click();
+  await t("add-to-cart").click();
+  await expect(t("cart-line")).toHaveCount(1);
+  await page.getByTestId("cart-code").fill("WELCOME10");
+  await page.getByRole("button", { name: "Apply" }).click();
+  await expect(page.getByTestId("cart-drawer")).toContainText("WELCOME10: 10% off");
+  await page.getByTestId("cart-checkout").click();
+  await page.getByTestId("checkout-email").fill("someone@example.com");
+  await page.getByTestId("checkout-continue").click();
+  await expect(page.getByTestId("checkout-error")).toHaveText("This is a demo, so checkout stops here. In your own shop, this is where Stripe takes the payment.");
+});

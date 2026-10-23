@@ -20,7 +20,8 @@ export function ShopFrame({ shop, buyer, children, cart = true }: { shop: Shop; 
           {buyer ? (
             <form action={`/p/${shop.slug}/trade/leave`} method="post" className={s.barSide}>
               <span className={s.tradeNote} data-testid="trade-signed-in">
-                {buyer.company}, {buyer.tierName} prices
+                <span className={s.tradeCompany}>{buyer.company}, </span>
+                {buyer.tierName} prices
               </span>
               <button type="submit" className={s.ghost}>
                 Sign out
