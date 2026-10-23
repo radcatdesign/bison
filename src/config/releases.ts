@@ -9,6 +9,7 @@ export const RELEASES: Release[] = [
     title: "Pages",
     changes: [
       "Build landing pages by describing them. The agent builds the page section by section while you watch, and changes it when you ask.",
+      "Start from one of eight templates: quote request, product launch, seasonal sale, consultation, event, trade program, free guide or simple contact. Each opens with your company name and brand color already in.",
       "Edit any section by hand, reorder sections, and pick colors, type and corners. Undo takes back any change.",
       "Preview every page at desktop, tablet and phone size.",
       "The agent never makes up prices, dates, reviews or numbers. It marks what only you know in yellow, and a page can't go live until those are filled in.",

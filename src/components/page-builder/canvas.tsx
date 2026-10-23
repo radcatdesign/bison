@@ -43,11 +43,31 @@ type Props = {
   scrollTo?: { id: string; nonce: number } | null;
   /** A small, non-interactive card preview. */
   thumb?: boolean;
+  /** Show section outlines and selection, as in the editor. Off for plain previews. */
+  outlines?: boolean;
+  testId?: string;
   title?: string;
 };
 
-export function Canvas({ doc, brand, device = "desktop", selectedId = null, onSelect, scrollTo, thumb, title = "Page preview" }: Props) {
+export function Canvas({ doc, brand, device = "desktop", selectedId = null, onSelect, scrollTo, thumb, outlines = true, testId, title = "Page preview" }: Props) {
   const [stageRef, size] = useSize<HTMLDivElement>();
+  // Card previews only load once they're near the screen, so a long list stays fast.
+  const [seen, setSeen] = useState(!thumb);
+  useEffect(() => {
+    const el = stageRef.current;
+    if (seen || !el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setSeen(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "300px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [seen, stageRef]);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const onSelectRef = useRef(onSelect);
@@ -120,7 +140,7 @@ export function Canvas({ doc, brand, device = "desktop", selectedId = null, onSe
 
   return (
     <div ref={stageRef} className={thumb ? s.thumbStage : s.stage} data-device={thumb ? undefined : device}>
-      {scale > 0 && (
+      {scale > 0 && seen && (
         <div className={s.device} data-device={thumb ? "thumb" : device} data-ready={mount ? true : undefined} style={{ width: d.width * scale, height: frameHeight * scale }}>
           {!mount && <div className={s.frameLoading} aria-hidden="true" />}
           <iframe
@@ -134,9 +154,9 @@ export function Canvas({ doc, brand, device = "desktop", selectedId = null, onSe
             tabIndex={thumb ? -1 : 0}
             aria-hidden={thumb || undefined}
             style={{ transform: `scale(${scale})`, pointerEvents: thumb ? "none" : "auto", opacity: mount ? 1 : 0 }}
-            data-testid={thumb ? undefined : "builder-frame"}
+            data-testid={testId ?? (thumb ? undefined : "builder-frame")}
           />
-          {mount && createPortal(<LandingPage doc={doc} brand={brand} selectedId={selectedId} builder={!thumb} />, mount)}
+          {mount && createPortal(<LandingPage doc={doc} brand={brand} selectedId={outlines ? selectedId : null} builder={!thumb && outlines} />, mount)}
         </div>
       )}
     </div>

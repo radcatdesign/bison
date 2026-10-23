@@ -34,6 +34,7 @@ If your plan doesn't include a mode, opening it shows what it does and an **Unlo
 
 Pages are in Marketing. Describe the page you want in plain words: who it's for, what you're offering, and what people should do. For example: "A spring sale page for glow aggregate, 15% off through May, with a quote form and a few common questions." The agent builds it section by section while you watch.
 
+- **Or start from a template.** Pick one of eight, from a quote request to a free guide. It opens with your company name and brand color already in; untick "Use my brand color" to keep the template's own colors.
 - **Change it by asking.** "Make it dark", "add an FAQ", "shorten the copy". Undo takes back any change.
 - **Or change it by hand.** Open Sections to edit any text, reorder sections or add new ones. Page sets the colors, type and corners.
 - **Check the yellow.** The agent never makes up prices, dates, reviews or numbers. Anything only you know is marked in yellow, and the page can't go live until those are filled in.

@@ -4,14 +4,16 @@
 import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { createPageAction } from "@/app/(portal)/marketing/pages/actions";
 import type { PageStatus } from "@/lib/pages/repo";
 import { useIsClient } from "@/lib/use-is-client";
 import { emptyPageDoc, type PageDoc, titleFromBrief } from "@/lib/pages/schema";
 import s from "./pages-home.module.css";
 import { Canvas } from "./canvas";
+import { buildFromTemplate, type PageTemplate } from "@/lib/pages/page-templates";
 import { createDemoPage, demoPages } from "./store";
+import { TemplateGallery } from "./template-gallery";
 
 export type PageCard = { id: string; title: string; slug: string; status: PageStatus; edited: string; doc: PageDoc };
 
@@ -35,6 +37,20 @@ export function PagesHome({ storage, pages: serverPages, tenant, seed, canEdit, 
   const client = useIsClient();
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
+  const [creating, startCreating] = useTransition();
+
+  const startFromTemplate = (template: PageTemplate, brandColor: boolean) => {
+    if (storage === "browser") {
+      const page = createDemoPage(tenant.id, template.name, buildFromTemplate(template, { brand: tenant.name, accent: tenant.accent }, brandColor));
+      setBusy(true);
+      router.push(`/marketing/pages/${page.id}`);
+      return;
+    }
+    const data = new FormData();
+    data.set("template", template.key);
+    if (brandColor) data.set("brandColor", "on");
+    startCreating(() => createPageAction(data));
+  };
 
   // Demo pages live in this browser, so they're read once the page is running here.
   const pages = useMemo<PageCard[] | null>(() => {
@@ -108,12 +124,24 @@ export function PagesHome({ storage, pages: serverPages, tenant, seed, canEdit, 
         </form>
       )}
 
+      <section className={s.block} aria-labelledby="templates-heading">
+        <div className={s.blockHead}>
+          <h2 id="templates-heading">Start from a template</h2>
+          <p>Each one is filled in with your company name. Open one to see it at full size.</p>
+        </div>
+        <TemplateGallery tenant={tenant} canEdit={canEdit} busy={busy || creating} onUse={startFromTemplate} />
+      </section>
+
+      <section className={s.block} aria-labelledby="your-pages-heading">
+        <div className={s.blockHead}>
+          <h2 id="your-pages-heading">Your pages</h2>
+        </div>
       {pages === null ? (
         <div className={s.grid} aria-busy="true">
           <div className={s.skeleton} />
         </div>
       ) : pages.length === 0 ? (
-        <p className={s.empty}>No pages yet. Describe one above and the agent will build it.</p>
+        <p className={s.empty}>No pages yet. Describe one above, or start from a template.</p>
       ) : (
         <ul className={s.grid} data-testid="page-list">
           {pages.map((p) => (
@@ -135,6 +163,7 @@ export function PagesHome({ storage, pages: serverPages, tenant, seed, canEdit, 
           ))}
         </ul>
       )}
+      </section>
     </div>
   );
 }

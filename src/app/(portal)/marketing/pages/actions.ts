@@ -10,6 +10,7 @@ import { demoMode } from "@/lib/env";
 import { createPage, deletePage, PageInputError, publishPage, renamePage, saveDraft, unpublishPage } from "@/lib/pages/repo";
 import { emptyPageDoc, PageDocError, parsePageDoc, titleFromBrief } from "@/lib/pages/schema";
 import { getPortalContext, type PortalContext, scopeOf } from "@/lib/portal";
+import { buildFromTemplate, findTemplate } from "@/lib/pages/page-templates";
 import { publicPageUrl } from "@/lib/pages/urls";
 
 export type PageActionResult = { ok: boolean; message: string; url?: string; savedAt?: string };
@@ -32,6 +33,12 @@ function failure(err: unknown, fallback: string): PageActionResult {
 export async function createPageAction(formData: FormData): Promise<void> {
   const { ctx, error } = await pagesContext("pages.edit");
   if (error) redirect(`/marketing/pages?error=${encodeURIComponent(error)}`);
+  const template = findTemplate(formData.get("template"));
+  if (template) {
+    const doc = parsePageDoc(buildFromTemplate(template, { brand: ctx.tenant.name, accent: ctx.settings.accent }, formData.get("brandColor") === "on"));
+    const { id } = await createPage(scopeOf(ctx), { title: template.name, doc, actor: ctx.member.email });
+    redirect(`/marketing/pages/${id}`);
+  }
   const blank = formData.get("mode") === "blank";
   const prompt = blank ? "" : String(formData.get("prompt") ?? "").trim().slice(0, 2000);
   const title = String(formData.get("title") ?? "").trim() || (prompt ? titleFromBrief(prompt) : "Untitled page");

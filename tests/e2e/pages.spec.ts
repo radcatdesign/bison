@@ -110,6 +110,32 @@ test.describe("page builder", () => {
     await expect(page.getByTestId("page-status")).toHaveText("Live");
   });
 
+  test("start from a template, in the company's name and color, and publish it once it's filled in", async ({ page }) => {
+    await signIn(page, "dev_ada");
+    await page.goto("/marketing/pages");
+    await expect(page.getByTestId("template-gallery").getByRole("button")).toHaveCount(8);
+
+    // Preview the Simple contact template, with Brightwater's name already in it.
+    await page.getByTestId("template-simple").click();
+    const dialog = page.getByTestId("template-preview");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.frameLocator('[data-testid="template-frame"]').getByText("Brightwater Pools").first()).toBeVisible();
+    await expect(dialog).toContainText("Ready to edit.");
+    await page.getByTestId("use-template").click();
+    await page.waitForURL(/\/marketing\/pages\/[0-9a-f-]{36}$/);
+    await expect(page.getByTestId("page-editor")).toContainText("Simple contact");
+    await expect(page.getByTestId("placeholder-count")).toHaveCount(0);
+    await page.getByTestId("publish").click();
+    await expect(page.getByTestId("page-status")).toHaveText("Live");
+
+    // A template with things only the business knows can't go live until they're filled in.
+    await page.goto("/marketing/pages");
+    await page.getByTestId("template-quote").click();
+    await expect(page.getByTestId("template-preview")).toContainText("4 yellow spots");
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("template-preview")).toBeHidden();
+  });
+
   test("only roles with Marketing can build pages", async ({ page }) => {
     for (const who of ["dev_ben", "dev_dana"] as const) {
       await page.context().clearCookies();

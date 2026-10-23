@@ -148,3 +148,15 @@ test("pages: an example to open, the agent builds new ones, and they stay in thi
   await expect(other.getByTestId("page-card")).toHaveCount(1);
   await other.close();
 });
+
+test("pages: start from a template in the demo", async ({ page }) => {
+  await pick(page, "dev_ada");
+  await page.goto("/marketing/pages");
+  await page.getByTestId("template-launch").click();
+  await expect(page.getByTestId("template-preview").frameLocator('[data-testid="template-frame"]').getByRole("heading", { level: 1 })).toHaveText("Something new is on the way");
+  await page.getByTestId("use-template").click();
+  await expect(page.getByTestId("page-editor")).toContainText("Product launch");
+  await expect(page.getByTestId("save-state")).toHaveText("Saved in this browser");
+  await page.goto("/marketing/pages");
+  await expect(page.getByTestId("page-card")).toHaveCount(2);
+});

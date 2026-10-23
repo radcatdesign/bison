@@ -163,3 +163,36 @@ describe("the offline agent", () => {
     expect(r.doc.sections).toHaveLength(pools.sections.length);
   });
 });
+
+describe("page templates", () => {
+  const ctx = { brand: "Brightwater Pools", accent: "#2ef2d0" };
+
+  it("all build valid pages with the company's name in them and nothing made up", async () => {
+    const { PAGE_TEMPLATES, buildFromTemplate } = await import("@/lib/pages/page-templates");
+    expect(new Set(PAGE_TEMPLATES.map((t) => t.key)).size).toBe(PAGE_TEMPLATES.length);
+    expect(PAGE_TEMPLATES.length).toBeGreaterThanOrEqual(8);
+    for (const t of PAGE_TEMPLATES) {
+      const doc = parsePageDoc(buildFromTemplate(t, ctx));
+      expect(allText(doc), t.key).toContain("Brightwater Pools");
+      expect(allText(doc), t.key).not.toMatch(/—/);
+      expect(doc.sections.some((s) => s.type === "form"), `${t.key} has a form`).toBe(true);
+      // Every button goes to a section that exists on the page.
+      const ids = new Set(doc.sections.map((s) => s.id));
+      for (const href of allText(doc).match(/"href":"#[a-z-]+"/g) ?? []) expect(ids.has(href.slice(9, -1)), `${t.key} ${href}`).toBe(true);
+    }
+  });
+
+  it("use the company's color unless asked to keep their own", async () => {
+    const { findTemplate, buildFromTemplate } = await import("@/lib/pages/page-templates");
+    const launch = findTemplate("launch")!;
+    expect(buildFromTemplate(launch, ctx).theme.accent).toBe("#2ef2d0");
+    expect(buildFromTemplate(launch, ctx, false).theme.accent).toBe(launch.theme.accent);
+    expect(findTemplate("nope")).toBeNull();
+  });
+
+  it("still fit when the company name is very long", async () => {
+    const { PAGE_TEMPLATES, buildFromTemplate } = await import("@/lib/pages/page-templates");
+    const long = { brand: "The Extremely Long Named Pool and Spa Supply Company of the Pacific Northwest", accent: "#3b5bff" };
+    for (const t of PAGE_TEMPLATES) expect(() => parsePageDoc(buildFromTemplate(t, long)), t.key).not.toThrow();
+  });
+});

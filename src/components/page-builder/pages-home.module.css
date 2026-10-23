@@ -80,6 +80,29 @@
   font-size: var(--bo-text-xs);
 }
 
+.block {
+  display: grid;
+  gap: 14px;
+}
+
+.blockHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.blockHead h2 {
+  font-size: var(--bo-text-lg);
+  font-weight: 660;
+  letter-spacing: -0.015em;
+}
+
+.blockHead p {
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-sm);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
