@@ -34,6 +34,26 @@ function check(purpose: string, token: unknown, maxDays: number, now: number): {
   return { id: m[2], issuedAt, expired: now - issuedAt > maxDays * 86_400_000 };
 }
 
+/**
+ * A signed link for any public page: estimates, trade sign-in, shared contacts.
+ * `purpose` names the page and a version (like "estimate:v2"), so bumping the
+ * version on the row retires every link made before it.
+ */
+export function signLink(purpose: string, id: string, issuedAt = Date.now()): string {
+  return make(purpose, id, issuedAt);
+}
+
+export function checkLink(purpose: string, token: unknown, maxDays: number, now = Date.now()) {
+  return check(purpose, token, maxDays, now);
+}
+
+/** The id inside a link, read without checking it, to look up which version to check against. */
+export function linkId(token: unknown): string | null {
+  if (typeof token !== "string" || token.length > 200) return null;
+  const m = /^\d{1,4}\.([0-9a-f-]{36})\.[0-9a-z]{6,12}\.[A-Za-z0-9_-]{43}$/.exec(token);
+  return m && UUID.test(m[1]) ? m[1] : null;
+}
+
 export function unsubscribeToken(sendId: string, issuedAt = Date.now()): string {
   return make("unsubscribe", sendId, issuedAt);
 }

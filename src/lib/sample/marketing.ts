@@ -21,9 +21,9 @@ export type SampleSubscriber = {
 
 export type SampleList = { id: string; name: string };
 
-const FIRST = ["Avery", "Jordan", "Maya", "Luis", "Priya", "Noah", "Hana", "Marcus", "Elena", "Theo", "Imani", "Grace", "Diego", "Nora", "Kenji", "Ruth", "Omar", "Tessa", "Wes", "Lila", "Felix", "Sasha", "Andre", "June", "Caleb", "Rosa", "Ezra", "Mina", "Jonah", "Iris", "Paloma", "Reza", "Cleo", "Arlo", "Nadia"];
-const LAST = ["Bennett", "Okafor", "Nguyen", "Alvarez", "Shah", "Fischer", "Tanaka", "Reid", "Moreno", "Hart", "Kowalski", "Price", "Delgado", "Brooks", "Ito", "Sullivan", "Haddad", "Larsen", "Ford", "Castillo", "Weiss", "Park", "Rowe", "Quinn", "Mendez", "Ochoa", "Lind"];
-const MAIL = ["gmail.com", "outlook.com", "icloud.com", "yahoo.com", "proton.me"];
+export const FIRST = ["Avery", "Jordan", "Maya", "Luis", "Priya", "Noah", "Hana", "Marcus", "Elena", "Theo", "Imani", "Grace", "Diego", "Nora", "Kenji", "Ruth", "Omar", "Tessa", "Wes", "Lila", "Felix", "Sasha", "Andre", "June", "Caleb", "Rosa", "Ezra", "Mina", "Jonah", "Iris", "Paloma", "Reza", "Cleo", "Arlo", "Nadia"];
+export const LAST = ["Bennett", "Okafor", "Nguyen", "Alvarez", "Shah", "Fischer", "Tanaka", "Reid", "Moreno", "Hart", "Kowalski", "Price", "Delgado", "Brooks", "Ito", "Sullivan", "Haddad", "Larsen", "Ford", "Castillo", "Weiss", "Park", "Rowe", "Quinn", "Mendez", "Ochoa", "Lind"];
+export const MAIL = ["gmail.com", "outlook.com", "icloud.com", "yahoo.com", "proton.me"];
 const DAY = 86_400_000;
 
 const LISTS: Record<string, string[]> = {

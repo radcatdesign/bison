@@ -34,6 +34,8 @@ export type Limits = Partial<{
   translatedStringsPerMonth: number;
   translatedStringsPerVisitorPerDay: number;
   pageAgentRunsPerMonth: number;
+  products: number;
+  tradeAccounts: number;
 }>;
 
 export type CatalogItem = {
@@ -69,7 +71,7 @@ export const CATALOG: Record<ItemKey, CatalogItem> = {
     name: "Sales",
     pitch: "Send estimates people approve online, turn them into invoices, and take orders on your site. Payments go straight to your own Stripe account.",
     price: placeholder(149),
-    limits: {},
+    limits: { products: 2_000, tradeAccounts: 500 },
     trialDays: 14,
     stripePriceEnv: "STRIPE_PRICE_SALES",
   },

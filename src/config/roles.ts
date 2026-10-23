@@ -14,7 +14,8 @@ export type Action =
   | "data.delete"
   | "pages.edit"
   | "pages.publish"
-  | "marketing.edit";
+  | "marketing.edit"
+  | "sales.edit";
 
 type RoleSpec = { label: string; description: string; modes: readonly ModeKey[]; actions: readonly Action[] };
 
@@ -23,19 +24,19 @@ export const ROLES: Record<Role, RoleSpec> = {
     label: "Owner",
     description: "Everything, including billing and deleting the account.",
     modes: ["analyze", "marketing", "sales"],
-    actions: ["billing.manage", "members.manage", "settings.manage", "contacts.edit", "email.send", "refunds.issue", "data.export", "data.delete", "pages.edit", "pages.publish", "marketing.edit"],
+    actions: ["billing.manage", "members.manage", "settings.manage", "contacts.edit", "email.send", "refunds.issue", "data.export", "data.delete", "pages.edit", "pages.publish", "marketing.edit", "sales.edit"],
   },
   admin: {
     label: "Admin",
     description: "Everything except billing.",
     modes: ["analyze", "marketing", "sales"],
-    actions: ["members.manage", "settings.manage", "contacts.edit", "email.send", "refunds.issue", "data.export", "data.delete", "pages.edit", "pages.publish", "marketing.edit"],
+    actions: ["members.manage", "settings.manage", "contacts.edit", "email.send", "refunds.issue", "data.export", "data.delete", "pages.edit", "pages.publish", "marketing.edit", "sales.edit"],
   },
   sales: {
     label: "Sales",
-    description: "Analyze and Sales. Can work contacts, send email and issue refunds.",
+    description: "Analyze and Sales. Can work contacts, send email, run estimates, orders and the catalog, and issue refunds.",
     modes: ["analyze", "sales"],
-    actions: ["contacts.edit", "email.send", "refunds.issue"],
+    actions: ["contacts.edit", "email.send", "refunds.issue", "sales.edit"],
   },
   marketing: {
     label: "Marketing",

@@ -217,7 +217,7 @@ export interface MarketingSettingsTable {
 export interface FilesTable {
   id: Generated<string>;
   tenant_id: TenantId;
-  kind: "logo" | "email-image";
+  kind: "logo" | "email-image" | "product-image";
   content_type: "image/png" | "image/jpeg" | "image/gif";
   bytes: Buffer;
   width: number;
@@ -381,6 +381,241 @@ export interface WorkerRunsTable {
   last_result: Json;
 }
 
+// ---- Sales ----------------------------------------------------------------------------
+
+type Numeric = ColumnType<string, string | number, string | number>;
+type NumericNullable = ColumnType<string | null, string | number | null | undefined, string | number | null>;
+
+export type ProductStatus = "active" | "draft" | "archived";
+export type ProductSource = "manual" | "csv" | "shopify" | "feed";
+export type CartStatus = "open" | "checkout" | "ordered" | "abandoned" | "inquiry";
+export type EstimateStatus = "draft" | "sent" | "viewed" | "changes_requested" | "approved" | "declined" | "invoiced" | "paid" | "void";
+export type EstimateEventKind = "created" | "edited" | "sent" | "email_failed" | "viewed" | "changes_requested" | "approved" | "declined" | "invoiced" | "invoice_failed" | "paid" | "void" | "reopened";
+export type OrderSource = "checkout" | "estimate" | "free";
+export type OrderStatus = "paid" | "partially_refunded" | "refunded" | "canceled";
+export type FulfillmentStatus = "none" | "pending" | "sent" | "failed" | "shipped";
+export type DiscountUsage = "unlimited" | "single_use" | "per_account";
+export type RedemptionStatus = "reserved" | "used" | "released";
+export type TradeStatus = "applied" | "approved" | "declined" | "paused";
+
+export interface SalesSettingsTable {
+  tenant_id: TenantId;
+  store: Json<unknown>;
+  shipping: Json<unknown>;
+  trade: Json<unknown>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface ProductsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  slug: string;
+  name: string;
+  description: Generated<string>;
+  status: Generated<ProductStatus>;
+  options: Json<unknown>;
+  photos: Json<unknown>;
+  category: Generated<string>;
+  tax_code: Generated<string>;
+  seo: Json<unknown>;
+  source: Generated<ProductSource>;
+  source_id: Generated<string>;
+  position: Generated<number>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface ProductVariantsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  product_id: string;
+  options: Json<unknown>;
+  sku: Generated<string>;
+  price_cents: number;
+  compare_at_cents: number | null;
+  weight_oz: Numeric;
+  box: Generated<string>;
+  units_per_box: Generated<number>;
+  ships_alone: Generated<boolean>;
+  flat_ship_cents: number | null;
+  active: Generated<boolean>;
+  position: Generated<number>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface TradeAccountsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  company: string;
+  contact_name: Generated<string>;
+  email: string;
+  phone: Generated<string>;
+  website: Generated<string>;
+  details: Json<unknown>;
+  status: Generated<TradeStatus>;
+  tier_override: Generated<string>;
+  note: Generated<string>;
+  contact_id: string | null;
+  decided_at: TimestampNullable;
+  decided_by: Generated<string>;
+  session_version: Generated<number>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface DiscountsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  code: string;
+  percent_off: NumericNullable;
+  amount_off_cents: number | null;
+  usage: Generated<DiscountUsage>;
+  trade_account_id: string | null;
+  max_uses: number | null;
+  min_order_cents: number | null;
+  starts_at: TimestampNullable;
+  expires_at: TimestampNullable;
+  note: Generated<string>;
+  active: Generated<boolean>;
+  created_by: Generated<string>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface CartsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  status: Generated<CartStatus>;
+  items: Json<unknown>;
+  email: string | null;
+  name: Generated<string>;
+  contact_id: string | null;
+  trade_account_id: string | null;
+  discount_code: Generated<string>;
+  priced: Json<unknown>;
+  checkout_session_id: string | null;
+  last_active_at: Timestamp;
+  abandoned_at: TimestampNullable;
+  order_id: string | null;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface EstimatesTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  number: number;
+  status: Generated<EstimateStatus>;
+  source: Generated<"team" | "inquiry">;
+  title: Generated<string>;
+  client: Json<unknown>;
+  contact_id: string | null;
+  trade_account_id: string | null;
+  items: Json<unknown>;
+  discount: Json<unknown>;
+  shipping_cents: Generated<number>;
+  subtotal_cents: Generated<number>;
+  discount_cents: Generated<number>;
+  total_cents: Generated<number>;
+  currency: Generated<string>;
+  notes: Generated<string>;
+  internal_note: Generated<string>;
+  valid_until: ColumnType<Date | null, Date | string | null | undefined, Date | string | null>;
+  link_version: Generated<number>;
+  sent_at: TimestampNullable;
+  viewed_at: TimestampNullable;
+  responded_at: TimestampNullable;
+  approved_name: Generated<string>;
+  change_request: Generated<string>;
+  delivery: Json<unknown>;
+  stripe_customer_id: string | null;
+  stripe_invoice_id: string | null;
+  invoice_url: string | null;
+  invoiced_at: TimestampNullable;
+  paid_at: TimestampNullable;
+  order_id: string | null;
+  created_by: Generated<string>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface EstimateEventsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  estimate_id: string;
+  kind: EstimateEventKind;
+  actor: Generated<string>;
+  detail: Generated<string>;
+  created_at: Timestamp;
+}
+
+export interface OrdersTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  number: number;
+  source: OrderSource;
+  status: Generated<OrderStatus>;
+  fulfillment: Generated<FulfillmentStatus>;
+  email: string;
+  name: Generated<string>;
+  phone: Generated<string>;
+  ship_to: Json<unknown>;
+  items: Json<unknown>;
+  subtotal_cents: Generated<number>;
+  discount_cents: Generated<number>;
+  shipping_cents: Generated<number>;
+  tax_cents: Generated<number>;
+  total_cents: Generated<number>;
+  refunded_cents: Generated<number>;
+  currency: Generated<string>;
+  discount_code: Generated<string>;
+  shipping_service: Generated<string>;
+  cart_id: string | null;
+  estimate_id: string | null;
+  contact_id: string | null;
+  trade_account_id: string | null;
+  stripe_account_id: string | null;
+  stripe_checkout_session_id: string | null;
+  stripe_payment_intent_id: string | null;
+  stripe_invoice_id: string | null;
+  alert: Json<unknown>;
+  fulfillment_detail: Json<unknown>;
+  note: Generated<string>;
+  paid_at: Timestamp;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface DiscountRedemptionsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  discount_id: string | null;
+  offer_code_id: string | null;
+  code: string;
+  status: Generated<RedemptionStatus>;
+  reserved_until: TimestampNullable;
+  email: string | null;
+  trade_account_id: string | null;
+  cart_id: string | null;
+  order_id: string | null;
+  amount_cents: Generated<number>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface ContactSharesTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  contact_id: string;
+  expires_at: Timestamp;
+  revoked_at: TimestampNullable;
+  created_by: Generated<string>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
 export interface DB {
   tenants: TenantsTable;
   sites: SitesTable;
@@ -411,6 +646,17 @@ export interface DB {
   offer_codes: OfferCodesTable;
   email_sends: EmailSendsTable;
   worker_runs: WorkerRunsTable;
+  sales_settings: SalesSettingsTable;
+  products: ProductsTable;
+  product_variants: ProductVariantsTable;
+  trade_accounts: TradeAccountsTable;
+  discounts: DiscountsTable;
+  carts: CartsTable;
+  estimates: EstimatesTable;
+  estimate_events: EstimateEventsTable;
+  orders: OrdersTable;
+  discount_redemptions: DiscountRedemptionsTable;
+  contact_shares: ContactSharesTable;
 }
 
 export type Tenant = Selectable<TenantsTable>;

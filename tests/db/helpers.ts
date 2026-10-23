@@ -34,6 +34,17 @@ export const TENANT_TABLES = [
   "sequence_runs",
   "offer_codes",
   "email_sends",
+  "sales_settings",
+  "products",
+  "product_variants",
+  "trade_accounts",
+  "discounts",
+  "carts",
+  "estimates",
+  "estimate_events",
+  "orders",
+  "discount_redemptions",
+  "contact_shares",
 ] as const;
 
 let appDb: Database | null = null;

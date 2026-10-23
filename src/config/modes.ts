@@ -50,7 +50,17 @@ export const MODES: ModeSpec[] = [
     label: "Sales",
     item: "module:sales",
     feature: "sales.estimates",
-    pages: [{ href: "/sales", label: "Overview", feature: "sales.estimates" }],
+    pages: [
+      { href: "/sales", label: "Overview", feature: "sales.estimates" },
+      { href: "/sales/setup", label: "Setup", feature: "sales.estimates" },
+      { href: "/sales/estimates", label: "Estimates", feature: "sales.estimates" },
+      { href: "/sales/orders", label: "Orders", feature: "sales.orders" },
+      { href: "/sales/products", label: "Products", feature: "sales.products" },
+      { href: "/sales/discounts", label: "Discount codes", feature: "sales.discounts" },
+      { href: "/sales/trade", label: "Trade accounts", feature: "sales.trade" },
+      { href: "/sales/carts", label: "Carts", feature: "sales.abandoned" },
+      { href: "/sales/checkout", label: "Checkout", feature: "sales.checkout" },
+    ],
   },
 ];
 
