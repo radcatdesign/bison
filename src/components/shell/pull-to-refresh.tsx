@@ -17,7 +17,9 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onStart = (e: TouchEvent) => {
-      start.current = window.scrollY <= 0 && e.touches.length === 1 ? e.touches[0].clientY : null;
+      // Full-screen tools like the page editor scroll on their own and opt out.
+      const inTool = e.target instanceof Element && e.target.closest("[data-no-pull]");
+      start.current = !inTool && window.scrollY <= 0 && e.touches.length === 1 ? e.touches[0].clientY : null;
     };
     const onMove = (e: TouchEvent) => {
       if (start.current === null) return;

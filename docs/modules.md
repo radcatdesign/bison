@@ -31,7 +31,11 @@ Products, checkout through the tenant's own Stripe account, estimates and invoic
 
 ## Marketing (module, Phase 3)
 
-Newsletters, brand kit, email series, subscribers and unsubscribes, signup forms, welcome offer, search pack. Phase 0: the mode, its Unlock screen and a "being built" overview.
+Newsletters, brand kit, email series, subscribers and unsubscribes, signup forms, welcome offer, search pack. Built so far:
+
+- **Pages** (`/marketing/pages`, feature `marketing.pages`): a landing page maker with an agent. Describe a page and the agent builds it section by section in a live preview at desktop, tablet or phone width; ask for changes in plain words, or edit any section, the order and the style by hand. Undo, autosave, yellow placeholders for facts only the company knows (publishing waits until they're filled), publish to `/p/<company>/<page>`, and forms that send to Contacts with bot filtering. The agent runs on Claude with an `ANTHROPIC_API_KEY`, otherwise an offline helper. Plan limit: 300 agent requests a month (placeholder). Owners, admins and the Marketing role can build and publish.
+
+The rest of the mode shows a "being built" overview.
 
 ## AI Assistant (module, Phase 4)
 

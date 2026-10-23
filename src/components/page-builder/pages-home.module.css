@@ -1,0 +1,161 @@
+.home {
+  display: grid;
+  gap: 28px;
+}
+
+.composer {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  padding: 22px;
+  overflow: hidden;
+  border: 1px solid var(--bo-accent-line);
+  border-radius: var(--bo-r-panel);
+  background:
+    radial-gradient(70% 140% at 100% 0%, var(--bo-accent-soft), transparent 70%),
+    var(--bo-surface);
+  box-shadow: var(--bo-shadow);
+}
+
+.mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(140deg, var(--bo-accent), color-mix(in oklab, var(--bo-accent) 60%, #b14dff));
+  color: var(--bo-accent-ink);
+  box-shadow: 0 8px 20px -8px color-mix(in oklab, var(--bo-accent) 60%, transparent);
+}
+
+.mark svg {
+  width: 19px;
+  height: 19px;
+}
+
+.composerBody {
+  display: grid;
+  flex: 1;
+  gap: 12px;
+  min-width: 0;
+}
+
+.composerTitle {
+  font-size: var(--bo-text-lg);
+  font-weight: 660;
+  letter-spacing: -0.015em;
+}
+
+.composerBody textarea {
+  width: 100%;
+  min-height: 92px;
+  padding: 12px 14px;
+  border: 1px solid var(--bo-line-strong);
+  border-radius: 12px;
+  background: var(--bo-surface);
+  color: var(--bo-ink);
+  font: inherit;
+  font-size: var(--bo-text-md);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.composerBody textarea:focus {
+  border-color: var(--bo-accent);
+  box-shadow: var(--bo-focus);
+  outline: none;
+}
+
+.composerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.composerNote {
+  flex: 1 1 260px;
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-xs);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.card {
+  display: grid;
+  overflow: hidden;
+  padding: 0 !important;
+  transition:
+    border-color var(--bo-fast) var(--bo-ease),
+    transform var(--bo-fast) var(--bo-ease);
+}
+
+.card:hover {
+  border-color: var(--bo-accent-line);
+  transform: translateY(-1px);
+}
+
+.thumb {
+  border-bottom: 1px solid var(--bo-line);
+}
+
+.cardBody {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px 16px;
+}
+
+.cardBody strong {
+  font-size: var(--bo-text-md);
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-xs);
+}
+
+.cardMeta .mono {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.edited {
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-xs);
+}
+
+.empty {
+  color: var(--bo-ink-2);
+}
+
+.skeleton {
+  aspect-ratio: 16 / 13;
+  border-radius: var(--bo-r-card);
+  background: var(--bo-sunken);
+}
+
+@media (max-width: 600px) {
+  .composer {
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px;
+  }
+
+  .composerActions > .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}

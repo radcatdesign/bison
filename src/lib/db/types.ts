@@ -155,6 +155,31 @@ export interface EventsTable {
   props: Json;
 }
 
+export interface PagesTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  slug: string;
+  title: string;
+  doc: Json<unknown>;
+  published_doc: ColumnType<unknown | null, unknown | string | null | undefined, unknown | string | null>;
+  published_at: TimestampNullable;
+  created_by: Generated<string>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface PageRevisionsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  page_id: string;
+  source: "agent" | "publish";
+  doc: Json<unknown>;
+  instruction: Generated<string>;
+  reply: Generated<string>;
+  actor: Generated<string>;
+  created_at: Timestamp;
+}
+
 export interface WebhookEventsTable {
   provider: string;
   event_id: string;
@@ -173,6 +198,8 @@ export interface DB {
   contacts: ContactsTable;
   submissions: SubmissionsTable;
   events: EventsTable;
+  pages: PagesTable;
+  page_revisions: PageRevisionsTable;
   webhook_events: WebhookEventsTable;
 }
 

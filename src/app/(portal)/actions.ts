@@ -28,6 +28,8 @@ const NOT_ALLOWED: Record<Action, string> = {
   "refunds.issue": "Your role can't issue refunds.",
   "data.export": "Only owners and admins can export data.",
   "data.delete": "Only owners and admins can delete data.",
+  "pages.edit": "Your role can't change landing pages.",
+  "pages.publish": "Your role can't publish landing pages.",
 };
 
 /** Role check first. In the demo, only actions that opt in (turning things on) go ahead. */

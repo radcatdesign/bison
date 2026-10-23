@@ -4,6 +4,18 @@ export type Release = { version: string; date: string; title: string; changes: s
 
 export const RELEASES: Release[] = [
   {
+    version: "0.2.0",
+    date: "2026-10-22",
+    title: "Pages",
+    changes: [
+      "Build landing pages by describing them. The agent builds the page section by section while you watch, and changes it when you ask.",
+      "Edit any section by hand, reorder sections, and pick colors, type and corners. Undo takes back any change.",
+      "Preview every page at desktop, tablet and phone size.",
+      "The agent never makes up prices, dates, reviews or numbers. It marks what only you know in yellow, and a page can't go live until those are filled in.",
+      "Publish a page to its own address. Its form sends go straight to Contacts, with bots filtered out.",
+    ],
+  },
+  {
     version: "0.1.0",
     date: "2026-10-21",
     title: "Foundation",

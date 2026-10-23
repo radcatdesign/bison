@@ -114,3 +114,33 @@ test("people who can't change the plan still can't in the demo", async ({ page }
   await expect(page.getByText("Only an owner can change the plan.")).toBeVisible();
   await expect(page.getByTestId("start-trial")).toHaveCount(0);
 });
+
+test("pages: an example to open, the agent builds new ones, and they stay in this browser", async ({ page, browser }) => {
+  await pick(page, "dev_ada");
+  await page.goto("/marketing/pages");
+  await expect(page.getByTestId("page-card")).toHaveCount(1);
+  await expect(page.getByTestId("page-card")).toContainText("Spring glow sale");
+
+  // The example is finished, but the demo can't put it live.
+  await page.getByTestId("page-card").click();
+  await expect(page.getByTestId("page-editor")).toBeVisible();
+  await page.getByTestId("publish").click();
+  await expect(page.getByTestId("editor-notice")).toContainText("This is a demo, so pages can't go live");
+
+  // A new page from a brief.
+  await page.goto("/marketing/pages");
+  await page.locator("#new-page-prompt").fill("A page to book a free pool design consultation");
+  await page.getByTestId("build-page").click();
+  await expect(page.getByTestId("agent-reply").last()).toHaveAttribute("data-state", "done", { timeout: 20_000 });
+  await expect(page.getByTestId("stand-in-note")).toBeVisible();
+  await expect(page.getByTestId("save-state")).toHaveText("Saved in this browser");
+  await page.goto("/marketing/pages");
+  await expect(page.getByTestId("page-card")).toHaveCount(2);
+
+  // Someone else's browser starts from the example only.
+  const other = await browser.newPage({ baseURL: test.info().project.use.baseURL });
+  await pick(other, "dev_ada");
+  await other.goto("/marketing/pages");
+  await expect(other.getByTestId("page-card")).toHaveCount(1);
+  await other.close();
+});

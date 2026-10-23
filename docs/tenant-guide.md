@@ -30,6 +30,17 @@ Every number has a **?** next to it. Tap it to see exactly how it's counted. A f
 
 If your plan doesn't include a mode, opening it shows what it does and an **Unlock** button. From there, an owner can start a 14-day trial with no card, or subscribe. When a module is turned off, your data stays. Turn it back on and everything is where you left it.
 
+## Building a landing page
+
+Pages are in Marketing. Describe the page you want in plain words: who it's for, what you're offering, and what people should do. For example: "A spring sale page for glow aggregate, 15% off through May, with a quote form and a few common questions." The agent builds it section by section while you watch.
+
+- **Change it by asking.** "Make it dark", "add an FAQ", "shorten the copy". Undo takes back any change.
+- **Or change it by hand.** Open Sections to edit any text, reorder sections or add new ones. Page sets the colors, type and corners.
+- **Check the yellow.** The agent never makes up prices, dates, reviews or numbers. Anything only you know is marked in yellow, and the page can't go live until those are filled in.
+- **Publish.** The page goes live at its own address. Anyone who sends its form shows up in Contacts.
+
+Desktop, tablet and phone buttons show the page at each size. On a phone, Preview is its own tab.
+
 ## Your team
 
 | Role | Sees | Can |
@@ -37,7 +48,7 @@ If your plan doesn't include a mode, opening it shows what it does and an **Unlo
 | Owner | Everything | Everything, including the plan and deleting the account |
 | Admin | Everything | Everything except the plan |
 | Sales | Analyze and Sales | Work contacts, send email, issue refunds |
-| Marketing | Analyze and Marketing | Work contacts, send email |
+| Marketing | Analyze and Marketing | Work contacts, send email, build and publish landing pages |
 | Viewer | Analyze | Look only |
 
 ## Your data

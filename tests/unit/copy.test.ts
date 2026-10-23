@@ -15,7 +15,9 @@ function files(dir: string): string[] {
   });
 }
 
-const targets = [...files(path.join(ROOT, "src")), path.join(ROOT, "docs/tenant-guide.md")];
+// The page agent's list of words it must never write has to name them.
+const EXEMPT = new Set([path.join(ROOT, "src/lib/pages/agent/banned-words.ts")]);
+const targets = [...files(path.join(ROOT, "src")), path.join(ROOT, "docs/tenant-guide.md")].filter((f) => !EXEMPT.has(f));
 
 describe("copy rules", () => {
   it("has no em dashes", () => {

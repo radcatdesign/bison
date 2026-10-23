@@ -33,7 +33,10 @@ export const MODES: ModeSpec[] = [
     label: "Marketing",
     item: "module:marketing",
     feature: "marketing.newsletters",
-    pages: [{ href: "/marketing", label: "Overview", feature: "marketing.newsletters" }],
+    pages: [
+      { href: "/marketing", label: "Overview", feature: "marketing.newsletters" },
+      { href: "/marketing/pages", label: "Pages", feature: "marketing.pages" },
+    ],
   },
   {
     key: "sales",

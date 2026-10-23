@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AppWindow,
   ChartLine,
   Inbox,
   LayoutGrid,
@@ -33,6 +34,7 @@ const PAGE_ICONS: Record<string, LucideIcon> = {
   "/analyze/pages": PanelsTopLeft,
   "/analyze/contacts": Inbox,
   "/marketing": Megaphone,
+  "/marketing/pages": AppWindow,
   "/sales": Receipt,
 };
 

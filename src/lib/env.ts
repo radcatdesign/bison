@@ -71,11 +71,22 @@ export function billingMode(): BillingProviderName | "not_set_up" {
   }
 }
 
+/** The dashboard's public address. APP_URL wins; on Vercel without it, the project's production domain. */
 export function appUrl(): string {
-  return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  return (process.env.APP_URL || (vercel ? `https://${vercel}` : "http://localhost:3000")).replace(/\/$/, "");
 }
 
 /** Cookies are Secure in production, except when testing a production build over plain http. */
 export function secureCookies(): boolean {
   return process.env.NODE_ENV === "production" && !process.env.APP_URL?.startsWith("http://");
+}
+
+/**
+ * Which page agent answers. Claude when ANTHROPIC_API_KEY is set, otherwise the
+ * offline stand-in. PAGE_AGENT=stand-in forces the stand-in (tests use it).
+ */
+export function pageAgentName(): "claude" | "stand-in" {
+  if (process.env.PAGE_AGENT === "stand-in") return "stand-in";
+  return process.env.ANTHROPIC_API_KEY ? "claude" : "stand-in";
 }

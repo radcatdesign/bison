@@ -48,12 +48,20 @@ Copy `.env.example` to `.env.local` for local work. Tests use `.env.test` (commi
 | `SECRETS_KEYS` | Yes | Comma-separated `version:base64key` pairs, 32 bytes each. Tenant API keys and tokens are encrypted with these. |
 | `SECRETS_ACTIVE_KEY` | Yes | Which version encrypts new values. To rotate: add a key, make it active, re-encrypt stored values with `rotateSecret`, then remove the old key. |
 
+### Page agent
+
+| Variable | Required | What it does |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | For the Claude agent | Marketing > Pages builds with Claude when set. Without it, an offline helper answers that builds from a brief and follows short, direct changes. For the public demo, use a key with a monthly spend limit; the demo also limits each visitor's network address to 20 requests an hour. |
+| `ANTHROPIC_MODEL` | No | Defaults to `claude-sonnet-5-5`. |
+| `PAGE_AGENT` | No | `stand-in` forces the offline helper even when a key is set. Tests use it so they never call Claude. |
+
 ### Jobs and app
 
 | Variable | Required | What it does |
 |---|---|---|
 | `CRON_SECRET` | On Vercel | Vercel Cron sends it as a bearer token to `/api/cron/daily`. The job briefly locks the events table while it adds or drops a month, so it runs at 2:17 AM Pacific. |
-| `APP_URL` | Yes | The dashboard's public URL, used in Stripe return links. |
+| `APP_URL` | Yes | The dashboard's public URL, used in Stripe return links and in published page addresses (`/p/<company>/<page>`). |
 | `PW_CHROMIUM_PATH` | No | Points Playwright at a Chromium other than its own download. |
 | `E2E_PORT` | No | Port for the end-to-end test server. Default 3100. |
 

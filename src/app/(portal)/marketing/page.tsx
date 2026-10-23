@@ -17,7 +17,13 @@ const PLANNED = [
 export default function MarketingPage() {
   return (
     <Suspense fallback={<PageHeader title="Marketing" />}>
-      <ModulePage mode="marketing" title="Marketing" note="Email your list from your own domain, in your own colors." planned={PLANNED} />
+      <ModulePage
+        mode="marketing"
+        title="Marketing"
+        note="Landing pages and email, in your own colors."
+        ready={[{ title: "Pages", body: "Describe a landing page and the agent builds it while you watch. Edit anything by hand, then publish. Forms send to Contacts.", href: "/marketing/pages", cta: "Build a page" }]}
+        planned={PLANNED}
+      />
     </Suspense>
   );
 }

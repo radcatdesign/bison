@@ -82,6 +82,8 @@ Built in Phase 0 (all with RLS):
 | `submissions` | Every form capture | `contact_id`, `form_key`, `form_type`, `fields`, `status`, `spam_reason`, `alert` |
 | `events` | Page views, leaves, actions (partitioned by month) | `occurred_at`, `site_id`, `visit_id`, `browser_id`, `visitor_hash`, `type`, `path`, `name`, `props` |
 | `webhook_events` | System table: dedupes inbound webhooks | `provider`, `event_id` (app role may insert only) |
+| `pages` | Landing pages built in Marketing > Pages | `slug` (unique per tenant), `title`, `doc` (draft, json), `published_doc`, `published_at` |
+| `page_revisions` | Every agent change and every publish | `page_id`, `source` (agent, publish), `doc`, `instruction`, `reply`, `actor` |
 
 **Planned**, added in the phase that needs them, each with the same RLS pattern: `visits`, `heat_points`, `lists`, `list_items`, `messages`, `files` (Phase 1); `products`, `estimates`, `orders`, `discounts`, `trade_accounts` (Phase 2); `newsletters`, `newsletter_sends`, `sequences`, `sequence_steps`, `sequence_runs`, `subscribers`, `unsubscribes` (Phase 3); `assistant_chats`, `assistant_lessons`, `usage_counters` (Phase 4); `translations`, `push_subscriptions` (Phase 5); `jobs` (queue table, Phase 1).
 
@@ -154,6 +156,17 @@ Event types: `pageview`, `leave`, `action`, `heartbeat` (every 15 s while active
 3. `getPortalContext()` reads the session (Clerk or dev), resolves the tenant, loads the member row under that tenant's context (RLS confirms membership), loads entitlements and settings, and returns `{ tenant, member, access, settings }`.
 4. The page asks `can()` and `may()`, then reads through a repository (database or sample).
 5. Server actions repeat step 3. They never trust anything the browser sends about tenant or role.
+
+## Landing pages and the page agent
+
+A page is a small JSON document (`src/lib/pages/schema.ts`): a theme, search details and up to 16 typed sections (hero, features, steps, numbers, quote, offer, questions, form, call to action, text). Everything that edits a page goes through one set of ops (`src/lib/pages/ops.ts`), and every op result is checked against the schema, so a page can't hold a bad link (only https, mailto, tel and `#section` are allowed) or a form without an email field.
+
+- **Editor** (`/marketing/pages/[id]`): a client component holding the document, with undo, autosave through server actions, and a live preview. The preview is `/page-frame`, a static page in a sandboxed iframe (`allow-scripts` only, so it has no origin and can't reach the dashboard). The editor posts the document to it; it posts back clicks so a section can be selected from the preview.
+- **Agent** (`POST /api/pages/agent`): takes the document as the editor has it plus a request, and streams back newline-delimited JSON: one `op` event per change (with the full document), then `done`. On Claude, the model edits only through six tools (`add_section`, `update_section`, `remove_section`, `move_section`, `set_theme`, `set_seo`). Each tool call is applied the moment its block finishes streaming, so the preview fills in while the model is still writing; errors go back to the model as tool results so it can fix them. At most six rounds. Without `ANTHROPIC_API_KEY`, an offline stand-in (`stand-in.ts`) builds from a brief and follows short, direct changes. The route checks role, plan and the monthly request limit, and saves the result with the request in `page_revisions`.
+- **Facts**: the agent is told never to invent quotes, reviews, numbers, prices or dates, and to write `[Add ...]` placeholders instead. Publishing refuses while any are left.
+- **Publishing**: copies `doc` to `published_doc`. Visitors see `/p/<tenant-slug>/<page-slug>`, found with the `resolve_published_page` SECURITY DEFINER function and then read under that tenant's RLS. Drafts are never public.
+- **Forms**: `POST /p/<tenant>/<page>/submit` accepts only the fields that page's form has, upserts a contact and records a submission (`form_type = landing-page`). A filled hidden field or a send under 1.5 seconds is kept as spam with no contact.
+- **Sample mode doesn't apply**: pages are content a company makes, not data it measures, so they save whether sample data is on or off. The public demo keeps pages in the visitor's browser instead.
 
 ## Billing flow
 

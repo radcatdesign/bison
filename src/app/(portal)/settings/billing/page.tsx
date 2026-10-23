@@ -29,6 +29,7 @@ const LIMIT_LABELS: Record<keyof Limits, string> = {
   answersPerVisitorPerDay: "Answers per visitor a day",
   translatedStringsPerMonth: "Translated lines a month",
   translatedStringsPerVisitorPerDay: "Translated lines per visitor a day",
+  pageAgentRunsPerMonth: "Page agent requests a month",
 };
 
 async function Billing({ searchParams }: { searchParams: Promise<{ item?: string; done?: string }> }) {

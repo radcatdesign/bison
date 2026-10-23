@@ -21,7 +21,9 @@
     "test:e2e:demo": "playwright test -c playwright.demo.config.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1",
     "@clerk/nextjs": "^7.9.19",
+    "@fontsource-variable/fraunces": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
     "@fontsource-variable/mona-sans": "^5.3.0",
     "kysely": "^0.29.7",

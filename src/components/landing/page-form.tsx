@@ -1,0 +1,62 @@
+"use client";
+
+import { type FormEvent, useEffect, useRef, useState } from "react";
+import type { SectionOf } from "@/lib/pages/schema";
+import { FormFields, formClasses } from "./landing-page";
+
+/** The working form on a published landing page. Sends to Contacts. */
+export function PageForm({ section, endpoint }: { section: SectionOf<"form">; endpoint: string }) {
+  const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
+  const [message, setMessage] = useState("");
+  // When the form appeared. A send faster than a person could manage is kept as spam.
+  const started = useRef<number | null>(null);
+  useEffect(() => {
+    started.current = Date.now();
+  }, []);
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    const fields = Object.fromEntries(section.fields.map((f) => [f, String(data.get(f) ?? "")]));
+    setState("sending");
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ formId: section.id, fields, trap: String(data.get("website") ?? ""), elapsedMs: started.current ? Date.now() - started.current : 0 }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { message?: string };
+      setMessage(body.message ?? (res.ok ? section.success : "This wasn't sent. Try again in a minute."));
+      setState(res.ok ? "done" : "error");
+    } catch {
+      setMessage("This wasn't sent. Check your connection and try again.");
+      setState("error");
+    }
+  }
+
+  if (state === "done") {
+    return (
+      <p className={formClasses.done} role="status" data-testid="page-form-done">
+        {message}
+      </p>
+    );
+  }
+
+  return (
+    <form className={formClasses.form} onSubmit={onSubmit} data-testid="page-form">
+      <FormFields section={section} disabled={state === "sending"} />
+      <label className={formClasses.trap} aria-hidden="true">
+        Leave this empty
+        <input name="website" tabIndex={-1} autoComplete="off" />
+      </label>
+      {state === "error" && (
+        <p className={formClasses.error} role="alert">
+          {message}
+        </p>
+      )}
+      <button type="submit" className={formClasses.submit} disabled={state === "sending"}>
+        {state === "sending" ? "Sending" : section.submit}
+      </button>
+    </form>
+  );
+}

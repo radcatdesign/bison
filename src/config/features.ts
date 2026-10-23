@@ -27,6 +27,7 @@ export const FEATURES = {
   "marketing.brand-kit": ["module:marketing"],
   "marketing.welcome-offer": ["module:marketing"],
   "marketing.seo": ["module:marketing"],
+  "marketing.pages": ["module:marketing"],
 
   // AI Assistant
   "assistant.widget": ["module:assistant"],

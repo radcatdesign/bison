@@ -38,7 +38,7 @@ Database tests connect as the real app role, so they test row-level security its
 
 ## Demo deploy (no database)
 
-Set one environment variable on the Vercel project, `DEMO_MODE=1`, and leave `DATABASE_URL` unset. The site shows two made-up companies with sample data, a picker to sign in as any of four made-up people, and saves nothing on the server. Owners can unlock Marketing, Sales and add-ons with a trial or subscription to see them open up; that stays in their own browser until they reset it. `pnpm test:e2e:demo` tests it.
+Set one environment variable on the Vercel project, `DEMO_MODE=1`, and leave `DATABASE_URL` unset. The site shows two made-up companies with sample data, a picker to sign in as any of four made-up people, and saves nothing on the server. Owners can unlock Marketing, Sales and add-ons with a trial or subscription to see them open up, and build landing pages in Marketing > Pages; both stay in their own browser. Add `ANTHROPIC_API_KEY` (with a spend limit) to let the demo's page agent use Claude. `pnpm test:e2e:demo` tests it.
 
 ## Deploy (Vercel + Neon)
 
@@ -47,6 +47,7 @@ Set one environment variable on the Vercel project, `DEMO_MODE=1`, and leave `DA
 3. In Clerk, turn on Organizations. Set the Clerk keys, and add a webhook to `/api/webhooks/clerk` for `organizationMembership.created` and `.deleted`.
 4. In Stripe, create a monthly price for each module and add-on, set the `STRIPE_PRICE_*` variables, and add a webhook to `/api/webhooks/stripe` for `customer.subscription.created`, `.updated` and `.deleted`.
 5. Set `SECRETS_KEYS`, `SECRETS_ACTIVE_KEY`, `CRON_SECRET` and `APP_URL`. Every variable is explained in `docs/settings-and-env.md`.
+6. For the page agent in Marketing > Pages, set `ANTHROPIC_API_KEY`. Without it, an offline helper answers instead.
 
 ## Where things are
 

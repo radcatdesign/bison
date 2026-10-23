@@ -14,6 +14,7 @@ const demoEnv = {
   // No DEV_AUTH_SECRET on purpose: DEMO_MODE=1 should be the only setting a demo needs.
   APP_URL: baseURL,
   NEXT_TELEMETRY_DISABLED: "1",
+  PAGE_AGENT: "stand-in",
 };
 
 export default defineConfig({
