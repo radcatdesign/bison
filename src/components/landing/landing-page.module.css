@@ -19,6 +19,7 @@
   --lp-gutter: clamp(20px, 5vw, 72px);
 
   min-height: 100dvh;
+  color-scheme: light;
   background: var(--lp-bg);
   color: var(--lp-ink);
   font-family: var(--lp-body);

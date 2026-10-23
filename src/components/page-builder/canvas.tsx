@@ -61,8 +61,21 @@ export function Canvas({ doc, brand, device = "desktop", selectedId = null, onSe
     const root = d?.getElementById("root");
     if (!d || !root || d.head.dataset.ready) return;
     d.head.dataset.ready = "1";
-    for (const el of document.querySelectorAll('link[rel="stylesheet"], style')) d.head.appendChild(el.cloneNode(true));
-    setMount(root);
+    // Show the page once its styles have loaded (or after a moment), never unstyled.
+    const loads: Promise<unknown>[] = [];
+    for (const el of document.querySelectorAll('link[rel="stylesheet"], style')) {
+      const copy = el.cloneNode(true) as HTMLElement;
+      if (copy instanceof HTMLLinkElement) {
+        loads.push(
+          new Promise((done) => {
+            copy.addEventListener("load", done, { once: true });
+            copy.addEventListener("error", done, { once: true });
+          }),
+        );
+      }
+      d.head.appendChild(copy);
+    }
+    void Promise.race([Promise.all(loads), new Promise((done) => setTimeout(done, 1500))]).then(() => setMount(root));
   };
 
   // Clicking selects a section. Links, buttons and forms do nothing in the editor.
@@ -120,7 +133,7 @@ export function Canvas({ doc, brand, device = "desktop", selectedId = null, onSe
             sandbox="allow-same-origin"
             tabIndex={thumb ? -1 : 0}
             aria-hidden={thumb || undefined}
-            style={{ transform: `scale(${scale})`, pointerEvents: thumb ? "none" : "auto" }}
+            style={{ transform: `scale(${scale})`, pointerEvents: thumb ? "none" : "auto", opacity: mount ? 1 : 0 }}
             data-testid={thumb ? undefined : "builder-frame"}
           />
           {mount && createPortal(<LandingPage doc={doc} brand={brand} selectedId={selectedId} builder={!thumb} />, mount)}
