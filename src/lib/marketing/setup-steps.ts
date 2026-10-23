@@ -33,7 +33,7 @@ export type SetupStep = {
   manual?: boolean;
 };
 
-export type ToolSetup = { key: ToolKey; name: string; href: string; summary: string; optional?: boolean; steps: SetupStep[] };
+export type ToolSetup<K extends string = ToolKey> = { key: K; name: string; href: string; summary: string; optional?: boolean; steps: SetupStep[] };
 
 export function buildSetup(f: SetupFacts): ToolSetup[] {
   const owner = f.canManageSettings ? undefined : "An owner or admin on your team does this step.";
@@ -279,13 +279,13 @@ export function buildSetup(f: SetupFacts): ToolSetup[] {
   ];
 }
 
-export type SetupProgress = { done: number; total: number; next: (SetupStep & { tool: ToolSetup }) | null };
+export type SetupProgress<K extends string = ToolKey> = { done: number; total: number; next: (SetupStep & { tool: ToolSetup<K> }) | null };
 
 /** Required steps only: optional ones never hold up "done". */
-export function progressOf(tools: ToolSetup[]): SetupProgress {
+export function progressOf<K extends string>(tools: ToolSetup<K>[]): SetupProgress<K> {
   let done = 0;
   let total = 0;
-  let next: SetupProgress["next"] = null;
+  let next: SetupProgress<K>["next"] = null;
   for (const tool of tools) {
     if (tool.optional) continue;
     for (const step of tool.steps) {
@@ -298,7 +298,7 @@ export function progressOf(tools: ToolSetup[]): SetupProgress {
   return { done, total, next };
 }
 
-export function toolProgress(tool: ToolSetup): { done: number; total: number; complete: boolean } {
+export function toolProgress(tool: ToolSetup<string>): { done: number; total: number; complete: boolean } {
   const required = tool.steps.filter((s) => !s.optional);
   const done = required.filter((s) => s.done).length;
   return { done, total: required.length, complete: done === required.length };

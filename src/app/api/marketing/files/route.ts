@@ -1,5 +1,6 @@
-// Image uploads for the brand kit and the email builder. Signed-in only, with
-// the plan and role checked here. Images are re-encoded before they're saved.
+// Image uploads for the brand kit, the email builder and product photos.
+// Signed-in only, with the plan and role checked here. Images are re-encoded
+// before they're saved.
 import { sql } from "kysely";
 import { may } from "@/config/roles";
 import { can } from "@/lib/access/entitlements";
@@ -17,8 +18,14 @@ const refuse = (status: number, message: string) => Response.json({ message }, {
 
 export async function POST(req: Request) {
   const ctx = await getPortalContext();
-  if (!can(ctx.tenant, "marketing.newsletters")) return refuse(403, "Images are part of Marketing. Unlock Marketing to upload them.");
-  if (!may(ctx.member.role, "marketing.edit")) return refuse(403, "Your role can't upload images.");
+  const wanted = new URL(req.url).searchParams.get("kind");
+  if (wanted === "product-image") {
+    if (!can(ctx.tenant, "sales.products")) return refuse(403, "Product photos are part of Sales. Unlock Sales to upload them.");
+    if (!may(ctx.member.role, "sales.edit")) return refuse(403, "Your role can't change products.");
+  } else {
+    if (!can(ctx.tenant, "marketing.newsletters")) return refuse(403, "Images are part of Marketing. Unlock Marketing to upload them.");
+    if (!may(ctx.member.role, "marketing.edit")) return refuse(403, "Your role can't upload images.");
+  }
   if (demoMode()) return refuse(403, "This is a demo, so images stay in your browser.");
   if (!allow(`upload:${ctx.tenant.id}`, 120, 60 * 60 * 1000)) return refuse(429, "That's a lot of uploads in an hour. Try again in a little while.");
 
@@ -32,7 +39,7 @@ export async function POST(req: Request) {
     return refuse(400, "Couldn't read that upload. Try again.");
   }
   const file = form.get("file");
-  const kind = form.get("kind") === "logo" ? "logo" : "email-image";
+  const kind = wanted === "product-image" ? "product-image" : form.get("kind") === "logo" ? "logo" : "email-image";
   if (!(file instanceof File)) return refuse(400, "Pick an image to upload.");
   if (file.size > MAX_UPLOAD_BYTES) return refuse(413, "That image is over 12 MB. Try a smaller one.");
 

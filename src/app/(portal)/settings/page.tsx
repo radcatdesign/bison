@@ -16,9 +16,10 @@ import s from "./settings.module.css";
 export const metadata: Metadata = { title: "Settings" };
 
 const INTEGRATIONS = [
-  { provider: "resend", name: "Email sending", breaks: "Newsletters, series and form alerts can't be emailed until your sending domain is verified.", href: "/settings/email" },
-  { provider: "stripe-connect", name: "Your Stripe account", breaks: "Needed for Sales. Checkout and invoices pay into this account." },
-  { provider: "shipstation", name: "ShipStation", breaks: "Needed for live shipping rates and sending paid orders to fulfillment." },
+  { provider: "resend", name: "Email sending", breaks: "Newsletters, series, estimates and order alerts come from Bison Ops instead of your domain until it's verified.", href: "/settings/email" },
+  { provider: "stripe", name: "Your Stripe account", breaks: "Needed for Sales. Checkout and invoices pay into this account; without it, the shop can't take payment.", href: "/settings/payments" },
+  { provider: "shipstation", name: "ShipStation", breaks: "For live shipping rates and sending paid orders to be packed and labeled.", href: "/settings/shipping" },
+  { provider: "ups", name: "UPS", breaks: "For live UPS rates at checkout with your own account's prices.", href: "/settings/shipping" },
 ];
 
 function itemStatus(state: ItemState, key: PaidItemKey): { label: string; tone: string } {

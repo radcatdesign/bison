@@ -45,6 +45,17 @@ async function guard(action: Action, feature: FeatureKey, opts: { data?: boolean
   return { ctx, error: null };
 }
 
+
+/** Email sending is shared by Marketing and Sales, so either module opens it. */
+async function sendingGuard(action: "settings.manage" | "edit"): Promise<Guarded> {
+  const ctx = await getPortalContext();
+  if (!can(ctx.tenant, "marketing.newsletters") && !can(ctx.tenant, "sales.estimates")) return { ctx, error: "Email sending is part of Marketing and Sales. Unlock one of them to use it." };
+  const allowed = action === "edit" ? may(ctx.member.role, "marketing.edit") || may(ctx.member.role, "sales.edit") : may(ctx.member.role, action);
+  if (!allowed) return { ctx, error: ROLE_MESSAGES[action === "edit" ? "marketing.edit" : action] ?? "Your role can't do that." };
+  if (demoMode()) return { ctx, error: DEMO_MESSAGE };
+  return { ctx, error: null };
+}
+
 function failed(err: unknown, fallback: string): MarketingResult {
   if (err instanceof BrandKitError || err instanceof SettingsInputError || err instanceof EmailProviderError) return { ok: false, message: err.message };
   console.error(fallback, err);
@@ -305,7 +316,7 @@ export async function deleteListAction(id: string): Promise<MarketingResult> {
 // ---- Sending domain ------------------------------------------------------------------------
 
 export async function addSendingDomainAction(input: unknown): Promise<MarketingResult> {
-  const { ctx, error } = await guard("settings.manage", "marketing.newsletters");
+  const { ctx, error } = await sendingGuard("settings.manage");
   if (error) return { ok: false, message: error };
   const provider = emailProvider();
   if (!provider) return { ok: false, message: NOT_SET_UP };
@@ -327,7 +338,7 @@ export async function addSendingDomainAction(input: unknown): Promise<MarketingR
 }
 
 export async function checkSendingDomainAction(): Promise<MarketingResult & { status?: string }> {
-  const { ctx, error } = await guard("marketing.edit", "marketing.newsletters");
+  const { ctx, error } = await sendingGuard("edit");
   if (error) return { ok: false, message: error };
   const provider = emailProvider();
   if (!provider) return { ok: false, message: NOT_SET_UP };
@@ -357,7 +368,7 @@ export async function checkSendingDomainAction(): Promise<MarketingResult & { st
 }
 
 export async function setFromAddressAction(local: unknown): Promise<MarketingResult> {
-  const { ctx, error } = await guard("settings.manage", "marketing.newsletters");
+  const { ctx, error } = await sendingGuard("settings.manage");
   if (error) return { ok: false, message: error };
   const clean = typeof local === "string" ? local.trim().toLowerCase() : "";
   if (!FROM_LOCAL.test(clean) || clean.length > 40) return { ok: false, message: "Use letters, numbers, dots or dashes, like hello or news." };
@@ -367,7 +378,7 @@ export async function setFromAddressAction(local: unknown): Promise<MarketingRes
 }
 
 export async function removeSendingDomainAction(): Promise<MarketingResult> {
-  const { ctx, error } = await guard("settings.manage", "marketing.newsletters");
+  const { ctx, error } = await sendingGuard("settings.manage");
   if (error) return { ok: false, message: error };
   await withTenant(scopeOf(ctx), async (tx) => {
     const current = await readSending(tx);
@@ -379,7 +390,7 @@ export async function removeSendingDomainAction(): Promise<MarketingResult> {
 }
 
 export async function sendSetupTestAction(to: unknown): Promise<MarketingResult> {
-  const { ctx, error } = await guard("marketing.edit", "marketing.newsletters");
+  const { ctx, error } = await sendingGuard("edit");
   if (error) return { ok: false, message: error };
   const settings = await withTenant(scopeOf(ctx), (tx) => getMarketingSettings(tx, settingsTenantOf(ctx)));
   const result = await sendTestEmail(scopeOf(ctx), {

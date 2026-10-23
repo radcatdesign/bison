@@ -230,3 +230,49 @@ export async function productCount(tx: Tx): Promise<{ total: number; active: num
   const row = r.rows[0];
   return { total: Number(row?.total ?? 0), active: Number(row?.active ?? 0), missingWeight: Number(row?.missing ?? 0) };
 }
+
+// ---- Imports ------------------------------------------------------------------------------
+
+export type ImportSummary = { created: number; updated: number; failed: string[] };
+
+/**
+ * Saves imported products. A product imported before (same source and id) or
+ * with the same address is updated; weights, boxes and shipping the team set
+ * by hand are kept when the import doesn't say.
+ */
+export async function saveImported(tx: Tx, products: import("./imports").ImportedProduct[], source: ProductSource): Promise<ImportSummary> {
+  const { parseProduct } = await import("./catalog");
+  const out: ImportSummary = { created: 0, updated: 0, failed: [] };
+  for (const p of products) {
+    const existing =
+      (p.sourceId ? await tx.selectFrom("products").select("id").where("source", "=", source).where("source_id", "=", p.sourceId).executeTakeFirst() : undefined) ??
+      (await tx.selectFrom("products").select("id").where("slug", "=", slugify(p.name)).where("source", "=", source).executeTakeFirst());
+    const before = existing ? await getProduct(tx, existing.id) : null;
+    const variants = p.variants.map((v) => {
+      const match = before?.variants.find((b) => (v.sku && b.sku.toLowerCase() === v.sku.toLowerCase()) || JSON.stringify(b.options) === JSON.stringify(v.options));
+      return {
+        id: match?.id,
+        options: v.options,
+        sku: v.sku,
+        priceCents: v.priceCents,
+        compareAtCents: v.compareAtCents,
+        weightOz: v.weightOz || match?.weightOz || 0,
+        box: match?.box ?? "",
+        unitsPerBox: match?.unitsPerBox ?? 1,
+        shipsAlone: match?.shipsAlone ?? false,
+        flatShipCents: match?.flatShipCents ?? null,
+        active: true,
+      };
+    });
+    try {
+      const input = parseProduct({ name: p.name, description: p.description, status: before?.status === "archived" ? "archived" : p.status, category: p.category, options: p.options, photos: p.photos.length ? p.photos : (before?.photos ?? []), seo: p.seo, variants, taxCode: before?.taxCode ?? "", slug: before?.slug });
+      await saveProduct(tx, input, { id: existing?.id ?? null, source, sourceId: p.sourceId });
+      if (existing) out.updated++;
+      else out.created++;
+    } catch (err) {
+      out.failed.push(`${p.name}: ${err instanceof Error ? err.message : "couldn't be saved"}`);
+      if (out.failed.length > 50) break;
+    }
+  }
+  return out;
+}

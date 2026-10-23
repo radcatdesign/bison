@@ -6,6 +6,7 @@ import { marketingGate } from "@/components/marketing/gate";
 import { SendingSetup } from "@/components/marketing/sending-setup";
 import { PageHeader } from "@/components/ui";
 import { may } from "@/config/roles";
+import { can } from "@/lib/access/entitlements";
 import { withTenant } from "@/lib/db";
 import { demoTeam } from "@/lib/demo";
 import { demoMode } from "@/lib/env";
@@ -17,11 +18,12 @@ import { getPortalContext, scopeOf } from "@/lib/portal";
 
 export const metadata: Metadata = { title: "Email sending" };
 
-const NOTE = "Newsletters and series go out from your own domain. Set it up once; it takes about 15 minutes plus waiting for DNS.";
+const NOTE = "Newsletters, series, estimates and order alerts go out from your own domain. Set it up once; it takes about 15 minutes plus waiting for DNS.";
 
 async function Body() {
   const ctx = await getPortalContext();
-  const blocked = marketingGate(ctx, "marketing.newsletters");
+  // Marketing and Sales both send from here, so either one opens it.
+  const blocked = can(ctx.tenant, "sales.estimates") ? null : marketingGate(ctx, "marketing.newsletters");
   if (blocked) return blocked;
   const demo = demoMode();
   const site = ctx.sites[0]?.domain ?? "yourcompany.com";

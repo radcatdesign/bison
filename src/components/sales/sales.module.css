@@ -1,0 +1,428 @@
+/* Styles for the Sales screens that Marketing's shared styles don't cover. Colors, type and spacing come from tokens.css. */
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.stack {
+  display: grid;
+  gap: 20px;
+}
+
+.money {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.right {
+  text-align: right;
+}
+
+/* ---- Status pills ---- */
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.status[data-tone="good"] {
+  border-color: var(--bo-good-line, var(--bo-line));
+  color: var(--bo-good);
+}
+
+.status[data-tone="warn"] {
+  color: var(--bo-warn);
+}
+
+.status[data-tone="bad"] {
+  color: var(--bo-bad);
+}
+
+.status[data-tone="accent"] {
+  color: var(--bo-accent-text);
+}
+
+/* ---- Lists of things in a panel ---- */
+
+.lines {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lines li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--bo-line);
+  font-size: var(--bo-text-sm);
+}
+
+.lines li:last-child {
+  border-bottom: 0;
+}
+
+.lines li span {
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-xs);
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: var(--bo-text-sm);
+}
+
+.totals dt {
+  color: var(--bo-ink-2);
+}
+
+.totals dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.totals .grand {
+  padding-top: 8px;
+  border-top: 1px solid var(--bo-line);
+  color: var(--bo-ink);
+  font-size: var(--bo-text-md);
+  font-weight: 660;
+}
+
+.timeline {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--bo-text-sm);
+}
+
+.timeline li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.timeline li::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--bo-line-strong);
+}
+
+.timeline li[data-kind="approved"]::before,
+.timeline li[data-kind="paid"]::before {
+  background: var(--bo-good);
+}
+
+.timeline li[data-kind="changes_requested"]::before,
+.timeline li[data-kind="email_failed"]::before,
+.timeline li[data-kind="invoice_failed"]::before {
+  background: var(--bo-warn);
+}
+
+.timeline small {
+  display: block;
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-xs);
+}
+
+/* ---- Estimate builder ---- */
+
+.builder {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: start;
+  gap: 24px;
+}
+
+.builderMain {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.builderSide {
+  position: sticky;
+  top: 20px;
+  display: grid;
+  gap: 14px;
+}
+
+.lineHead,
+.lineRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px 116px 104px 34px;
+  align-items: start;
+  gap: 8px;
+}
+
+.lineHead {
+  padding: 0 0 6px;
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-xs);
+  font-weight: 600;
+}
+
+.lineRow {
+  padding: 8px 0;
+  border-top: 1px solid var(--bo-line);
+}
+
+.lineRow .input {
+  width: 100%;
+}
+
+.lineName {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lineTotal {
+  padding-top: 9px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.lineActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.picker {
+  display: grid;
+  gap: 6px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.pick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-r-control);
+  background: var(--bo-surface);
+  color: inherit;
+  font: inherit;
+  font-size: var(--bo-text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.pick:hover {
+  border-color: var(--bo-accent-line);
+  background: var(--bo-raised);
+}
+
+.pick span {
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-xs);
+}
+
+.sentence {
+  padding: 12px 14px;
+  border-radius: var(--bo-r-control);
+  background: var(--bo-accent-soft);
+  color: var(--bo-ink);
+  font-size: var(--bo-text-sm);
+  line-height: 1.5;
+}
+
+/* ---- Product editor ---- */
+
+.variants {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--bo-text-sm);
+}
+
+.variants th {
+  padding: 6px 6px 8px;
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-xs);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.variants td {
+  padding: 6px;
+  border-top: 1px solid var(--bo-line);
+  vertical-align: middle;
+}
+
+.variants .input,
+.variants .select {
+  width: 100%;
+  min-width: 70px;
+}
+
+.photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+}
+
+.photo {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-r-control);
+  background: var(--bo-raised);
+}
+
+.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--bo-surface) 90%, transparent);
+  color: var(--bo-ink);
+  cursor: pointer;
+}
+
+.photo button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.thumb {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--bo-raised);
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.productCell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.optionRow {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) 34px;
+  align-items: start;
+  gap: 8px;
+}
+
+.copyRow {
+  display: flex;
+  gap: 8px;
+}
+
+.copyRow .input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- Overview ---- */
+
+.attention {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attention a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-r-control);
+  color: inherit;
+  font-size: var(--bo-text-sm);
+  text-decoration: none;
+}
+
+.attention a:hover {
+  border-color: var(--bo-accent-line);
+}
+
+.attention strong {
+  font-weight: 600;
+}
+
+@media (max-width: 980px) {
+  .builder {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .builderSide {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .lineHead {
+    display: none;
+  }
+
+  .lineRow {
+    grid-template-columns: 1fr 1fr 34px;
+  }
+
+  .lineName {
+    grid-column: 1 / -1;
+  }
+
+  .lineTotal {
+    grid-column: 1 / 3;
+    padding-top: 0;
+    text-align: left;
+  }
+
+  .optionRow {
+    grid-template-columns: minmax(0, 1fr) 34px;
+  }
+
+  .optionRow > :nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}

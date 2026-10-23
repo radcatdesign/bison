@@ -8,12 +8,12 @@ import sharp, { type Metadata, type OutputInfo } from "sharp";
 export const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 const MAX_STORED_BYTES = 2 * 1024 * 1024;
 
-export type ImageKind = "logo" | "email-image";
+export type ImageKind = "logo" | "email-image" | "product-image";
 export type ProcessedImage = { bytes: Buffer; contentType: "image/png" | "image/jpeg" | "image/gif"; width: number; height: number };
 
 export class ImageError extends Error {}
 
-const MAX_WIDTH: Record<ImageKind, number> = { logo: 600, "email-image": 1200 };
+const MAX_WIDTH: Record<ImageKind, number> = { logo: 600, "email-image": 1200, "product-image": 1600 };
 
 export async function processImage(input: Buffer, kind: ImageKind): Promise<ProcessedImage> {
   if (input.length === 0) throw new ImageError("That file is empty.");

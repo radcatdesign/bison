@@ -7,13 +7,19 @@ import type { PageDoc, Section } from "@/lib/pages/schema";
 import type { SearchSettings } from "./settings";
 
 export type SearchPage = { slug: string; title: string; doc: PageDoc; publishedAt: Date };
-export type SearchContext = { name: string; tenantSlug: string; site: string | null; base: string; brand: BrandKit; search: SearchSettings; pages: SearchPage[] };
+/** An active product, when the company has Sales. Its page is /p/<company>/shop/<slug>. */
+export type SearchProduct = { slug: string; name: string; summary: string; price: string; updatedAt: Date };
+export type SearchContext = { name: string; tenantSlug: string; site: string | null; base: string; brand: BrandKit; search: SearchSettings; pages: SearchPage[]; products?: SearchProduct[] };
 
 /** AI crawlers named in robots.txt when a company turns them off. */
 export const AI_BOTS = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-User", "Claude-SearchBot", "anthropic-ai", "PerplexityBot", "Perplexity-User", "Google-Extended", "Applebot-Extended", "CCBot", "Bytespider", "meta-externalagent", "Amazonbot", "cohere-ai"];
 
 export function pageUrl(c: Pick<SearchContext, "base" | "tenantSlug">, slug: string): string {
   return `${c.base}/p/${c.tenantSlug}/${slug}`;
+}
+
+export function productPage(c: Pick<SearchContext, "base" | "tenantSlug">, slug: string): string {
+  return `${c.base}/p/${c.tenantSlug}/shop/${slug}`;
 }
 
 export function filesBase(c: Pick<SearchContext, "base" | "tenantSlug">): string {
@@ -38,9 +44,13 @@ export function pageDescription(p: SearchPage): string {
 // ---- sitemap.xml -----------------------------------------------------------------
 
 export function buildSitemap(c: SearchContext): string {
-  const urls = c.pages
-    .map((p) => `  <url>\n    <loc>${xml(pageUrl(c, p.slug))}</loc>\n    <lastmod>${p.publishedAt.toISOString().slice(0, 10)}</lastmod>\n  </url>`)
-    .join("\n");
+  const entry = (loc: string, at: Date) => `  <url>\n    <loc>${xml(loc)}</loc>\n    <lastmod>${at.toISOString().slice(0, 10)}</lastmod>\n  </url>`;
+  const products = c.products ?? [];
+  const urls = [
+    ...c.pages.map((p) => entry(pageUrl(c, p.slug), p.publishedAt)),
+    ...(products.length ? [entry(`${filesBase(c)}/shop`, products.reduce((d, p) => (p.updatedAt > d ? p.updatedAt : d), products[0].updatedAt))] : []),
+    ...products.map((p) => entry(productPage(c, p.slug), p.updatedAt)),
+  ].join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
 
@@ -83,6 +93,11 @@ export function buildLlmsTxt(c: SearchContext): string {
       const d = pageDescription(p);
       out.push(`- [${pageTitle(p, c.name)}](${pageUrl(c, p.slug)})${d ? `: ${d}` : ""}`);
     }
+    out.push("");
+  }
+  if (c.products?.length) {
+    out.push("## Products", "");
+    for (const p of c.products) out.push(`- [${clean(p.name)}](${productPage(c, p.slug)}): ${p.price}${p.summary ? `. ${clean(p.summary)}` : ""}`);
     out.push("");
   }
   out.push("## Optional", "", `- [Full text of every page](${filesBase(c)}/llms-full.txt)`, "");

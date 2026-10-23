@@ -31,7 +31,7 @@ function writeFolded(tool: string, folded: boolean) {
 }
 
 type Props = {
-  tool: ToolSetup;
+  tool: ToolSetup<string>;
   /** In the hub every tool shows its steps; on a tool's own page, the guide can fold away. */
   variant?: "page" | "hub";
   onMark?: (stepKey: string, done: boolean) => Promise<{ ok: boolean; message: string }>;
