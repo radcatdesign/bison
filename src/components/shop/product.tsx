@@ -5,6 +5,7 @@
 // how many, adding to the cart, and sharing.
 import { Check, Link2, Mail, Minus, Plus, Share2 } from "lucide-react";
 import { type CSSProperties, useState } from "react";
+import { useSay } from "@/components/edition";
 import { formatMoney } from "@/lib/sales/money";
 import { type ShopItem, type ShopVariant, shareLinks, tradePrice } from "@/lib/sales/shop-view";
 import { useIsClient } from "@/lib/use-is-client";
@@ -140,12 +141,13 @@ export function ProductBuy({ slug, item, currency, trade }: BuyProps) {
 }
 
 export function ShareButtons({ url, title, image }: { url: string; title: string; image: string | null }) {
+  const say = useSay();
   const client = useIsClient();
   const [copied, setCopied] = useState(false);
   const links = shareLinks(url, title, image);
   const canShare = client && typeof navigator !== "undefined" && typeof navigator.share === "function";
   return (
-    <div className={s.share} aria-label="Share this product" role="group">
+    <div className={s.share} aria-label={say("Share this product", "Share this")} role="group">
       <button
         type="button"
         className={s.ghost}

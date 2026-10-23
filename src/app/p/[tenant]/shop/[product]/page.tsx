@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { ShopFrame } from "@/components/shop/frame";
 import { Gallery, ProductBuy, ShareButtons } from "@/components/shop/product";
 import s from "@/components/shop/shop.module.css";
+import { sayFor } from "@/config/editions";
 import { jsonLd } from "@/lib/marketing/search";
 import { descriptionBlocks, descriptionSummary } from "@/lib/sales/catalog";
 import { productStructuredData } from "@/lib/sales/seo";
@@ -52,7 +53,7 @@ async function ProductView({ params }: { params: Params }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(productStructuredData(shop, feedProduct(item))) }} />
       {shop.shopOn && (
         <a className={s.crumb} href={`/p/${shop.slug}/shop`}>
-          ← All products
+          ← {sayFor(shop.edition)("All products", "All memberships")}
         </a>
       )}
       <div className={s.product}>

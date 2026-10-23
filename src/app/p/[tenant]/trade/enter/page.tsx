@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ShopFrame } from "@/components/shop/frame";
 import s from "@/components/shop/shop.module.css";
+import { sayFor } from "@/config/editions";
 import { currentBuyer } from "@/lib/sales/shop";
 import { getShop } from "@/lib/sales/shop-load";
 import { tradeLinkCompany } from "@/lib/sales/trade-public";
@@ -10,7 +11,11 @@ import { tradeLinkCompany } from "@/lib/sales/trade-public";
 // Where a trade sign-in link lands. Opening it changes nothing (email apps
 // open links to check them); the button signs this browser in. Public.
 
-export const metadata: Metadata = { title: { absolute: "Trade sign-in" }, robots: { index: false, follow: false }, referrer: "no-referrer" };
+export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
+  const shop = await getShop((await params).tenant);
+  return { title: { absolute: shop ? sayFor(shop.edition)("Trade sign-in", "Corporate account sign-in") : "Trade sign-in" }, robots: { index: false, follow: false }, referrer: "no-referrer" };
+}
+
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 type Props = { params: Promise<{ tenant: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
@@ -27,7 +32,7 @@ async function Enter({ params, searchParams }: Props) {
       {company ? (
         <form className={s.step} method="post" action={`/p/${shop.slug}/trade/session`} data-testid="trade-enter">
           <h1 className={s.title}>Sign in as {company}</h1>
-          <p className={s.lead}>You&apos;ll see your trade prices across the shop on this browser for 30 days.</p>
+          <p className={s.lead}>{sayFor(shop.edition)("You'll see your trade prices across the shop on this browser for 30 days.", "You'll see your corporate prices across the store on this browser for 30 days.")}</p>
           <input type="hidden" name="t" value={token} />
           <button type="submit" className={`${s.button} ${s.payButton}`} data-testid="trade-enter-confirm">
             Sign in

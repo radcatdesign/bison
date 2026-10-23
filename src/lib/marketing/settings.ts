@@ -131,7 +131,8 @@ export type SettingsTenant = { name: string; industry: string; accent: string; d
 export function defaultMarketingSettings(t: SettingsTenant): MarketingSettings {
   return {
     brand: defaultBrandKit(t.name, t.accent, t.domain, t.edition),
-    signup: { question: "I am a", types: presetFor(t.industry).signupTypes },
+    // Club choices ("Thinking about joining", "Member") don't follow "I am a", so clubs start with a question that fits them.
+    signup: { question: t.edition === "fit" ? "Which fits you?" : "I am a", types: presetFor(t.industry).signupTypes },
     offer: offerSettingsSchema.parse(t.edition === "fit" ? { prefix: offerPrefixFor(t.edition) } : {}),
     search: searchSettingsSchema.parse({ businessType: defaultBusinessType(t.industry) }),
   };

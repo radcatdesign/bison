@@ -7,6 +7,8 @@
 import { loadStripe, type StripeCheckoutLoadActionsSuccess, type StripeCheckoutSession } from "@stripe/stripe-js";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useEditionKey, useSay } from "@/components/edition";
+import type { Say } from "@/config/editions";
 import type { CheckoutStart } from "@/lib/sales/checkout";
 import { formatMoney } from "@/lib/sales/money";
 import { clearCart, useCart } from "./cart-store";
@@ -23,14 +25,14 @@ const NO_EXTRA: Extra = { shippingCents: null, taxCents: null, totalCents: null 
 
 type Reply<T> = { ok: boolean; message?: string } & Partial<T>;
 
-async function post<T = object>(url: string, body: unknown): Promise<Reply<T>> {
+async function post<T = object>(url: string, body: unknown, say?: Say): Promise<Reply<T>> {
   const fail = (message: string) => ({ ok: false, message }) as Reply<T>;
   try {
     const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     const data = (await res.json().catch(() => null)) as Reply<T> | null;
     return data ?? fail("Something went wrong. Try again.");
   } catch {
-    return fail("Couldn't reach the shop. Check your connection and try again.");
+    return fail(say ? say("Couldn't reach the shop. Check your connection and try again.", "Couldn't reach the store. Check your connection and try again.") : "Couldn't reach the shop. Check your connection and try again.");
   }
 }
 
@@ -38,6 +40,7 @@ const days = (n: number | null) => (n ? `${n} business ${n === 1 ? "day" : "days
 
 export function CheckoutFlow(props: CheckoutProps) {
   const { slug } = props;
+  const say = useSay();
   const { cart, loaded } = useCart(slug);
   const [stage, setStage] = useState<Stage>({ kind: "details" });
   const [email, setEmail] = useState("");
@@ -54,7 +57,7 @@ export function CheckoutFlow(props: CheckoutProps) {
         <h2>{stage.title}</h2>
         <p>{stage.message}</p>
         <a className={s.button} href={`/p/${slug}/shop`}>
-          Back to the shop
+          {say("Back to the shop", "Back to the store")}
         </a>
       </div>
     );
@@ -64,9 +67,9 @@ export function CheckoutFlow(props: CheckoutProps) {
     return (
       <div className={s.step}>
         <h2>Your cart is empty</h2>
-        <p className={s.note}>Add something from the shop first.</p>
+        <p className={s.note}>{say("Add something from the shop first.", "Add a membership or pack first.")}</p>
         <a className={s.button} href={`/p/${slug}/shop`}>
-          Go to the shop
+          {say("Go to the shop", "Go to the store")}
         </a>
       </div>
     );
@@ -77,7 +80,7 @@ export function CheckoutFlow(props: CheckoutProps) {
     if (!cart) return;
     setBusy(true);
     setError(null);
-    const r = await post<{ start: CheckoutStart }>(`/p/${slug}/checkout/start`, { cartId: cart.cartId, email, name });
+    const r = await post<{ start: CheckoutStart }>(`/p/${slug}/checkout/start`, { cartId: cart.cartId, email, name }, say);
     setBusy(false);
     if (!r.ok || !r.start) return setError(r.message ?? "Checkout didn't start. Try again.");
     const st = r.start;
@@ -96,7 +99,7 @@ export function CheckoutFlow(props: CheckoutProps) {
       <div className={s.panel}>
         <form className={s.step} onSubmit={(e) => void begin(e)} aria-labelledby="co-you">
           <h2 id="co-you">{cart?.inquiry ? "Ask for a quote" : "Your details"}</h2>
-          {cart?.inquiry && <p className={s.note}>{props.inquiryMessage || "Orders this size get a quote from the team. Send your cart and we'll be in touch."}</p>}
+          {cart?.inquiry && <p className={s.note}>{props.inquiryMessage || say("Orders this size get a quote from the team. Send your cart and we'll be in touch.", "Purchases this size get a quote from the club. Send your cart and we'll be in touch.")}</p>}
           <label className={s.field}>
             Email
             <input className={s.input} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={stage.kind !== "details"} data-testid="checkout-email" />
@@ -130,13 +133,21 @@ export function CheckoutFlow(props: CheckoutProps) {
 
         {stage.kind === "stripe" && <StripePay key={stage.start.sessionId} start={stage.start} accent={props.accent} collectPhone={props.collectPhone} slug={slug} onTotals={setExtra} />}
         {stage.kind === "stand-in" && cart && <StandInPay start={stage.start} props={props} money={money} onTotals={setExtra} subtotal={cart.merchandiseCents} />}
-        {stage.kind === "free" && cart && <FreeOrder props={props} cartId={cart.cartId} email={email} name={name} onDone={(n) => finish(`Order #${n} is placed`, `A code covered the whole order, so there's nothing to pay. We'll email ${email} when it ships.`)} />}
+        {stage.kind === "free" && cart && (
+          <FreeOrder
+            props={props}
+            cartId={cart.cartId}
+            email={email}
+            name={name}
+            onDone={(n) => finish(say(`Order #${n} is placed`, `Purchase #${n} is placed`), say(`A code covered the whole order, so there's nothing to pay. We'll email ${email} when it ships.`, `A code covered the whole purchase, so there's nothing to pay. If it has gear in it, we'll email ${email} when it ships.`))}
+          />
+        )}
         {stage.kind === "inquiry" && cart && <Inquiry slug={slug} cartId={cart.cartId} email={email} name={name} token={props.inquiryToken} onDone={(m) => finish("Request sent", m)} />}
         {props.note && <p className={s.note}>{props.note}</p>}
       </div>
 
-      <aside className={s.summary} aria-label="Order summary">
-        <strong>Order summary</strong>
+      <aside className={s.summary} aria-label={say("Order summary", "Summary")}>
+        <strong>{say("Order summary", "Summary")}</strong>
         {cart?.lines.map((l) => (
           <div key={l.variantId} className={s.sumLine}>
             <div>
@@ -152,7 +163,7 @@ export function CheckoutFlow(props: CheckoutProps) {
           <dl className={s.sums}>
             {cart.trade && (
               <>
-                <dt>Trade pricing</dt>
+                <dt>{say("Trade pricing", "Corporate pricing")}</dt>
                 <dd>{cart.trade.name}</dd>
               </>
             )}
@@ -251,6 +262,8 @@ function AddressFields({ value, onChange, countries, phone, disabled }: { value:
 // ---- Stripe ----------------------------------------------------------------------------------
 
 function StripePay({ start, accent, collectPhone, slug, onTotals }: { start: Extract<CheckoutStart, { kind: "stripe" }>; accent: string; collectPhone: boolean; slug: string; onTotals: (e: Extra) => void }) {
+  const say = useSay();
+  const club = useEditionKey() === "fit";
   const shipRef = useRef<HTMLDivElement>(null);
   const payRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<StripeCheckoutLoadActionsSuccess | null>(null);
@@ -344,7 +357,8 @@ function StripePay({ start, accent, collectPhone, slug, onTotals }: { start: Ext
   return (
     <>
       <section className={s.step} aria-labelledby="co-ship">
-        <h2 id="co-ship">Shipping</h2>
+        <h2 id="co-ship">{say("Shipping", "Your address")}</h2>
+        {club && <p className={s.note}>Gear ships here. Memberships, class packs and training don&apos;t ship.</p>}
         {!ready && <p className={s.note}>Loading the secure payment form.</p>}
         <div ref={shipRef} />
         {quoting && <p className={s.note}>Getting shipping options.</p>}
@@ -383,6 +397,8 @@ function StripePay({ start, accent, collectPhone, slug, onTotals }: { start: Ext
 
 function StandInPay({ start, props, money, onTotals, subtotal }: { start: Extract<CheckoutStart, { kind: "stand-in" }>; props: CheckoutProps; money: (n: number) => string; onTotals: (e: Extra) => void; subtotal: number }) {
   const router = useRouter();
+  const say = useSay();
+  const club = useEditionKey() === "fit";
   const [address, setAddress] = useState<Address>({ ...EMPTY, country: props.countries[0] ?? "US" });
   const [options, setOptions] = useState<Option[] | null>(null);
   const [chosen, setChosen] = useState<string | null>(null);
@@ -423,7 +439,8 @@ function StandInPay({ start, props, money, onTotals, subtotal }: { start: Extrac
   return (
     <>
       <form className={s.step} onSubmit={(e) => void rates(e)} aria-labelledby="co-ship">
-        <h2 id="co-ship">Shipping address</h2>
+        <h2 id="co-ship">{say("Shipping address", "Your address")}</h2>
+        {club && <p className={s.note}>Gear ships here. Memberships, class packs and training don&apos;t ship.</p>}
         <AddressFields value={address} onChange={(a) => {
             setAddress(a);
             setOptions(null);
@@ -451,7 +468,7 @@ function StandInPay({ start, props, money, onTotals, subtotal }: { start: Extrac
       </form>
       <section className={s.step} aria-labelledby="co-pay">
         <h2 id="co-pay">Payment</h2>
-        <p className={s.note}>On a live shop, Stripe&apos;s card form is here. This one pays with a test card.</p>
+        <p className={s.note}>{say("On a live shop, Stripe's card form is here. This one pays with a test card.", "On a live store, Stripe's card form is here. This one pays with a test card.")}</p>
         {message && (
           <p className={s.message} data-tone="error" role="alert" data-testid="pay-error">
             {message}
@@ -468,6 +485,7 @@ function StandInPay({ start, props, money, onTotals, subtotal }: { start: Extrac
 // ---- Free orders and quote requests ---------------------------------------------------------------
 
 function FreeOrder({ props, cartId, email, name, onDone }: { props: CheckoutProps; cartId: string; email: string; name: string; onDone: (number: number) => void }) {
+  const say = useSay();
   const [address, setAddress] = useState<Address>({ ...EMPTY, name, country: props.countries[0] ?? "US" });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -482,12 +500,12 @@ function FreeOrder({ props, cartId, email, name, onDone }: { props: CheckoutProp
         void post<{ number: number }>(`/p/${props.slug}/checkout/free`, { cartId, email, name: name || address.name, phone: address.phone, address }).then((r) => {
           setBusy(false);
           if (r.ok && r.number) onDone(r.number);
-          else setMessage(r.message ?? "The order didn't go through. Try again.");
+          else setMessage(r.message ?? say("The order didn't go through. Try again.", "That didn't go through. Try again."));
         });
       }}
     >
-      <h2 id="co-free">Where should we send it?</h2>
-      <p className={s.note}>Your code covers the whole order, so there&apos;s nothing to pay.</p>
+      <h2 id="co-free">{say("Where should we send it?", "Your address")}</h2>
+      <p className={s.note}>{say("Your code covers the whole order, so there's nothing to pay.", "Your code covers the whole purchase, so there's nothing to pay. If it has gear in it, we'll send it here.")}</p>
       <AddressFields value={address} onChange={setAddress} countries={props.countries} phone={props.collectPhone} disabled={busy} />
       {message && (
         <p className={s.message} data-tone="error" role="alert">
@@ -495,13 +513,14 @@ function FreeOrder({ props, cartId, email, name, onDone }: { props: CheckoutProp
         </p>
       )}
       <button type="submit" className={s.button} disabled={busy} data-testid="place-free-order">
-        {busy ? "Placing the order" : "Place the order"}
+        {busy ? say("Placing the order", "Finishing") : say("Place the order", "Finish")}
       </button>
     </form>
   );
 }
 
 function Inquiry({ slug, cartId, email, name, token, onDone }: { slug: string; cartId: string; email: string; name: string; token: string; onDone: (message: string) => void }) {
+  const say = useSay();
   const [phone, setPhone] = useState("");
   const [text, setText] = useState("");
   const [trap, setTrap] = useState("");
@@ -528,7 +547,7 @@ function Inquiry({ slug, cartId, email, name, token, onDone }: { slug: string; c
         <input className={s.input} type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
       </label>
       <label className={s.field}>
-        Anything we should know? <span>Delivery dates, the job, where it&apos;s going</span>
+        Anything we should know? <span>{say("Delivery dates, the job, where it's going", "How many people, start dates, anything else")}</span>
         <textarea className={s.input} value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} />
       </label>
       {/* People never see this field. Bots fill it in. */}

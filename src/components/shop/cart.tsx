@@ -5,6 +5,7 @@
 // quantities, a code box, totals, and the way to checkout.
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useSay } from "@/components/edition";
 import { formatMoney } from "@/lib/sales/money";
 import { changeCart, openCart, useCart } from "./cart-store";
 import s from "./shop.module.css";
@@ -23,6 +24,7 @@ export function CartButton({ slug }: { slug: string }) {
 
 export function CartDrawer({ slug, checkoutOff }: { slug: string; checkoutOff: string | null }) {
   const { cart, open, busy, error } = useCart(slug);
+  const say = useSay();
   const ref = useRef<HTMLDialogElement>(null);
   const [code, setCode] = useState("");
 
@@ -101,7 +103,7 @@ export function CartDrawer({ slug, checkoutOff }: { slug: string; checkoutOff: s
                 if (code.trim()) void changeCart(slug, { op: "code", code }).then(() => setCode(""));
               }}
             >
-              <input className={s.input} aria-label="Discount code" placeholder="Discount code" value={code} onChange={(e) => setCode(e.target.value)} autoCapitalize="characters" data-testid="cart-code" />
+              <input className={s.input} aria-label={say("Discount code", "Promo code")} placeholder={say("Discount code", "Promo code")} value={code} onChange={(e) => setCode(e.target.value)} autoCapitalize="characters" data-testid="cart-code" />
               <button type="submit" className={s.ghost} disabled={busy}>
                 Apply
               </button>
@@ -118,7 +120,7 @@ export function CartDrawer({ slug, checkoutOff }: { slug: string; checkoutOff: s
           <dl className={s.sums}>
             {cart.trade && (
               <>
-                <dt>Trade pricing</dt>
+                <dt>{say("Trade pricing", "Corporate pricing")}</dt>
                 <dd>
                   {cart.trade.name}, {cart.trade.percentOff}% off
                 </dd>
@@ -146,7 +148,7 @@ export function CartDrawer({ slug, checkoutOff }: { slug: string; checkoutOff: s
               {cart.inquiry ? "Ask for a quote" : "Check out"}
             </a>
           )}
-          {cart.inquiry && <p className={s.note}>Orders this size get a quote from the team instead of paying online.</p>}
+          {cart.inquiry && <p className={s.note}>{say("Orders this size get a quote from the team instead of paying online.", "Purchases this size get a quote from the club instead of paying online.")}</p>}
         </div>
       )}
     </dialog>

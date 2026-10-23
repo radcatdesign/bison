@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useTransition } from "react";
 import { createNewsletterAction, deleteTemplateAction } from "@/app/(portal)/marketing/newsletters/actions";
 import { useEditionKey } from "@/components/edition";
-import { editionOfIndustry } from "@/config/editions";
+import { editionOfIndustry, sayFor } from "@/config/editions";
 import { renderEmail } from "@/lib/email/render";
 import { type BrandKit, type EmailDoc, emptyEmailDoc } from "@/lib/email/schema";
 import { emailTemplatesFor } from "@/lib/email/templates";
@@ -107,7 +107,7 @@ export function NewslettersHome(props: Props) {
         <section aria-labelledby="start-heading" className={h.block}>
           <div className={h.blockHead}>
             <h2 id="start-heading">Start a newsletter</h2>
-            <p>Pick a starting point. Yellow spots mark what only you know; nothing goes out until they&apos;re filled in.</p>
+            <p>{sayFor(edition)("Pick a starting point. Yellow spots mark what only you know; nothing goes out until they're filled in.", "Pick a starting point, like club news or this month's class schedule. Yellow spots mark what only your club knows; nothing goes out until they're filled in.")}</p>
           </div>
           <ul className={h.templates} data-testid="newsletter-templates">
             <li>

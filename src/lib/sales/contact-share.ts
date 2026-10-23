@@ -4,6 +4,7 @@ import "server-only";
 // what they sent, and their orders, estimates and carts, never team notes.
 // Revoking a link, or letting it run out, turns it off at once.
 import { sql } from "kysely";
+import type { EditionKey } from "@/config/editions";
 import { can, loadAccess } from "@/lib/access/entitlements";
 import { type Database, db, isUuid, type Tx, withTenant } from "@/lib/db";
 import { checkLink, linkId, signLink } from "@/lib/email/tokens";
@@ -53,6 +54,8 @@ export type SharedCart = { status: string; itemCount: number; subtotalCents: num
 
 export type SharedContact = {
   business: string;
+  /** The company's edition, so a club's page reads in club words. */
+  edition: EditionKey;
   contact: { name: string; email: string; phone: string; firstSeenAt: Date; lastSeenAt: Date };
   sent: { formType: string; at: Date; fields: Record<string, string> }[];
   orders: OrderRow[];
@@ -79,11 +82,12 @@ export async function openShare(token: string, database: Database = db()): Promi
       if (!can({ access: await loadAccess(tx) }, "contacts.share")) return null;
       const c = await tx.selectFrom("contacts").select(["id", "name", "email", "phone", "first_seen_at", "last_seen_at"]).where("id", "=", share.contact_id).executeTakeFirst();
       if (!c) return null;
-      const tenant = await tx.selectFrom("tenants").select("name").executeTakeFirstOrThrow();
+      const tenant = await tx.selectFrom("tenants").select(["name", "edition"]).executeTakeFirstOrThrow();
       const subs = await tx.selectFrom("submissions").select(["form_type", "fields", "created_at"]).where("contact_id", "=", c.id).orderBy("created_at", "desc").limit(20).execute();
       const carts = await tx.selectFrom("carts").select(["status", "priced", "last_active_at"]).where("email", "=", c.email).where("status", "in", ["abandoned", "open", "checkout", "inquiry"]).orderBy("last_active_at", "desc").limit(10).execute();
       return {
         business: tenant.name,
+        edition: tenant.edition === "fit" ? "fit" : "bison",
         contact: { name: c.name, email: c.email, phone: c.phone, firstSeenAt: c.first_seen_at, lastSeenAt: c.last_seen_at },
         sent: subs.map((x) => ({ formType: x.form_type, at: x.created_at, fields: Object.fromEntries(Object.entries((x.fields ?? {}) as Record<string, unknown>).filter(([, v]) => typeof v === "string" && v).map(([k, v]) => [k, String(v).slice(0, 2000)])) })),
         orders: await ordersFor(tx, c.email),

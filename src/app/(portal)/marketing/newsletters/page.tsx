@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { EditionPageHeader } from "@/components/marketing/edition-header";
 import { marketingGate } from "@/components/marketing/gate";
 import { type NewsletterCard, NewslettersHome } from "@/components/marketing/newsletters-home";
 import { SetupFor } from "@/components/marketing/setup-for";
@@ -89,7 +90,7 @@ async function Body({ searchParams }: { searchParams: Promise<{ error?: string }
 
 export default function NewslettersPage({ searchParams }: PageProps<"/marketing/newsletters">) {
   return (
-    <Suspense fallback={<PageHeader title="Newsletters" note={NOTE} />}>
+    <Suspense fallback={<EditionPageHeader title={["Newsletters", "Newsletters"]} note={[NOTE, CLUB_NOTE]} />}>
       <Body searchParams={searchParams as Promise<{ error?: string }>} />
     </Suspense>
   );
