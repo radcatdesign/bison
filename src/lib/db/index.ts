@@ -4,6 +4,10 @@ import { Kysely, PostgresDialect, sql, type Transaction } from "kysely";
 import pg from "pg";
 import type { DB } from "./types";
 
+// Plain dates (like an estimate's "good until") read as "2026-11-30", not a Date at
+// local midnight that shifts a day depending on the server's time zone.
+pg.types.setTypeParser(1082, (v: string) => v);
+
 export type Database = Kysely<DB>;
 export type Tx = Transaction<DB>;
 

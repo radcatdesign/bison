@@ -1,7 +1,9 @@
 import { timingSafeEqual } from "node:crypto";
 import { runEmailWork } from "@/lib/marketing/worker";
+import { runSalesWork } from "@/lib/sales/job";
 
-// The email job: scheduled newsletters, series steps and retries. Wants to run
+// The email job: scheduled newsletters, series steps and retries, then the
+// sales job (left-behind carts, code holds, fulfillment retries). Wants to run
 // every 5 minutes. On Vercel Pro, add it to vercel.json crons; on the free plan
 // (daily cron only), point a free scheduler at it with the CRON_SECRET bearer
 // token. The daily job runs it too, as a backstop.
@@ -17,7 +19,9 @@ function authorized(req: Request): boolean {
 
 async function run(req: Request) {
   if (!authorized(req)) return new Response("Not allowed.", { status: 401 });
-  return Response.json(await runEmailWork({ budgetMs: 240_000 }));
+  const email = await runEmailWork({ budgetMs: 200_000 });
+  const sales = await runSalesWork({ budgetMs: 60_000 });
+  return Response.json({ ...email, sales });
 }
 
 export const GET = run;

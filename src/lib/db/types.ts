@@ -522,7 +522,7 @@ export interface EstimatesTable {
   currency: Generated<string>;
   notes: Generated<string>;
   internal_note: Generated<string>;
-  valid_until: ColumnType<Date | null, Date | string | null | undefined, Date | string | null>;
+  valid_until: ColumnType<string | null, string | null | undefined, string | null>;
   link_version: Generated<number>;
   sent_at: TimestampNullable;
   viewed_at: TimestampNullable;

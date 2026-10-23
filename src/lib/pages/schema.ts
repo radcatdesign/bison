@@ -241,6 +241,9 @@ export function slugifyPage(title: string): string {
 
 export const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
+/** Addresses under /p/<company>/ that belong to the shop, so no landing page can take them. */
+export const RESERVED_PAGE_SLUGS = new Set(["shop", "checkout", "order", "orders", "cart", "trade", "products", "estimate", "account"]);
+
 /** A short page name from a brief: "A spring sale page for glow aggregate, 15% off" becomes "Spring sale: glow aggregate". */
 export function titleFromBrief(brief: string): string {
   let t = brief.split(/[.!?\n,;]/)[0].trim();

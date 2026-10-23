@@ -30,6 +30,8 @@ const LIMIT_LABELS: Record<keyof Limits, string> = {
   translatedStringsPerMonth: "Translated lines a month",
   translatedStringsPerVisitorPerDay: "Translated lines per visitor a day",
   pageAgentRunsPerMonth: "Page agent requests a month",
+  products: "Products",
+  tradeAccounts: "Trade accounts",
 };
 
 async function Billing({ searchParams }: { searchParams: Promise<{ item?: string; done?: string }> }) {

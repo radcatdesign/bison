@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { sql } from "kysely";
 import { db } from "@/lib/db";
 import { runEmailWork } from "@/lib/marketing/worker";
+import { runSalesWork } from "@/lib/sales/job";
 
 export const maxDuration = 300;
 
@@ -21,6 +22,7 @@ export async function GET(req: Request) {
   if (!authorized(req)) return new Response("Not allowed.", { status: 401 });
   const { rows: created } = await sql<{ n: number }>`select ensure_event_partitions(2) as n`.execute(db());
   const { rows: purged } = await sql<{ n: string }>`select purge_expired_events() as n`.execute(db());
-  const email = await runEmailWork({ budgetMs: 200_000 });
-  return Response.json({ partitionsCreated: created[0]?.n ?? 0, eventsRemoved: Number(purged[0]?.n ?? 0), email });
+  const email = await runEmailWork({ budgetMs: 170_000 });
+  const sales = await runSalesWork({ budgetMs: 60_000 });
+  return Response.json({ partitionsCreated: created[0]?.n ?? 0, eventsRemoved: Number(purged[0]?.n ?? 0), email, sales });
 }

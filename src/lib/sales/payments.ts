@@ -397,6 +397,14 @@ function store(): StandInStore {
   return g.__bisonPayments;
 }
 
+function checkoutState(s: StandInCheckout): CheckoutState {
+  return { sessionId: s.sessionId, status: s.status, paid: s.paid, email: s.email, name: s.name, phone: s.phone, shipTo: s.shipTo, subtotalCents: s.subtotalCents, discountCents: s.discountCents, shippingCents: s.shippingCents, taxCents: s.taxCents, totalCents: s.totalCents, currency: s.currency, shippingLabel: s.shippingLabel, paymentIntentId: s.paymentIntentId, cartId: s.cartId };
+}
+
+function invoiceState(i: StandInInvoice): InvoiceState {
+  return { invoiceId: i.invoiceId, status: i.status, hostedUrl: i.hostedUrl, totalCents: i.totalCents, taxCents: i.taxCents, paymentIntentId: i.paymentIntentId, customerId: i.customerId };
+}
+
 const nextId = (prefix: string) => `${prefix}_standin_${(++store().seq).toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
 export function standInPayments(): PaymentsProvider {
@@ -465,8 +473,7 @@ export function standInPayments(): PaymentsProvider {
       const s = store().checkouts.get(sessionId);
       if (!s) throw new PaymentsError("No such checkout.");
       if (s.status === "open" && Date.now() > s.expiresAt) s.status = "expired";
-      const { accountId: _a, params: _p, options: _o, chosen: _c, expiresAt: _e, ...state } = s;
-      return state;
+      return checkoutState(s);
     },
     async expireCheckout(_accountId, sessionId) {
       const s = store().checkouts.get(sessionId);
@@ -477,14 +484,12 @@ export function standInPayments(): PaymentsProvider {
       const total = p.lines.reduce((n, l) => n + l.amountCents, 0) + p.shippingCents - (p.discount?.amountCents ?? 0);
       const inv: StandInInvoice = { accountId, params: p, invoiceId, status: "open", hostedUrl: `${base}/api/dev/payments/invoice?id=${invoiceId}`, totalCents: Math.max(0, total), taxCents: 0, paymentIntentId: null, customerId: nextId("cus") };
       store().invoices.set(invoiceId, inv);
-      const { accountId: _a, params: _p, ...state } = inv;
-      return state;
+      return invoiceState(inv);
     },
     async invoice(_accountId, invoiceId) {
       const inv = store().invoices.get(invoiceId);
       if (!inv) throw new PaymentsError("No such invoice.");
-      const { accountId: _a, params: _p, ...state } = inv;
-      return state;
+      return invoiceState(inv);
     },
     async voidInvoice(_accountId, invoiceId) {
       const inv = store().invoices.get(invoiceId);

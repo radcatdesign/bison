@@ -110,10 +110,7 @@ export function pack(lines: PackLine[], boxes: Box[]): PackResult {
     addItem(target, line.variantId);
   }
 
-  for (const p of open) {
-    const { used: _used, maxOz: _max, ...pkg } = p;
-    packages.push(pkg);
-  }
+  for (const p of open) packages.push({ boxKey: p.boxKey, boxName: p.boxName, weightOz: p.weightOz, dims: p.dims, items: p.items });
   for (const p of packages) {
     p.weightOz = Math.round(p.weightOz * 100) / 100;
     if (p.weightOz > CARRIER_MAX_OZ) warnings.push(`A package weighs ${Math.round(p.weightOz / 16)} lb, over the 150 lb most carriers take. It may need freight.`);

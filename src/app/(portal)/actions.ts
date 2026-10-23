@@ -31,6 +31,7 @@ const NOT_ALLOWED: Record<Action, string> = {
   "pages.edit": "Your role can't change landing pages.",
   "pages.publish": "Your role can't publish landing pages.",
   "marketing.edit": "Your role can't change email or marketing settings.",
+  "sales.edit": "Your role can't change estimates, orders or the catalog.",
 };
 
 /** Role check first. In the demo, only actions that opt in (turning things on) go ahead. */

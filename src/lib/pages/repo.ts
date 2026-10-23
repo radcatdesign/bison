@@ -7,7 +7,7 @@ import "server-only";
 import { sql } from "kysely";
 import { audit } from "@/lib/audit";
 import { type Database, db, isUuid, type TenantScope, withTenant } from "@/lib/db";
-import { findPlaceholders, type PageDoc, pageDocSchema, SLUG_PATTERN, slugifyPage } from "./schema";
+import { findPlaceholders, type PageDoc, pageDocSchema, RESERVED_PAGE_SLUGS, SLUG_PATTERN, slugifyPage } from "./schema";
 
 export type PageStatus = "draft" | "published" | "changed";
 
@@ -62,7 +62,8 @@ export async function getPage(scope: TenantScope, id: string, database?: Databas
 
 export async function createPage(scope: TenantScope, input: { title: string; doc: PageDoc; actor: string }, database?: Database): Promise<{ id: string; slug: string }> {
   const title = input.title.trim().slice(0, 120) || "Untitled page";
-  const base = slugifyPage(title);
+  const raw = slugifyPage(title);
+  const base = RESERVED_PAGE_SLUGS.has(raw) ? `${raw}-page` : raw;
   return withTenant(
     scope,
     async (tx) => {
@@ -99,6 +100,7 @@ export async function renamePage(scope: TenantScope, id: string, input: { title:
   const slug = input.slug.trim().toLowerCase();
   if (!title || title.length > 120) throw new PageInputError("Give the page a name of up to 120 characters.");
   if (!SLUG_PATTERN.test(slug) || slug.length > 60) throw new PageInputError("The address can use lowercase letters, numbers and dashes, like spring-sale.");
+  if (RESERVED_PAGE_SLUGS.has(slug)) throw new PageInputError(`/${slug} is used by your shop. Pick a different address.`);
   try {
     const row = await withTenant(scope, (tx) => tx.updateTable("pages").set({ title, slug }).where("id", "=", id).returning("id").executeTakeFirst(), database);
     if (!row) throw new PageInputError("That page doesn't exist.");
