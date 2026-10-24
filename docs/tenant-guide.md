@@ -25,6 +25,17 @@ Gyms, health clubs and fitness studios use Bison Ops as **Fit Funnels**: the sam
 
 Anything only you know, like prices, class times and member numbers, is marked in yellow until you fill it in. Nothing goes out with a yellow spot left.
 
+### The front desk kiosk
+
+Any tablet with a browser can be your front desk. In Settings, Kiosk:
+
+1. Set a staff PIN. Staff type it on the tablet to leave the kiosk.
+2. Choose Pair a tablet. On the tablet, open the kiosk address shown and type the 6-digit code within 10 minutes.
+3. Add the page to the tablet's home screen so it opens full screen, and turn on the tablet's guided access or kiosk mode.
+4. Pick what shows: check in, a free pass, a tour, joining, the waiver. Write your waiver (start from ours, then have a lawyer read it) before turning it on.
+
+People who claim a pass or book a tour land in Leads. Check-ins, passes, tours and waivers show in Analyze, Front desk, and on each lead. Joining shows a code they scan to pay on their own phone. Unpair a lost tablet from Settings and it stops working right away.
+
 ## Sample data
 
 A new account starts with sample data, so every screen shows how it works before your own visitors arrive. Sample data is made up, and nothing you change while it's on is saved. When your own data starts coming in, turn it off in **Settings**, under Data. Only owners and admins can switch it.

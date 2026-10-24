@@ -9,8 +9,10 @@ import { clerkConfigured } from "@/lib/env";
 
 // "/p" is published landing pages and shops, "/f" uploaded images (emails load
 // them), "/u" unsubscribe links, "/e" a client's estimate, "/s" a shared contact
-// page. None of them read a session. "/api/dev" answers only in local work.
-const PUBLIC_PREFIXES = ["/sign-in", "/sign-up", "/sign-out", "/api/webhooks", "/api/health", "/api/cron", "/api/dev", "/p", "/f", "/u", "/e", "/s", "/manifest.webmanifest", "/icon", "/apple-icon", "/brand"];
+// page. None of them read a session. "/kiosk" is the front desk tablet, which
+// has its own cookie; its preview checks the staff session itself. "/api/dev"
+// answers only in local work.
+const PUBLIC_PREFIXES = ["/sign-in", "/sign-up", "/sign-out", "/api/webhooks", "/api/health", "/api/cron", "/api/dev", "/p", "/f", "/u", "/e", "/s", "/manifest.webmanifest", "/icon", "/apple-icon", "/brand", "/kiosk"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`) || pathname.startsWith(`${p}.`) || pathname.startsWith(`${p}?`));

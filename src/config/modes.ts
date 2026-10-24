@@ -1,11 +1,12 @@
 // The portal's three modes, in order, and the pages inside each.
 import type { PaidItemKey } from "./catalog";
+import type { EditionKey } from "./editions";
 import type { FeatureKey } from "./features";
 
 export type ModeKey = "analyze" | "marketing" | "sales";
 
-/** A page in a mode. Pages with a `group` sit under that group's drilldown in the nav. */
-export type PageSpec = { href: string; label: string; feature: FeatureKey; group?: NavGroupKey };
+/** A page in a mode. Pages with a `group` sit under that group's drilldown in the nav; `editions` limits a page to some editions. */
+export type PageSpec = { href: string; label: string; feature: FeatureKey; group?: NavGroupKey; editions?: readonly EditionKey[] };
 
 /** Categories in the nav. Labels can differ by edition (see editions.ts `groupLabels`). */
 export type NavGroupKey = "email" | "web" | "brand" | "selling" | "catalog";
@@ -37,6 +38,7 @@ export const MODES: ModeSpec[] = [
       { href: "/analyze", label: "Overview", feature: "analytics" },
       { href: "/analyze/pages", label: "Landing pages", feature: "analytics" },
       { href: "/analyze/contacts", label: "Contacts", feature: "contacts" },
+      { href: "/analyze/front-desk", label: "Front desk", feature: "kiosk", editions: ["fit"] },
     ],
   },
   {

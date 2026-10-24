@@ -132,6 +132,23 @@ async function SettingsBody() {
           </div>
         </Card>
 
+        {edition === "fit" && (
+          <Card
+            title="Front desk kiosk"
+            id="kiosk"
+            note="Turn a tablet at your desk into a kiosk for check-ins, free passes, tours, joining and your waiver."
+            aside={
+              <Link href="/settings/kiosk" className="btn" data-testid="settings-kiosk">
+                Set up
+              </Link>
+            }
+          >
+            <p className="muted" style={{ margin: 0 }}>
+              See what happens at the desk in Analyze, Front desk.
+            </p>
+          </Card>
+        )}
+
         <Card title="Connections" id="integrations" flush>
           <div className={s.plan}>
             <Rows>

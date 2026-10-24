@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { setContactStatus } from "@/app/(portal)/actions";
 import { EditionPageHeader } from "@/components/marketing/edition-header";
+import { AtTheDesk } from "@/components/kiosk/at-the-desk";
 import { ContactSales } from "@/components/sales/contact-sales";
 import { ActionForm } from "@/components/ui/action-form";
 import { PageHeader, SampleBanner } from "@/components/ui";
@@ -30,6 +31,10 @@ const statusFor = (say: Say): Record<ContactStatus, { label: string; tone: strin
   lost: { label: say("Lost", "Didn't join"), tone: "pill" },
   spam: { label: "Spam", tone: "pill pill-bad" },
 });
+
+/** Where a form came from, in words. Unknown types show as they're stored. */
+const formLabel = (type: string, say: Say) =>
+  ({ "landing-page": say("Landing page", "Funnel page"), "kiosk-pass": "Free pass at the desk", "kiosk-tour": "Tour at the desk" })[type] ?? type;
 
 function initials(name: string, email: string) {
   const parts = (name || email.split("@")[0]).split(/[\s._-]+/).filter(Boolean);
@@ -115,6 +120,7 @@ async function Panel({ id, repos, ctx }: { id: string; repos: Repos; ctx: Portal
           </div>
         </dl>
 
+        {ctx.tenant.edition === "fit" && <AtTheDesk ctx={ctx} contactId={contact.id} titleClass={s.timelineTitle} />}
         <ContactSales ctx={ctx} contactId={contact.id} titleClass={s.timelineTitle} />
 
         <div className={s.timeline}>
@@ -122,7 +128,7 @@ async function Panel({ id, repos, ctx }: { id: string; repos: Repos; ctx: Portal
           {contact.submissions.map((sub) => (
             <article key={sub.id} className={s.submission}>
               <div className={s.submissionHead}>
-                <span className="pill">{sub.formType}</span>
+                <span className="pill">{formLabel(sub.formType, say)}</span>
                 <span className="label">{formatAgo(sub.createdAt)}</span>
               </div>
               {sub.fields.message && <p>{sub.fields.message}</p>}
@@ -185,7 +191,7 @@ async function Contacts({ searchParams }: { searchParams: Promise<{ c?: string }
                 <span className={s.sub}>{c.name ? c.email : c.message}</span>
               </span>
             </span>
-            <span className={`${s.sub} ${s.hideSmall}`}>{c.formType}</span>
+            <span className={`${s.sub} ${s.hideSmall}`}>{c.formType ? formLabel(c.formType, say) : null}</span>
             <span>
               <span className={STATUS[c.status].tone}>{STATUS[c.status].label}</span>
             </span>

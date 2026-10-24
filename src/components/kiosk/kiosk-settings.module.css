@@ -1,0 +1,171 @@
+/* Settings, Kiosk. */
+
+.stack {
+  display: grid;
+  gap: var(--bo-s4);
+  max-width: 860px;
+}
+
+.config {
+  display: grid;
+  gap: var(--bo-s2);
+  width: 100%;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field + .field,
+.toggle + .field,
+.field + .toggle {
+  margin-top: var(--bo-s2);
+}
+
+.toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--bo-s4);
+  padding: 12px 0;
+  border-top: 1px solid var(--bo-line);
+  cursor: pointer;
+}
+
+.toggle[data-disabled] {
+  cursor: default;
+}
+
+.toggleTitle {
+  display: block;
+  font-weight: 600;
+}
+
+.toggleNote {
+  display: block;
+  font-size: var(--bo-text-sm);
+  color: var(--bo-ink-2);
+  max-width: 60ch;
+}
+
+.inset {
+  margin: 0 0 var(--bo-s2);
+}
+
+.products {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 var(--bo-s2);
+  padding: var(--bo-s3) var(--bo-s4);
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-r-control);
+}
+
+.products legend {
+  padding: 0 4px;
+}
+
+.product {
+  display: flex;
+  align-items: center;
+  gap: var(--bo-s3);
+  min-height: 40px;
+  cursor: pointer;
+}
+
+.product input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--bo-accent);
+}
+
+.product > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+
+.textarea {
+  min-height: 280px;
+  padding: 12px;
+  line-height: 1.5;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.pair {
+  display: grid;
+  gap: var(--bo-s3);
+  margin-top: var(--bo-s4);
+}
+
+.pairForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--bo-s3);
+}
+
+.pairForm .field {
+  flex: 1 1 220px;
+}
+
+.codeBox {
+  display: grid;
+  gap: var(--bo-s2);
+  padding: var(--bo-s5);
+  border: 1px solid var(--bo-accent-line);
+  border-radius: var(--bo-r-panel);
+  background: var(--bo-accent-soft);
+  text-align: center;
+}
+
+.codeBox p {
+  margin: 0;
+}
+
+.code {
+  font-size: clamp(2.5rem, 6vw, 3.5rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--bo-ink);
+}
+
+/* A lead's front desk history, in their panel in Leads. */
+.desk {
+  display: grid;
+  gap: 8px;
+  margin-top: var(--bo-s4);
+  font-size: var(--bo-text-sm);
+}
+
+.desk p {
+  margin: 0;
+}
+
+.signed {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.signed svg {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-r-control);
+  background: var(--bo-surface);
+  color: var(--bo-ink);
+}
+
+.signed figcaption {
+  color: var(--bo-ink-2);
+}
+
+/* The two PIN boxes and the button sit on one line, lined up at the bottom. */
+.pinForm > div:first-child {
+  align-items: flex-end !important;
+}

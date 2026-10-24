@@ -29,6 +29,10 @@ Phase 1 adds the tracking script and everything else.
 
 Form capture with the invisible human check, the inbox with filters and lists, the contact panel, team alerts with delivery tracking, and email threads. Built in Phase 0: the contact list, the slide-over panel and status changes, with sample mode refusing writes.
 
+## Front desk kiosk (Base, Fit Funnels only, built)
+
+`kiosk`. A paired tablet at a club's desk for check-ins, free passes, tours, joining by QR code (needs Membership sales) and signing the club's waiver. Settings, Kiosk sets it up; Analyze, Front desk shows what happened. See `architecture.md`, Front desk kiosk.
+
 ## Sales (module, Phase 2, built)
 
 Every tool has a step-by-step setup (`src/lib/sales/setup-steps.ts`): a Setup page (`/sales/setup`) for all of them in order, and the same steps at the top of each tool until done. The overview shows 30-day revenue and orders, open estimates, what needs the team, and the latest orders.

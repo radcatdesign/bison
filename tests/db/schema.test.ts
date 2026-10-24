@@ -9,6 +9,7 @@ const SYSTEM_TABLES: Record<string, string> = {
   schema_migrations: "Migration bookkeeping. The app role has no access.",
   webhook_events: "Webhook dedupe across tenants. The app role may insert only.",
   worker_runs: "When each background job last ran. Job names and times only, no tenant data.",
+  kiosk_pair_attempts: "Wrong kiosk pairing codes by hashed address, for the limit across every server. No club's data; the app role reaches it only through two functions.",
 };
 
 afterAll(async () => {

@@ -668,6 +668,66 @@ export interface ContactSharesTable {
   updated_at: Timestamp;
 }
 
+export interface KioskSettingsTable {
+  tenant_id: TenantId;
+  pin_hash: string | null;
+  pin_set_at: TimestampNullable;
+  config: Json<unknown>;
+  waiver_title: Generated<string>;
+  waiver_body: Generated<string>;
+  waiver_version: Generated<number>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface KioskDevicesTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  name: string;
+  token_hash: string;
+  paired_by: Generated<string>;
+  paired_at: Timestamp;
+  last_seen_at: Timestamp;
+  pin_failures: Generated<number>;
+  pin_locked_until: TimestampNullable;
+  revoked_at: TimestampNullable;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface KioskPairCodesTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  code_hash: string;
+  name: string;
+  created_by: Generated<string>;
+  expires_at: Timestamp;
+  used_at: TimestampNullable;
+  device_id: string | null;
+  created_at: Timestamp;
+}
+
+export interface KioskCheckInsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  contact_id: string;
+  device_id: string | null;
+  checked_in_at: Timestamp;
+}
+
+export interface KioskWaiversTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  contact_id: string;
+  device_id: string | null;
+  waiver_version: number;
+  title: string;
+  body: string;
+  signed_name: string;
+  signature: string;
+  signed_at: Timestamp;
+}
+
 export interface DB {
   tenants: TenantsTable;
   sites: SitesTable;
@@ -713,6 +773,11 @@ export interface DB {
   page_test_versions: PageTestVersionsTable;
   page_test_visits: PageTestVisitsTable;
   page_test_salts: PageTestSaltsTable;
+  kiosk_settings: KioskSettingsTable;
+  kiosk_devices: KioskDevicesTable;
+  kiosk_pair_codes: KioskPairCodesTable;
+  kiosk_check_ins: KioskCheckInsTable;
+  kiosk_waivers: KioskWaiversTable;
 }
 
 export type Tenant = Selectable<TenantsTable>;

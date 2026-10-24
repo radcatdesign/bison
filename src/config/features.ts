@@ -10,6 +10,8 @@ export const FEATURES = {
   "analytics.benchmarks": ["base"],
   contacts: ["base"],
   "contacts.export": ["base"],
+  // The front desk kiosk. Fit Funnels only; joining from it also needs Sales.
+  kiosk: ["base"],
 
   // Sales
   "sales.products": ["module:sales"],
