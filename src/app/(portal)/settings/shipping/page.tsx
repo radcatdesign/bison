@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { CarrierSetup } from "@/components/sales/carrier-setup";
 import { salesGate } from "@/components/sales/gate";
-import { PageHeader } from "@/components/ui";
+import { SaidHeader } from "@/components/sales/said";
 import { may } from "@/config/roles";
 import { withTenant } from "@/lib/db";
 import { demoMode } from "@/lib/env";
@@ -13,7 +13,10 @@ import { type CarrierConnection, readCarrier } from "@/lib/sales/store";
 
 export const metadata: Metadata = { title: "Shipping connections" };
 
-const NOTE = "Connect your own carrier account for live rates at checkout. Choose which one checkout uses, and your boxes, in Sales, Checkout.";
+const NOTE: [string, string] = [
+  "Connect your own carrier account for live rates at checkout. Choose which one checkout uses, and your boxes, in Sales, Checkout.",
+  "Connect your own carrier account for live rates on gear at checkout. Only gear ships; memberships, packs and training don't. Choose which carrier checkout uses, and your boxes, in Sales, Checkout.",
+];
 
 const view = (c: CarrierConnection | null) => ({ connected: Boolean(c?.connected), detail: c?.detail ?? "", keyHint: typeof c?.config.keyHint === "string" ? c.config.keyHint : "", accountNumber: typeof c?.config.accountNumber === "string" ? c.config.accountNumber : "", error: c?.error ?? null });
 
@@ -33,7 +36,7 @@ export default function ShippingConnectionsPage() {
         <ArrowLeft aria-hidden="true" style={{ width: 15, height: 15 }} />
         Settings
       </Link>
-      <PageHeader title="Shipping connections" note={NOTE} />
+      <SaidHeader title={["Shipping connections", "Shipping connections"]} note={NOTE} />
       <Suspense fallback={null}>
         <Body />
       </Suspense>

@@ -5,6 +5,7 @@
 import { Upload } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 import { importProductsAction } from "@/app/(portal)/sales/actions";
+import { useSay } from "@/components/edition";
 import m from "@/components/marketing/marketing.module.css";
 
 type Kind = "file" | "shopify-store" | "feed-url";
@@ -14,6 +15,7 @@ export function ProductImport({ canEdit, demo }: { canEdit: boolean; demo: boole
   const [kind, setKind] = useState<Kind>("file");
   const [result, setResult] = useState<{ ok: boolean; message: string; skipped?: string[] } | null>(null);
   const [pending, start] = useTransition();
+  const say = useSay();
   if (!canEdit) return null;
   return (
     <>
@@ -35,7 +37,7 @@ export function ProductImport({ canEdit, demo }: { canEdit: boolean; demo: boole
           }}
         >
           <div className={m.dialogHead}>
-            <h2 id="import-title">Import products</h2>
+            <h2 id="import-title">{say("Import products", "Import memberships and packs")}</h2>
           </div>
           <div className={m.choices} role="radiogroup" aria-label="Import from">
             {(
@@ -56,7 +58,7 @@ export function ProductImport({ canEdit, demo }: { canEdit: boolean; demo: boole
                 CSV, Shopify export or product feed
               </label>
               <ul className={m.hint} style={{ margin: "0 0 4px 18px", padding: 0 }}>
-                <li>A spreadsheet saved as CSV with Name and Price columns. Description, Was price, SKU, Weight, Category, Image, Option name and Option value are picked up too. Rows with the same name become one product with options.</li>
+                <li>{say("A spreadsheet saved as CSV with Name and Price columns. Description, Was price, SKU, Weight, Category, Image, Option name and Option value are picked up too. Rows with the same name become one product with options.", "A spreadsheet saved as CSV with Name and Price columns, one row per membership, pack or piece of gear. Description, Was price, SKU, Weight, Category, Image, Option name and Option value are picked up too. Rows with the same name become one with options, like Monthly and Annual.")}</li>
                 <li>Shopify: Products, Export, then the CSV for Excel or Numbers.</li>
                 <li>A Google Merchant feed (XML) or a CSV or TSV feed with the same columns.</li>
               </ul>
@@ -69,7 +71,7 @@ export function ProductImport({ canEdit, demo }: { canEdit: boolean; demo: boole
                 Your Shopify store&apos;s address
               </label>
               <input id="pi-store" name="url" className="input" placeholder="yourstore.com or yourstore.myshopify.com" />
-              <span className={m.hint}>We read the products the store already shows the public: names, descriptions, options, prices, photos and weights. Nothing changes in Shopify.</span>
+              <span className={m.hint}>{say("We read the products the store already shows the public: names, descriptions, options, prices, photos and weights. Nothing changes in Shopify.", "We read what the store already shows the public: names, descriptions, options, prices, photos and weights. Nothing changes in Shopify.")}</span>
             </div>
           )}
           {kind === "feed-url" && (
@@ -81,7 +83,7 @@ export function ProductImport({ canEdit, demo }: { canEdit: boolean; demo: boole
               <span className={m.hint}>The same feed you give Google Merchant Center. It has to be on a public https address.</span>
             </div>
           )}
-          <p className={m.hint}>Importing again updates what you imported before and keeps the weights, boxes and shipping you set here.</p>
+          <p className={m.hint}>{say("Importing again updates what you imported before and keeps the weights, boxes and shipping you set here.", "Importing again updates what you imported before and keeps the weights, boxes and shipping you set here. Memberships and packs don't ship, so give them no shipping charge (0 in flat shipping) after you import.")}</p>
           {result && (
             <div className={`notice ${result.ok ? "notice-ok" : "notice-error"}`} role={result.ok ? "status" : "alert"} data-testid="product-import-result">
               {result.message}

@@ -21,7 +21,7 @@ async function Body({ params }: { params: Promise<{ id: string; stepId: string }
   const { id, stepId } = await params;
   const demo = demoMode();
   const site = ctx.sites[0]?.domain ? `https://${ctx.sites[0].domain}` : "https://example.com";
-  const c = { storage: demo ? ("browser" as const) : ("server" as const), tenantId: ctx.tenant.id, site, canEdit: may(ctx.member.role, "marketing.edit"), triggers: triggersFor(ctx.tenant) };
+  const c = { storage: demo ? ("browser" as const) : ("server" as const), tenantId: ctx.tenant.id, site, canEdit: may(ctx.member.role, "marketing.edit"), triggers: triggersFor(ctx.tenant), edition: ctx.tenant.edition };
   if (demo) {
     return <StepEditor c={c} seriesId={id} stepId={stepId} server={null} brand={defaultMarketingSettings(settingsTenantOf(ctx)).brand} baseUrl={appUrl()} team={demoTeam(ctx).map((m) => ({ email: m.email, name: m.name }))} me={ctx.member.email} />;
   }

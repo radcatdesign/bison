@@ -16,7 +16,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ tenant:
     if (!shop) return json({ ok: false, message: "This shop isn't open." }, 404);
     const ceiling = shopCeiling(shop.tenantId, "trade-link", 100);
     if (ceiling) return ceiling;
-    const r = await requestTradeLink(shop.tenantId, shop.slug, body.email);
+    const r = await requestTradeLink(shop.tenantId, shop.slug, body.email, undefined, shop.edition);
     return json(r, r.ok ? 200 : 400);
   } catch (err) {
     return failure(err, "trade link");

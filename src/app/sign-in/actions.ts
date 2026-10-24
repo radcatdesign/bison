@@ -3,8 +3,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { MODE_COOKIE, modeForPath } from "@/config/modes";
-import { DEV_PEOPLE } from "@/lib/auth/dev-people";
-import { createDevSession, DEV_SESSION_COOKIE } from "@/lib/auth/dev-session";
+import { DEV_PEOPLE, DEV_TENANTS } from "@/lib/auth/dev-people";
+import { createDevSession, DEV_SESSION_COOKIE, readDevSession } from "@/lib/auth/dev-session";
 import { assertDevAuthAllowed, authProvider, secureCookies } from "@/lib/env";
 
 export async function signInAsDevPerson(formData: FormData) {
@@ -25,6 +25,10 @@ export async function signInAsDevPerson(formData: FormData) {
 
 export async function signOut() {
   if (authProvider() === "clerk") redirect("/sign-out");
-  (await cookies()).delete(DEV_SESSION_COOKIE);
-  redirect("/sign-in");
+  const jar = await cookies();
+  // Back to the sign-in for the edition they were in.
+  const tenantId = readDevSession(jar.get(DEV_SESSION_COOKIE)?.value)?.t;
+  const fit = Object.values(DEV_TENANTS).find((t) => t.id === tenantId)?.edition === "fit";
+  jar.delete(DEV_SESSION_COOKIE);
+  redirect(fit ? "/sign-in?edition=fit" : "/sign-in");
 }

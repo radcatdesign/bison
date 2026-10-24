@@ -4,6 +4,7 @@ import "server-only";
 // code can't be spent by two people at once. Welcome codes from Marketing go
 // through the same check, with the first-order rule on top.
 import { sql } from "kysely";
+import { type EditionKey, sayFor } from "@/config/editions";
 import type { Tx } from "@/lib/db";
 import { checkDiscount, checkWelcomeCode, type DiscountCheck, type DiscountInput, type DiscountRule, normalizeCode } from "./discounts";
 
@@ -47,13 +48,14 @@ export async function listDiscounts(tx: Tx): Promise<DiscountRow[]> {
   });
 }
 
-export async function saveDiscount(tx: Tx, d: DiscountInput, id: string | null, actor: string): Promise<string> {
+export async function saveDiscount(tx: Tx, d: DiscountInput, id: string | null, actor: string, edition: EditionKey = "bison"): Promise<string> {
+  const say = sayFor(edition);
   if (d.tradeAccountId) {
     const t = await tx.selectFrom("trade_accounts").select("id").where("id", "=", d.tradeAccountId).executeTakeFirst();
-    if (!t) throw new DiscountError("That trade account isn't here anymore.");
+    if (!t) throw new DiscountError(say("That trade account isn't here anymore.", "That corporate account isn't here anymore."));
   }
   const offer = await tx.selectFrom("offer_codes").select("id").where("code", "=", d.code).executeTakeFirst();
-  if (offer) throw new DiscountError(`${d.code} is already a welcome offer code. Pick another code.`);
+  if (offer) throw new DiscountError(say(`${d.code} is already a welcome offer code. Pick another code.`, `${d.code} is already an intro offer code. Pick another code.`));
   const values = {
     code: d.code,
     percent_off: d.kind === "percent" ? d.value : null,
@@ -85,7 +87,7 @@ export async function deleteDiscount(tx: Tx, id: string): Promise<void> {
   await tx.deleteFrom("discounts").where("id", "=", id).execute();
 }
 
-export type CodeContext = { subtotalCents: number; email: string | null; tradeAccountId: string | null; cartId: string | null; now: Date; currency: string; timeZone: string };
+export type CodeContext = { subtotalCents: number; email: string | null; tradeAccountId: string | null; cartId: string | null; now: Date; currency: string; timeZone: string; edition?: EditionKey };
 
 export type CodeResult = (DiscountCheck & { code: string; discountId: string | null; offerCodeId: string | null }) | null;
 
@@ -114,7 +116,7 @@ export async function checkCode(tx: Tx, rawCode: string, c: CodeContext): Promis
   if (d) {
     const total = await countUses({ discountId: d.id });
     const byBuyer = d.usage === "per_account" && (c.email || c.tradeAccountId) ? await countUses({ discountId: d.id, email: c.email, tradeAccountId: c.tradeAccountId }) : 0;
-    const r = checkDiscount(ruleOf(d), { subtotalCents: c.subtotalCents, email: c.email, tradeAccountId: c.tradeAccountId, now: c.now, usesTotal: total, usesByBuyer: byBuyer }, c.currency, c.timeZone);
+    const r = checkDiscount(ruleOf(d), { subtotalCents: c.subtotalCents, email: c.email, tradeAccountId: c.tradeAccountId, now: c.now, usesTotal: total, usesByBuyer: byBuyer }, c.currency, c.timeZone, c.edition);
     return { ...r, code, discountId: d.id, offerCodeId: null };
   }
 
@@ -123,7 +125,7 @@ export async function checkCode(tx: Tx, rawCode: string, c: CodeContext): Promis
     const held = await countUses({ offerCodeId: w.id });
     const email = c.email ?? null;
     const paid = email ? await tx.selectFrom("orders").select((eb) => eb.fn.countAll<string>().as("n")).where("email", "=", email).where("status", "!=", "canceled").executeTakeFirstOrThrow() : { n: "0" };
-    const r = checkWelcomeCode({ code: w.code, email: w.email, kind: w.discount_kind, value: Number(w.discount), expiresAt: w.expires_at, redeemedAt: w.redeemed_at }, { subtotalCents: c.subtotalCents, email, now: c.now, paidOrdersForEmail: Number(paid.n), heldElsewhere: held > 0 }, c.currency);
+    const r = checkWelcomeCode({ code: w.code, email: w.email, kind: w.discount_kind, value: Number(w.discount), expiresAt: w.expires_at, redeemedAt: w.redeemed_at }, { subtotalCents: c.subtotalCents, email, now: c.now, paidOrdersForEmail: Number(paid.n), heldElsewhere: held > 0 }, c.currency, c.edition);
     return { ...r, code, discountId: null, offerCodeId: w.id };
   }
   return { ok: false, message: "That code isn't valid.", code, discountId: null, offerCodeId: null };

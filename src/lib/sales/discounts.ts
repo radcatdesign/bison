@@ -1,7 +1,9 @@
 // Discount codes: the rule in one plain sentence, and whether a code works for
 // a given order. Pure. Codes are private: Bison Ops checks them, and Stripe
-// only ever sees the amount taken off.
+// only ever sees the amount taken off. A Fit Funnels club calls them promo
+// codes, on purchases, with corporate accounts in place of trade accounts.
 import { z } from "zod";
+import { type EditionKey, sayFor } from "@/config/editions";
 import { describeIssues } from "@/lib/email/schema";
 import { formatMoney, formatPercentOff, minorPerMajor, percentOf } from "./money";
 
@@ -80,13 +82,18 @@ export function ruleFromInput(d: DiscountInput, tradeAccountName?: string | null
 
 const dateText = (d: Date, timeZone: string) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone });
 
-/** "WELCOME10 takes 10% off orders of $50 or more. Each customer can use it once. It works until Dec 31, 2026, and stops after 100 uses." */
-export function discountSentence(r: DiscountRule, currency = "usd", timeZone = "America/Los_Angeles"): string {
+/**
+ * "WELCOME10 takes 10% off orders of $50 or more. Each customer can use it once. It works until Dec 31, 2026, and stops after 100 uses."
+ * For a club: "SUMMIT10 takes 10% off purchases of $50 or more. Each person can use it once. ..."
+ */
+export function discountSentence(r: DiscountRule, currency = "usd", timeZone = "America/Los_Angeles", edition: EditionKey = "bison"): string {
+  const say = sayFor(edition);
   const off = r.percentOff !== null ? `${formatPercentOff(r.percentOff)} off` : `${formatMoney(r.amountOffCents ?? 0, currency, { trim: true })} off`;
-  const scope = r.minOrderCents ? `orders of ${formatMoney(r.minOrderCents, currency, { trim: true })} or more` : r.percentOff === 100 ? "everything in the order, including shipping" : "any order";
-  const parts = [`${r.code} takes ${off} ${scope}${r.tradeAccountId ? `, for ${r.tradeAccountName || "one trade account"} only` : ""}.`];
+  const min = r.minOrderCents ? formatMoney(r.minOrderCents, currency, { trim: true }) : "";
+  const scope = r.minOrderCents ? say(`orders of ${min} or more`, `purchases of ${min} or more`) : r.percentOff === 100 ? say("everything in the order, including shipping", "everything in the purchase, including shipping") : say("any order", "any purchase");
+  const parts = [`${r.code} takes ${off} ${scope}${r.tradeAccountId ? `, for ${r.tradeAccountName || say("one trade account", "one corporate account")} only` : ""}.`];
 
-  const who = r.tradeAccountId ? "That account" : "Each customer";
+  const who = r.tradeAccountId ? "That account" : say("Each customer", "Each person");
   if (r.usage === "single_use") parts.push(r.tradeAccountId ? "It works once." : "It works once, for the first person who uses it.");
   else if (r.usage === "per_account") parts.push(`${who} can use it once.`);
   else parts.push(r.tradeAccountId ? "They can use it any number of times." : "Anyone can use it, any number of times.");
@@ -99,7 +106,7 @@ export function discountSentence(r: DiscountRule, currency = "usd", timeZone = "
   else if (when.length) parts.push(`It works ${when.join(" ")}.`);
   else if (limit) parts.push(`It never expires, and ${limit}.`);
   else parts.push("It never expires.");
-  if (r.percentOff === 100) parts.push("Orders it covers in full ship free.");
+  if (r.percentOff === 100) parts.push(say("Orders it covers in full ship free.", "When it covers a purchase in full, any gear in it ships free."));
   if (!r.active) parts.push("It's turned off right now.");
   return parts.join(" ");
 }
@@ -118,28 +125,30 @@ export type DiscountContext = {
 export type DiscountCheck = { ok: true; amountCents: number; freeShipping: boolean; label: string } | { ok: false; message: string };
 
 /** Whether a code works for this order, and what it takes off. Messages are written for the shopper. */
-export function checkDiscount(r: DiscountRule, c: DiscountContext, currency = "usd", timeZone = "America/Los_Angeles"): DiscountCheck {
+export function checkDiscount(r: DiscountRule, c: DiscountContext, currency = "usd", timeZone = "America/Los_Angeles", edition: EditionKey = "bison"): DiscountCheck {
+  const say = sayFor(edition);
   if (!r.active) return { ok: false, message: "That code isn't valid." };
   if (r.startsAt && c.now < r.startsAt) return { ok: false, message: `That code starts on ${dateText(r.startsAt, timeZone)}.` };
   if (r.expiresAt && c.now >= r.expiresAt) return { ok: false, message: "That code has expired." };
-  if (r.tradeAccountId && r.tradeAccountId !== c.tradeAccountId) return { ok: false, message: "That code is for a trade account. Sign in to your trade account to use it." };
+  if (r.tradeAccountId && r.tradeAccountId !== c.tradeAccountId) return { ok: false, message: say("That code is for a trade account. Sign in to your trade account to use it.", "That code is for a corporate account. Sign in to your corporate account to use it.") };
   if (r.usage === "single_use" && c.usesTotal >= 1) return { ok: false, message: "That code has already been used." };
   if (r.maxUses && c.usesTotal >= r.maxUses) return { ok: false, message: "That code has been used as many times as it can be." };
   if (r.usage === "per_account" && c.usesByBuyer >= 1) return { ok: false, message: "You've already used that code." };
-  if (r.minOrderCents && c.subtotalCents < r.minOrderCents) return { ok: false, message: `Add ${formatMoney(r.minOrderCents - c.subtotalCents, currency)} more to use that code. It's for orders of ${formatMoney(r.minOrderCents, currency, { trim: true })} or more.` };
+  if (r.minOrderCents && c.subtotalCents < r.minOrderCents) return { ok: false, message: `Add ${formatMoney(r.minOrderCents - c.subtotalCents, currency)} more to use that code. It's for ${say("orders", "purchases")} of ${formatMoney(r.minOrderCents, currency, { trim: true })} or more.` };
   const amountCents = r.percentOff !== null ? percentOf(c.subtotalCents, r.percentOff) : Math.min(c.subtotalCents, r.amountOffCents ?? 0);
   const label = r.percentOff !== null ? `${r.code}, ${formatPercentOff(r.percentOff)} off` : `${r.code}, ${formatMoney(r.amountOffCents ?? 0, currency, { trim: true })} off`;
   return { ok: true, amountCents, freeShipping: c.subtotalCents > 0 && amountCents >= c.subtotalCents, label };
 }
 
-/** A welcome code from Marketing: one per signup, for that person's first order only. */
+/** A welcome code from Marketing (a club's intro offer code): one per signup, for that person's first order only. */
 export type WelcomeCode = { code: string; email: string; kind: "percent" | "amount"; value: number; expiresAt: Date | null; redeemedAt: Date | null };
 
-export function checkWelcomeCode(w: WelcomeCode, c: { subtotalCents: number; email: string | null; now: Date; paidOrdersForEmail: number; heldElsewhere: boolean }, currency = "usd"): DiscountCheck {
+export function checkWelcomeCode(w: WelcomeCode, c: { subtotalCents: number; email: string | null; now: Date; paidOrdersForEmail: number; heldElsewhere: boolean }, currency = "usd", edition: EditionKey = "bison"): DiscountCheck {
+  const say = sayFor(edition);
   if (w.redeemedAt || c.heldElsewhere) return { ok: false, message: "That code has already been used." };
   if (w.expiresAt && c.now >= w.expiresAt) return { ok: false, message: "That code has expired." };
-  if (c.email && c.email !== w.email) return { ok: false, message: "That welcome code works with the email address it was sent to." };
-  if (c.paidOrdersForEmail > 0) return { ok: false, message: "Welcome codes are for a first order." };
+  if (c.email && c.email !== w.email) return { ok: false, message: say("That welcome code works with the email address it was sent to.", "That intro offer code works with the email address it was sent to.") };
+  if (c.paidOrdersForEmail > 0) return { ok: false, message: say("Welcome codes are for a first order.", "Intro offer codes are for a first purchase.") };
   const value = Number(w.value);
   // Welcome offers are set in whole currency units, like $15.
   const off = Math.round(value * minorPerMajor(currency));

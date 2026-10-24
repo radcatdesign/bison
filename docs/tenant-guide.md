@@ -14,6 +14,17 @@ Bison Ops opens the mode you used last. **Updates** lists every change we make. 
 
 On your phone, tap **Menu** in the bar at the bottom for the pages inside a mode. Pull down from the top of any page to refresh it. To put Bison Ops on your home screen, open it in your phone's browser and choose Add to Home Screen.
 
+## Fit Funnels, for clubs
+
+Gyms, health clubs and fitness studios use Bison Ops as **Fit Funnels**: the same tools, with your club's words. If you signed up as a club, everything below works the same way, with these names:
+
+- **Leads** are the people who asked about your club: a free trial pass, a tour, a class or a personal training consult. **Members** are the ones who joined.
+- **Funnel pages** are landing pages, with templates for a free trial pass, an intro offer, a new class, a personal training consult, a presale, corporate wellness, a six-week challenge and a club tour.
+- **Intro offer** is the welcome offer: a one-time code for each new subscriber, like a first week free. Your numbers, never ours.
+- **Memberships** are what you sell: memberships, class packs, personal training and gear. **Purchases** are paid orders, **Quotes** are for corporate memberships, team events and training bundles, **Corporate accounts** are companies buying for their staff at corporate pricing, **Promo codes** are discount codes, and **Unfinished joins** are carts people left behind.
+
+Anything only you know, like prices, class times and member numbers, is marked in yellow until you fill it in. Nothing goes out with a yellow spot left.
+
 ## Sample data
 
 A new account starts with sample data, so every screen shows how it works before your own visitors arrive. Sample data is made up, and nothing you change while it's on is saved. When your own data starts coming in, turn it off in **Settings**, under Data. Only owners and admins can switch it.

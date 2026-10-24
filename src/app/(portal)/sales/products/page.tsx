@@ -5,11 +5,13 @@ import { Suspense } from "react";
 import m from "@/components/marketing/marketing.module.css";
 import { salesGate } from "@/components/sales/gate";
 import { ProductImport } from "@/components/sales/product-import";
+import { SaidHeader } from "@/components/sales/said";
 import s from "@/components/sales/sales.module.css";
 import { SalesSetupFor } from "@/components/sales/setup";
 import { Card, PageHeader } from "@/components/ui";
 import { may } from "@/config/roles";
 import { withTenant } from "@/lib/db";
+import { sayOf } from "@/lib/edition";
 import { demoMode } from "@/lib/env";
 import { getPortalContext, scopeOf } from "@/lib/portal";
 import { sampleCatalog, sampleUuid } from "@/lib/sample/sales";
@@ -17,9 +19,14 @@ import { formatMoney } from "@/lib/sales/money";
 import { listProducts, type ProductRow } from "@/lib/sales/products";
 import { getSalesSettings } from "@/lib/sales/store";
 
-export const metadata: Metadata = { title: "Products" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: sayOf(await getPortalContext())("Products", "Memberships") };
+}
 
-const NOTE = "Everything you sell, with options, prices, photos and what it weighs. Active products show in your shop and each has its own page.";
+const NOTE: [string, string] = [
+  "Everything you sell, with options, prices, photos and what it weighs. Active products show in your shop and each has its own page.",
+  "Memberships, class packs, personal training and gear, with options and prices. Active ones show in your club's online store and each has its own page. Only gear ships.",
+];
 
 type Search = { q?: string; status?: string };
 
@@ -33,6 +40,7 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
   const demo = demoMode();
   const status = sp.status === "draft" || sp.status === "archived" || sp.status === "active" ? sp.status : "all";
   const canEdit = may(ctx.member.role, "sales.edit");
+  const say = sayOf(ctx);
   let rows: ProductRow[];
   let currency = "usd";
   if (demo) {
@@ -48,25 +56,25 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
   return (
     <>
       <PageHeader
-        title="Products"
-        note={NOTE}
+        title={say("Products", "Memberships")}
+        note={say(...NOTE)}
         actions={
           <>
             <ProductImport canEdit={canEdit} demo={demo} />
             {canEdit && (
               <Link href="/sales/products/new" className="btn btn-primary" data-testid="new-product">
                 <Plus aria-hidden="true" />
-                New product
+                {say("New product", "Add a membership or pack")}
               </Link>
             )}
           </>
         }
       />
       <SalesSetupFor ctx={ctx} tool="products" />
-      {demo && <p className="notice" style={{ marginBottom: 18 }}>This demo shows a sample catalog. In your own account you import or add your products here.</p>}
-      <Card title="Catalog" flush testId="product-list">
+      {demo && <p className="notice" style={{ marginBottom: 18 }}>{say("This demo shows a sample catalog. In your own account you import or add your products here.", "This demo shows sample memberships, packs and gear. In your own account you add or import yours here.")}</p>}
+      <Card title={say("Catalog", "Memberships, packs and gear")} flush testId="product-list">
         <form className={m.toolbar} action="/sales/products" style={{ padding: "14px 14px 0" }}>
-          <input name="q" className="input" defaultValue={sp.q} placeholder="Search products" aria-label="Search products" />
+          <input name="q" className="input" defaultValue={sp.q} placeholder={say("Search products", "Search memberships and packs")} aria-label={say("Search products", "Search memberships and packs")} />
           <select name="status" className="select" defaultValue={status} aria-label="Status">
             <option value="all">Active and drafts</option>
             <option value="active">Active</option>
@@ -79,17 +87,17 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
         </form>
         {rows.length === 0 ? (
           <div className={m.empty}>
-            <strong>{sp.q || status !== "all" ? "Nothing matches that." : "No products yet."}</strong>
-            <span>{sp.q || status !== "all" ? "Try a different search or filter." : "Import a spreadsheet, a Shopify export or a product feed, or add products one at a time."}</span>
+            <strong>{sp.q || status !== "all" ? "Nothing matches that." : say("No products yet.", "No memberships or packs yet.")}</strong>
+            <span>{sp.q || status !== "all" ? "Try a different search or filter." : say("Import a spreadsheet, a Shopify export or a product feed, or add products one at a time.", "Add your memberships, class packs, personal training and gear one at a time, or import a spreadsheet.")}</span>
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table className={m.table}>
               <thead>
                 <tr>
-                  <th>Product</th>
+                  <th>{say("Product", "Name")}</th>
                   <th>Price</th>
-                  <th className={m.hideSm}>Versions</th>
+                  <th className={m.hideSm}>{say("Versions", "Options")}</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -104,7 +112,7 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
                         </span>
                         <span className={m.cellMain}>
                           <strong>{r.name}</strong>
-                          <span>{[r.category, r.missingWeight ? "No weight" : ""].filter(Boolean).join(" · ")}</span>
+                          <span>{[r.category, r.missingWeight ? say("No weight", "No shipping set") : ""].filter(Boolean).join(" · ")}</span>
                         </span>
                       </Link>
                     </td>
@@ -121,7 +129,7 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
         )}
         <div className={m.pager}>
           <span>
-            <span className="num">{rows.length.toLocaleString("en-US")}</span> {rows.length === 1 ? "product" : "products"}
+            <span className="num">{rows.length.toLocaleString("en-US")}</span> {rows.length === 1 ? say("product", "item") : say("products", "items")}
           </span>
         </div>
       </Card>
@@ -131,7 +139,7 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
 
 export default function ProductsPage({ searchParams }: { searchParams: Promise<Search> }) {
   return (
-    <Suspense fallback={<PageHeader title="Products" note={NOTE} />}>
+    <Suspense fallback={<SaidHeader title={["Products", "Memberships"]} note={NOTE} />}>
       <Body searchParams={searchParams} />
     </Suspense>
   );

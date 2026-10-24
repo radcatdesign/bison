@@ -73,5 +73,5 @@ export async function loadSetupFacts(ctx: PortalContext): Promise<SetupFacts> {
 }
 
 export async function loadSetup(ctx: PortalContext): Promise<ToolSetup[]> {
-  return buildSetup(await loadSetupFacts(ctx));
+  return buildSetup(await loadSetupFacts(ctx), ctx.tenant.edition);
 }

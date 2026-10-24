@@ -5,7 +5,8 @@
 import { Check, Copy, Plus, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { saveSearchAction } from "@/app/(portal)/marketing/actions";
-import { BUSINESS_TYPES, type BusinessType, type SearchSettings, searchSettingsSchema } from "@/lib/marketing/settings";
+import { useEditionKey, useSay } from "@/components/edition";
+import { BUSINESS_TYPES, type BusinessType, businessTypesFor, type SearchSettings, searchSettingsSchema } from "@/lib/marketing/settings";
 import { useIsClient } from "@/lib/use-is-client";
 import { useDemoMarketing } from "./demo-setup";
 import { writeDemo } from "./demo-store";
@@ -28,6 +29,8 @@ function BusinessForm({ initial, storage, tenantId, canEdit, ready }: Props & { 
   const [profile, setProfile] = useState("");
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [pending, start] = useTransition();
+  const say = useSay();
+  const edition = useEditionKey();
   const set = <K extends keyof SearchSettings>(k: K, value: SearchSettings[K]) => setV((x) => ({ ...x, [k]: value }));
 
   const save = () =>
@@ -43,13 +46,21 @@ function BusinessForm({ initial, storage, tenantId, canEdit, ready }: Props & { 
 
   return (
     <fieldset className={s.group} id="business" disabled={!canEdit} data-testid="search-business" data-ready={ready || undefined}>
-      <legend>Your business, for search and AI</legend>
+      <legend>{say("Your business, for search and AI", "Your club, for search and AI")}</legend>
       <div className={s.field}>
         <label htmlFor="search-description" className={s.fieldLabel}>
-          What you do, in a paragraph
+          {say("What you do, in a paragraph", "What your club offers, in a paragraph")}
         </label>
-        <textarea id="search-description" className={`input ${s.textarea}`} rows={4} maxLength={600} value={v.description} onChange={(e) => set("description", e.target.value)} placeholder="We build and resurface pools in Central Oregon, known for glow-in-the-dark finishes..." />
-        <span className={s.hint}>Plain and specific: what you do, who for, and where. AI assistants often quote this when someone asks about businesses like yours.</span>
+        <textarea
+          id="search-description"
+          className={`input ${s.textarea}`}
+          rows={4}
+          maxLength={600}
+          value={v.description}
+          onChange={(e) => set("description", e.target.value)}
+          placeholder={say("We build and resurface pools in Central Oregon, known for glow-in-the-dark finishes...", "A gym in Bend, Oregon with a strength floor, group classes and personal training...")}
+        />
+        <span className={s.hint}>{say("Plain and specific: what you do, who for, and where. AI assistants often quote this when someone asks about businesses like yours.", "Plain and specific: what you offer, who it's for, and where. AI assistants often quote this when someone asks about gyms and studios nearby.")}</span>
       </div>
       <div className={s.field}>
         <span className={s.fieldLabel}>What you offer</span>
@@ -69,7 +80,7 @@ function BusinessForm({ initial, storage, tenantId, canEdit, ready }: Props & { 
         )}
         {canEdit && v.offerings.length < 12 && (
           <div className={s.inline}>
-            <input className="input" value={offering} onChange={(e) => setOffering(e.target.value)} maxLength={80} placeholder="Pool resurfacing" aria-label="Something you offer" style={{ flex: 1 }} />
+            <input className="input" value={offering} onChange={(e) => setOffering(e.target.value)} maxLength={80} placeholder={say("Pool resurfacing", "Group classes")} aria-label="Something you offer" style={{ flex: 1 }} />
             <button
               type="button"
               className="btn"
@@ -91,7 +102,7 @@ function BusinessForm({ initial, storage, tenantId, canEdit, ready }: Props & { 
             Kind of business
           </label>
           <select id="search-type" className="select" value={v.businessType} onChange={(e) => set("businessType", e.target.value as BusinessType)}>
-            {(Object.keys(BUSINESS_TYPES) as BusinessType[]).map((t) => (
+            {businessTypesFor(edition, v.businessType).map((t) => (
               <option key={t} value={t}>
                 {BUSINESS_TYPES[t]}
               </option>
@@ -123,7 +134,7 @@ function BusinessForm({ initial, storage, tenantId, canEdit, ready }: Props & { 
         <label htmlFor="search-hours" className={s.fieldLabel}>
           Hours
         </label>
-        <input id="search-hours" className="input" value={v.hours} maxLength={200} onChange={(e) => set("hours", e.target.value)} placeholder="Mon to Fri 8 to 5, Sat 9 to 1" />
+        <input id="search-hours" className="input" value={v.hours} maxLength={200} onChange={(e) => set("hours", e.target.value)} placeholder={say("Mon to Fri 8 to 5, Sat 9 to 1", "Mon to Fri 5 am to 10 pm, Sat and Sun 7 to 7")} />
       </div>
       <div className={s.field}>
         <span className={s.fieldLabel}>Your profiles elsewhere</span>
@@ -145,7 +156,7 @@ function BusinessForm({ initial, storage, tenantId, canEdit, ready }: Props & { 
         )}
         {canEdit && v.profiles.length < 6 && (
           <div className={s.inline}>
-            <input className="input" value={profile} onChange={(e) => setProfile(e.target.value.trim())} placeholder="https://www.instagram.com/yourcompany" aria-label="Profile address" style={{ flex: 1 }} />
+            <input className="input" value={profile} onChange={(e) => setProfile(e.target.value.trim())} placeholder={say("https://www.instagram.com/yourcompany", "https://www.instagram.com/yourclub")} aria-label="Profile address" style={{ flex: 1 }} />
             <button
               type="button"
               className="btn"
@@ -160,14 +171,14 @@ function BusinessForm({ initial, storage, tenantId, canEdit, ready }: Props & { 
             </button>
           </div>
         )}
-        <span className={s.hint}>Google Business Profile, Instagram, Facebook, Yelp, Houzz. Search engines use these to tie your profiles to you.</span>
+        <span className={s.hint}>{say("Google Business Profile, Instagram, Facebook, Yelp, Houzz. Search engines use these to tie your profiles to you.", "Google Business Profile, Instagram, Facebook, Yelp, ClassPass. Search engines use these to tie your profiles to your club.")}</span>
       </div>
       <label className={s.checkRow}>
         <input type="checkbox" checked={v.allowAi} onChange={(e) => set("allowAi", e.target.checked)} />
         <span>
           Let AI assistants read your pages
           <br />
-          <span className={s.hint}>On, ChatGPT, Claude, Perplexity and others can find and recommend you. Off, they&apos;re asked to skip your landing pages (most respect it).</span>
+          <span className={s.hint}>{say("On, ChatGPT, Claude, Perplexity and others can find and recommend you. Off, they're asked to skip your landing pages (most respect it).", "On, ChatGPT, Claude, Perplexity and others can find and recommend your club. Off, they're asked to skip your funnel pages (most respect it).")}</span>
         </span>
       </label>
       {canEdit && (

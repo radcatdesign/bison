@@ -56,7 +56,7 @@ export function compose(setup: SendSetup, from: string, content: Content, to: Re
     subject,
     preheader: merge(content.preheader),
     person: { name: to.name, email: to.email },
-    offer: offer ? { code: offer.code, terms: offerTerms({ kind: offer.discount_kind, value: Number(offer.discount), fine }, offer.expires_at, setup.info.timezone) } : null,
+    offer: offer ? { code: offer.code, terms: offerTerms({ kind: offer.discount_kind, value: Number(offer.discount), fine }, offer.expires_at, setup.info.timezone, setup.info.edition) } : null,
     unsubscribeUrl: links.page,
     baseUrl: base,
     utm: { source: to.kind === "series" ? "email-series" : "newsletter", campaign: content.campaign, hosts: [...setup.info.domains, new URL(base).hostname] },

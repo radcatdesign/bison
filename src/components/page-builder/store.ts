@@ -1,6 +1,7 @@
 // Where the editor keeps pages. Real accounts save through server actions; the
 // demo keeps everything in this browser's storage, so nothing reaches a server.
 import { deletePageAction, publishPageAction, renamePageAction, savePageAction, unpublishPageAction } from "@/app/(portal)/marketing/pages/actions";
+import { type EditionKey, sayFor } from "@/config/editions";
 import type { PageDoc } from "@/lib/pages/schema";
 
 export type ThreadItem = { id: string; role: "user" | "agent"; text: string; steps?: string[]; state?: "working" | "done" | "error" };
@@ -82,7 +83,8 @@ export function removeDemoPage(tenantId: string, id: string) {
   if (stored) write(tenantId, { seeded: true, pages: stored.pages.filter((p) => p.id !== id) });
 }
 
-export function browserStore(tenantId: string, publicBase: string): PageStore {
+export function browserStore(tenantId: string, publicBase: string, edition: EditionKey = "bison"): PageStore {
+  const say = sayFor(edition);
   const update = (id: string, change: Partial<DemoPage>): Result => {
     const page = demoPage(tenantId, id);
     if (!page) return { ok: false, message: "This page isn't in this browser anymore." };
@@ -98,7 +100,7 @@ export function browserStore(tenantId: string, publicBase: string): PageStore {
     },
     publish: async (id) => ({
       ok: false,
-      message: `This is a demo, so pages can't go live. In your own account, Publish puts it at ${publicBase}${demoPage(tenantId, id)?.slug ?? "your-page"} and its form sends land in Contacts.`,
+      message: `This is a demo, so pages can't go live. In your own account, Publish puts it at ${publicBase}${demoPage(tenantId, id)?.slug ?? "your-page"} and its form sends land in ${say("Contacts", "Leads")}.`,
     }),
     unpublish: async () => ({ ok: false, message: "This is a demo, so nothing is live." }),
     remove: async (id) => {

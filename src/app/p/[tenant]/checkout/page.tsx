@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { CheckoutFlow } from "@/components/shop/checkout";
 import { ShopFrame } from "@/components/shop/frame";
 import s from "@/components/shop/shop.module.css";
+import { sayFor } from "@/config/editions";
 import { demoMode } from "@/lib/env";
 import { formToken } from "@/lib/pages/form-token";
 import { inquiryFormKey } from "@/lib/sales/checkout";
@@ -33,7 +34,7 @@ async function Checkout({ params }: { params: Params }) {
     <ShopFrame shop={shop} buyer={buyer} cart={false}>
       <h1 className={s.title}>Checkout</h1>
       <p className={s.lead}>
-        <a href={`/p/${shop.slug}/shop`}>Back to the shop</a>
+        <a href={`/p/${shop.slug}/shop`}>{sayFor(shop.edition)("Back to the shop", "Back to the store")}</a>
       </p>
       <CheckoutFlow slug={shop.slug} accent={shop.accent} countries={shop.countries} collectPhone={shop.collectPhone} note={shop.checkoutNote} inquiryMessage={shop.inquiryMessage} testMode={paymentsProviderName() === "stand-in"} inquiryToken={demoMode() ? "" : formToken(inquiryFormKey(shop.tenantId))} />
     </ShopFrame>

@@ -10,6 +10,7 @@ import { Card, Metric, MetricStrip, PageHeader } from "@/components/ui";
 import { CATALOG } from "@/config/catalog";
 import { may } from "@/config/roles";
 import { withTenant } from "@/lib/db";
+import { sayOf } from "@/lib/edition";
 import { demoMode } from "@/lib/env";
 import { defaultMarketingSettings } from "@/lib/marketing/settings";
 import { getMarketingSettings, settingsTenantOf } from "@/lib/marketing/store";
@@ -23,6 +24,7 @@ const NOTE = "Everyone who agreed to get your email. Every email has a one-click
 type Search = { q?: string; status?: string; list?: string; kind?: string; page?: string; id?: string };
 
 const SOURCE: Record<string, string> = { manual: "Added by hand", import: "Imported", page: "Landing page", form: "Site form" };
+const CLUB_SOURCE: Record<string, string> = { ...SOURCE, page: "Funnel page" };
 
 function hrefWith(base: Search, change: Partial<Search>): string {
   const p = new URLSearchParams();
@@ -54,6 +56,8 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
   const limit = CATALOG["module:marketing"].limits.subscribers ?? 0;
   const base: Search = { q: sp.q, status: sp.status, list: sp.list, kind: sp.kind };
   const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: ctx.settings.timezone });
+  const say = sayOf(ctx);
+  const sources = ctx.tenant.edition === "fit" ? CLUB_SOURCE : SOURCE;
 
   return (
     <>
@@ -119,7 +123,7 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
         {page.rows.length === 0 ? (
           <div className={s.empty}>
             <strong>{sp.q || sp.list || sp.kind ? "Nobody matches that." : "No subscribers yet."}</strong>
-            <span>{sp.q || sp.list || sp.kind ? "Try a different search or filter." : "Import a CSV from your old email tool, add people by hand, or put a signup form on a landing page."}</span>
+            <span>{sp.q || sp.list || sp.kind ? "Try a different search or filter." : say("Import a CSV from your old email tool, add people by hand, or put a signup form on a landing page.", "Import a CSV from your old email tool or member software, add people by hand, or put a signup form on a funnel page.")}</span>
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
@@ -155,7 +159,7 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
                         ))}
                       </span>
                     </td>
-                    <td className={`${s.hideSm} muted`}>{SOURCE[r.source]}</td>
+                    <td className={`${s.hideSm} muted`}>{sources[r.source]}</td>
                     <td className="muted">{fmt.format(r.subscribedAt)}</td>
                   </tr>
                 ))}
@@ -189,9 +193,9 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
         <Card title="Signup forms" note='The "I am a..." question on signup forms, and its choices.' id="signup">
           <SignupEditor initial={settings.signup} canEdit={may(ctx.member.role, "marketing.edit")} storage={demo ? "browser" : "server"} tenantId={ctx.tenant.id} />
           <p className={s.hint} style={{ marginTop: 14 }}>
-            To collect signups, open a landing page in{" "}
+            {say("To collect signups, open a landing page in", "To collect signups, open a funnel page in")}{" "}
             <Link href="/marketing/pages" className="link">
-              Pages
+              {say("Pages", "Funnel pages")}
             </Link>
             , edit its form and turn on &quot;Add to email list&quot;.
           </p>

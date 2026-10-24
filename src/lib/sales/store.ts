@@ -2,6 +2,7 @@ import "server-only";
 // Reading and saving Sales settings, and the company's connections for taking
 // payments (its Stripe account) and for shipping (ShipStation or UPS). Secrets
 // are encrypted before they're stored and never leave the server.
+import { type EditionKey, isEditionKey } from "@/config/editions";
 import { decryptSecret, encryptSecret } from "@/lib/crypto/secrets";
 import type { Tx } from "@/lib/db";
 import { type Carrier, shipStation, shippingStandIn, standInCarrier, ups } from "./carriers";
@@ -15,9 +16,15 @@ export async function teamEmails(tx: Tx): Promise<string[]> {
   return rows.map((r) => r.email.toLowerCase());
 }
 
+/** The company's edition (tenants.edition), for words on pages and emails that have no session. */
+export async function readEdition(tx: Tx): Promise<EditionKey> {
+  const t = await tx.selectFrom("tenants").select("edition").executeTakeFirst();
+  return isEditionKey(t?.edition) ? t.edition : "bison";
+}
+
 export async function getSalesSettings(tx: Tx): Promise<SalesSettings> {
   const row = await tx.selectFrom("sales_settings").select(["store", "shipping", "trade"]).executeTakeFirst();
-  const settings = readSalesSettings(row, []);
+  const settings = readSalesSettings(row, [], await readEdition(tx));
   if (!settings.store.alertEmails.length) settings.store.alertEmails = await teamEmails(tx);
   return settings;
 }

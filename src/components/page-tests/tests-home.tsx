@@ -6,8 +6,9 @@ import { ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useRef, useState } from "react";
 import { createTestAction, type TestActionResult } from "@/app/(portal)/marketing/tests/actions";
+import { useSay } from "@/components/edition";
 import m from "@/components/marketing/marketing.module.css";
-import { Card } from "@/components/ui";
+import { Card, PageHeader } from "@/components/ui";
 import type { VerdictKind, VersionKey } from "@/lib/pages/test-stats";
 import s from "./tests.module.css";
 
@@ -44,7 +45,19 @@ export const VERDICT_PILL: Record<VerdictKind, { label: string; tone: string }> 
 
 const STATUS_TONE: Record<TestCardView["status"], string> = { draft: "pill", running: "pill pill-accent", ended: "pill" };
 
+/** The screen's title and note, in the company's words. Also the loading frame. */
+export function TestsHeader() {
+  const say = useSay();
+  return (
+    <PageHeader
+      title="A/B tests"
+      note={say("Show visitors two or three versions of a landing page, and keep the one that gets more form sends or clicks.", "Show visitors two or three versions of a funnel page, and keep the one that gets more form sends or clicks.")}
+    />
+  );
+}
+
 export function TestsHome({ tests, pages, hasLivePage, canEdit, sampleResults }: Props) {
+  const say = useSay();
   const ref = useRef<HTMLDialogElement>(null);
   const [goal, setGoal] = useState<"form" | "click">("form");
   const [state, run, pending] = useActionState<TestActionResult | null, FormData>(createTestAction, null);
@@ -106,7 +119,12 @@ export function TestsHome({ tests, pages, hasLivePage, canEdit, sampleResults }:
             <strong>
               <span className={s.howNum}>1</span>Make a version
             </strong>
-            <p>B starts as a copy of the live page. Change one thing, like the headline, the button or the offer, so you know what made the difference.</p>
+            <p>
+              {say(
+                "B starts as a copy of the live page. Change one thing, like the headline, the button or the offer, so you know what made the difference.",
+                "B starts as a copy of the live page. Change one thing, like the headline, the button or the intro offer, so you know what made the difference.",
+              )}
+            </p>
           </li>
           <li className={s.howItem}>
             <strong>
@@ -118,7 +136,12 @@ export function TestsHome({ tests, pages, hasLivePage, canEdit, sampleResults }:
             <strong>
               <span className={s.howNum}>3</span>Keep the winner
             </strong>
-            <p>After a week and enough visitors, the results say which one gets more form sends or clicks. End the test and the winner goes live.</p>
+            <p>
+              {say(
+                "After a week and enough visitors, the results say which one gets more form sends or clicks. End the test and the winner goes live.",
+                "After a week and enough visitors, the results say which one gets more form sends, like free pass requests, or more clicks. End the test and the winner goes live.",
+              )}
+            </p>
           </li>
         </ol>
       </Card>
@@ -132,7 +155,7 @@ export function TestsHome({ tests, pages, hasLivePage, canEdit, sampleResults }:
             <p className="notice">
               {hasLivePage ? "Every live page already has a test. End or delete one to test something new on that page." : "A test compares a live page with versions of it, so publish a page first."}{" "}
               <Link href="/marketing/pages" className="link">
-                Open Pages
+                {say("Open Pages", "Open funnel pages")}
               </Link>
             </p>
           ) : (
@@ -162,11 +185,16 @@ export function TestsHome({ tests, pages, hasLivePage, canEdit, sampleResults }:
                 <div className={s.goalChoices} role="radiogroup" aria-label="What counts as a win">
                   <button type="button" role="radio" aria-checked={goal === "form"} className={s.goalChoice} onClick={() => setGoal("form")} data-testid="new-test-goal-form">
                     <strong>Form sends</strong>
-                    <span>Someone sends the form on the page. Best for quote requests and signups.</span>
+                    <span>{say("Someone sends the form on the page. Best for quote requests and signups.", "Someone sends the form, like a free pass request. Best for trial passes, tours and class sign-ups.")}</span>
                   </button>
                   <button type="button" role="radio" aria-checked={goal === "click"} className={s.goalChoice} onClick={() => setGoal("click")} data-testid="new-test-goal-click">
                     <strong>Button clicks</strong>
-                    <span>Someone clicks any button, like Shop now or Call us. Best when the page sends people somewhere else.</span>
+                    <span>
+                      {say(
+                        "Someone clicks any button, like Shop now or Call us. Best when the page sends people somewhere else.",
+                        "Someone clicks any button, like Join online or Call us. Best when the page sends people somewhere else, like your online store.",
+                      )}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -174,7 +202,17 @@ export function TestsHome({ tests, pages, hasLivePage, canEdit, sampleResults }:
                 <label htmlFor="nt-why" className={m.fieldLabel}>
                   What you expect <em>Optional</em>
                 </label>
-                <textarea id="nt-why" name="hypothesis" className={`input ${m.textarea}`} rows={3} maxLength={1000} placeholder="A headline that says the price up front should get more quote requests, because people ask about price first." />
+                <textarea
+                  id="nt-why"
+                  name="hypothesis"
+                  className={`input ${m.textarea}`}
+                  rows={3}
+                  maxLength={1000}
+                  placeholder={say(
+                    "A headline that says the price up front should get more quote requests, because people ask about price first.",
+                    "A headline that says the pass is free with no card needed should get more free pass requests, because people worry about being signed up.",
+                  )}
+                />
                 <span className={m.hint}>Writing it down first keeps everyone honest about what the test showed.</span>
               </div>
             </fieldset>

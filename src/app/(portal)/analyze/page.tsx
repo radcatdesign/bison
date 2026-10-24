@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { VisitorsChart } from "@/components/visitors-chart";
 import { Card, Metric, MetricStrip, PageHeader, SampleBanner, Segmented } from "@/components/ui";
+import { sayOf } from "@/lib/edition";
 import { demoMode } from "@/lib/env";
 import { formatChange, formatDecimal, formatDuration, formatInt, formatPercent } from "@/lib/format";
 import { getPortalContext, scopeOf } from "@/lib/portal";
@@ -25,6 +26,9 @@ const HELP = {
     "Share of visits from browsers that have been here before. Browsers set to European or UK time, and browsers that ask not to be tracked, always count as new.",
 };
 
+// Staff browsers are the front desk, coaches and trainers in a club.
+const CLUB_PAGEVIEWS = "Every time a page loads, or a single-page site changes its address. Browsers your front desk, coaches and trainers use while signed in, and known bots, aren't counted.";
+
 function Ranges({ range }: { range: number }) {
   return <Segmented label="Date range" items={RANGES.map((r) => ({ href: `/analyze?range=${r}`, label: `${r} days`, current: r === range }))} />;
 }
@@ -36,11 +40,12 @@ async function Overview({ searchParams }: { searchParams: Promise<{ range?: stri
   const repos = getRepos({ scope: scopeOf(ctx), tenant: ctx.tenant, sampleData: ctx.settings.sampleData, timezone: ctx.settings.timezone });
   const { current: c, previous: p, daily, topPages } = await repos.analytics.summary(range);
   const topMax = Math.max(1, ...topPages.map((t) => t.views));
+  const say = sayOf(ctx);
 
   return (
     <>
       {repos.mode === "sample" && <SampleBanner demo={demoMode()} />}
-      <PageHeader title="Overview" note={`Last ${range} days on ${ctx.sites[0]?.domain ?? "your site"}`} actions={<Ranges range={range} />} />
+      <PageHeader title="Overview" note={`Last ${range} days on ${ctx.sites[0]?.domain ?? say("your site", "your club's site")}`} actions={<Ranges range={range} />} />
 
       <section className={`card ${s.hero}`} aria-label="Traffic">
         <div className={s.heroTop}>
@@ -49,7 +54,7 @@ async function Overview({ searchParams }: { searchParams: Promise<{ range?: stri
         </div>
         <VisitorsChart points={daily} />
         <MetricStrip>
-          <Metric label="Page views" value={formatInt(c.pageviews)} change={formatChange(c.pageviews, p.pageviews, range)} help={HELP.pageviews} />
+          <Metric label="Page views" value={formatInt(c.pageviews)} change={formatChange(c.pageviews, p.pageviews, range)} help={say(HELP.pageviews, CLUB_PAGEVIEWS)} />
           <Metric label="Visits" value={formatInt(c.visits)} change={formatChange(c.visits, p.visits, range)} help={HELP.visits} />
           <Metric label="Bounce rate" value={formatPercent(c.bounceRate)} change={formatChange(c.bounceRate, p.bounceRate, range, true)} help={HELP.bounce} />
           <Metric label="Average active visit" value={formatDuration(c.avgActiveSeconds)} change={formatChange(c.avgActiveSeconds, p.avgActiveSeconds, range)} help={HELP.active} />
@@ -60,7 +65,7 @@ async function Overview({ searchParams }: { searchParams: Promise<{ range?: stri
 
       <Card title="Top pages" aside={<span className="label">Page views</span>} flush>
         {topPages.length === 0 ? (
-          <p className={s.empty}>No page views in this range yet. Once the tracking script is on your site, pages show up here within a minute.</p>
+          <p className={s.empty}>{say("No page views in this range yet. Once the tracking script is on your site, pages show up here within a minute.", "No page views in this range yet. Once the tracking script is on your club's site, pages show up here within a minute.")}</p>
         ) : (
           <ol className={s.pages}>
             {topPages.map((page) => (

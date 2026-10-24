@@ -4,12 +4,14 @@
 // ask for changes, or decline.
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useSay } from "@/components/edition";
 import s from "@/components/shop/shop.module.css";
 
 type Kind = "approve" | "changes" | "decline";
 
 export function EstimateAnswer({ token, seen, total, business }: { token: string; seen: string; total: string; business: string }) {
   const router = useRouter();
+  const say = useSay();
   const [kind, setKind] = useState<Kind>("approve");
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
@@ -83,7 +85,7 @@ export function EstimateAnswer({ token, seen, total, business }: { token: string
         </p>
       )}
       <button type="submit" className={s.button} disabled={busy} data-testid="estimate-answer-send">
-        {busy ? "Sending" : kind === "approve" ? "Approve the estimate" : kind === "changes" ? "Send my changes" : "Decline the estimate"}
+        {busy ? "Sending" : kind === "approve" ? say("Approve the estimate", "Approve the quote") : kind === "changes" ? "Send my changes" : say("Decline the estimate", "Decline the quote")}
       </button>
     </form>
   );

@@ -6,6 +6,8 @@
 import { ImageUp, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useSay } from "@/components/edition";
+import type { Say } from "@/config/editions";
 import { describeIssues, type EmailImage, type EmailSection, emailSectionSchema } from "@/lib/email/schema";
 import m from "@/components/marketing/marketing.module.css";
 import { uploadImage } from "@/components/marketing/upload";
@@ -67,6 +69,15 @@ const SPECS: Record<EmailSection["type"], Field[]> = {
   ],
 };
 
+/** The fields in this edition's words: in Fit Funnels the offer is the intro offer. */
+function specsFor(type: EmailSection["type"], say: Say): Field[] {
+  return SPECS[type].map((f) => {
+    if (f.kind === "note" && type === "offer") return { ...f, text: say(f.text, "Each new lead sees their own one-time code here, with what it's worth and when it ends. People without a code don't see this box at all."), cta: say(f.cta ?? "", "Intro offer settings") };
+    if (f.kind === "link" && type === "button" && f.hint) return { ...f, hint: say(f.hint, "A full web address, like https://yourclub.com/free-pass.") };
+    return f;
+  });
+}
+
 function clean(raw: Raw, type: EmailSection["type"]): Raw {
   const out: Raw = { ...raw };
   for (const f of SPECS[type]) {
@@ -78,6 +89,7 @@ function clean(raw: Raw, type: EmailSection["type"]): Raw {
 type Props = { section: EmailSection; onCommit: (next: EmailSection, key: string) => void; storage: "server" | "browser"; disabled?: boolean };
 
 export function SectionEditor({ section, onCommit, storage, disabled }: Props) {
+  const say = useSay();
   const [raw, setRaw] = useState<Raw>(section as unknown as Raw);
   const [error, setError] = useState<string | null>(null);
   const committed = useRef(JSON.stringify(section));
@@ -111,7 +123,7 @@ export function SectionEditor({ section, onCommit, storage, disabled }: Props) {
 
   return (
     <fieldset className={s.form} data-testid={`email-section-form-${section.type}`} disabled={disabled}>
-      {SPECS[section.type].map((f) => {
+      {specsFor(section.type, say).map((f) => {
         switch (f.kind) {
           case "text":
           case "textarea":
@@ -197,6 +209,7 @@ export function SectionEditor({ section, onCommit, storage, disabled }: Props) {
 }
 
 function ImageField({ id, label, image, alt, storage, onImage, onAlt }: { id: string; label: string; image: EmailImage | null; alt: string; storage: "server" | "browser"; onImage: (i: EmailImage | null) => void; onAlt: (a: string) => void }) {
+  const say = useSay();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -251,7 +264,7 @@ function ImageField({ id, label, image, alt, storage, onImage, onAlt }: { id: st
       <label className={m.fieldLabel} htmlFor={`${id}-alt`}>
         Describe the photo <em>For people who can&apos;t see images</em>
       </label>
-      <input id={`${id}-alt`} className="input" value={alt} maxLength={200} onChange={(e) => onAlt(e.target.value)} placeholder="A finished pool lit blue at night" />
+      <input id={`${id}-alt`} className="input" value={alt} maxLength={200} onChange={(e) => onAlt(e.target.value)} placeholder={say("A finished pool lit blue at night", "Members training on the strength floor")} />
     </div>
   );
 }

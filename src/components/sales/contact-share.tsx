@@ -4,12 +4,14 @@
 import { Copy } from "lucide-react";
 import { useState, useTransition } from "react";
 import { revokeShareAction, shareContactAction } from "@/app/(portal)/sales/actions";
+import { useSay } from "@/components/edition";
 import m from "@/components/marketing/marketing.module.css";
 import s from "./sales.module.css";
 
 type Share = { id: string; url: string; expiresAt: string };
 
 export function ShareContact({ contactId, shares, canShare }: { contactId: string; shares: Share[]; canShare: boolean }) {
+  const say = useSay();
   const [days, setDays] = useState(7);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [made, setMade] = useState<string | null>(null);
@@ -18,7 +20,7 @@ export function ShareContact({ contactId, shares, canShare }: { contactId: strin
   return (
     <div className={s.stack} style={{ gap: 10 }} data-testid="contact-share">
       <p className={m.hint} style={{ margin: 0 }}>
-        A read-only page of this person, their orders, estimates and carts, for someone outside your team. It never shows team notes.
+        {say("A read-only page of this person, their orders, estimates and carts, for someone outside your team. It never shows team notes.", "A read-only page of this person, their purchases, quotes and carts, for a trainer or another location. It never shows team notes.")}
       </p>
       {canShare && (
         <div className={s.copyRow}>

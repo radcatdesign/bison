@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { PagesHome } from "@/components/page-builder/pages-home";
-import { Locked, PageHeader, RoleBlocked } from "@/components/ui";
+import { PagesHeader, PagesHome } from "@/components/page-builder/pages-home";
+import { Locked, RoleBlocked } from "@/components/ui";
 import { may } from "@/config/roles";
 import { demoMode } from "@/lib/env";
 import { gateMode } from "@/lib/gate";
 import { listPages } from "@/lib/pages/repo";
 import { listTests } from "@/lib/pages/tests";
 import { seedPageFor } from "@/lib/pages/seeds";
+import { sayOf } from "@/lib/edition";
 import { getPortalContext, scopeOf } from "@/lib/portal";
 
-export const metadata: Metadata = { title: "Pages" };
-
-const NOTE = "Landing pages you build by describing them. Forms on every page send to Contacts.";
+// The tab title follows the edition, like the nav: "Funnel pages" for a club.
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: sayOf(await getPortalContext())("Pages", "Funnel pages") };
+}
 
 async function PagesBody({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const ctx = await getPortalContext();
@@ -32,7 +34,7 @@ async function PagesBody({ searchParams }: { searchParams: Promise<{ error?: str
 
   return (
     <>
-      <PageHeader title="Pages" note={NOTE} />
+      <PagesHeader />
       <PagesHome
         storage={demo ? "browser" : "server"}
         pages={pages}
@@ -47,7 +49,7 @@ async function PagesBody({ searchParams }: { searchParams: Promise<{ error?: str
 
 export default function PagesPage({ searchParams }: PageProps<"/marketing/pages">) {
   return (
-    <Suspense fallback={<PageHeader title="Pages" note={NOTE} />}>
+    <Suspense fallback={<PagesHeader />}>
       <PagesBody searchParams={searchParams as Promise<{ error?: string }>} />
     </Suspense>
   );

@@ -4,6 +4,7 @@
 // then the agent's short reply.
 import { ArrowUp, Check, Eye, Sparkles, Square } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { useEditionKey } from "@/components/edition";
 import s from "./builder.module.css";
 import type { ThreadItem } from "./store";
 
@@ -13,6 +14,13 @@ const STARTERS = [
   "A launch waitlist page, dark and minimal",
 ];
 const NEXT = ["Make it dark", "Add an FAQ", "Shorten the copy", "Add a customer quote", "Center the hero"];
+// The same ideas for a gym or studio.
+const CLUB_STARTERS = [
+  "A free week pass page: what's included, a short form and a few common questions",
+  "A page to book a personal training consult, clean and light",
+  "A presale page for our new location, dark and bold",
+];
+const CLUB_NEXT = ["Make it dark", "Add an FAQ", "Shorten the copy", "Add a member quote", "Center the hero"];
 
 type Props = {
   thread: ThreadItem[];
@@ -25,6 +33,7 @@ type Props = {
 };
 
 export function AgentPanel({ thread, running, onAsk, onStop, agentName, empty, onShowPreview }: Props) {
+  const club = useEditionKey() === "fit";
   const [text, setText] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -47,7 +56,7 @@ export function AgentPanel({ thread, running, onAsk, onStop, agentName, empty, o
     }
   };
 
-  const suggestions = empty ? STARTERS : NEXT;
+  const suggestions = club ? (empty ? CLUB_STARTERS : CLUB_NEXT) : empty ? STARTERS : NEXT;
 
   return (
     <div className={s.agent} data-testid="agent-panel">
@@ -119,7 +128,7 @@ export function AgentPanel({ thread, running, onAsk, onStop, agentName, empty, o
             onKeyDown={onKeyDown}
             rows={empty ? 4 : 2}
             maxLength={2000}
-            placeholder={empty ? "A page for our spring sale on glow aggregate, 15% off through May, with a quote form" : "Tell the agent what to change"}
+            placeholder={empty ? (club ? "A page for our free week pass, with what's included and a short form" : "A page for our spring sale on glow aggregate, 15% off through May, with a quote form") : "Tell the agent what to change"}
             aria-label="Tell the agent what to build or change"
             data-testid="agent-input"
           />

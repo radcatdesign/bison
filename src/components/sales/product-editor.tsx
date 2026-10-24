@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { deleteProductAction, saveProductAction } from "@/app/(portal)/sales/actions";
+import { useSay } from "@/components/edition";
 import m from "@/components/marketing/marketing.module.css";
 import { expandVariants, MAX_OPTIONS, MAX_PHOTOS, type ProductOption, type ProductPhoto, slugify, type VariantInput, variantKey, variantLabel } from "@/lib/sales/catalog";
 import { moneyInput, parseMoney } from "@/lib/sales/money";
@@ -54,17 +55,18 @@ function MoneyCell({ value, onChange, label, optional }: { value: number | null;
 }
 
 function OptionEditor({ options, onChange }: { options: ProductOption[]; onChange: (o: ProductOption[]) => void }) {
+  const say = useSay();
   return (
     <div className={m.formCol} style={{ gap: 10 }}>
       {options.map((o, i) => (
         <div key={i} className={s.optionRow}>
-          <input className="input" aria-label={`Option ${i + 1} name`} value={o.name} placeholder="Size" onChange={(e) => onChange(options.map((x, n) => (n === i ? { ...x, name: e.target.value } : x)))} data-testid={`option-name-${i}`} />
+          <input className="input" aria-label={`Option ${i + 1} name`} value={o.name} placeholder={say("Size", "Plan")} onChange={(e) => onChange(options.map((x, n) => (n === i ? { ...x, name: e.target.value } : x)))} data-testid={`option-name-${i}`} />
           <input
             key={`${i}:${o.values.join(",")}`}
             className="input"
             aria-label={`Option ${i + 1} choices`}
             defaultValue={o.values.join(", ")}
-            placeholder="Small, Medium, Large"
+            placeholder={say("Small, Medium, Large", "Monthly, Annual")}
             onBlur={(e) => {
               const values = [...new Set(e.target.value.split(",").map((x) => x.trim()).filter(Boolean))].slice(0, 30);
               onChange(options.map((x, n) => (n === i ? { ...x, values } : x)));
@@ -77,18 +79,19 @@ function OptionEditor({ options, onChange }: { options: ProductOption[]; onChang
         </div>
       ))}
       {options.length < MAX_OPTIONS && (
-        <button type="button" className={m.linkButton} style={{ justifySelf: "start" }} onClick={() => onChange([...options, { name: options.length ? "" : "Size", values: [] }])} data-testid="add-option">
+        <button type="button" className={m.linkButton} style={{ justifySelf: "start" }} onClick={() => onChange([...options, { name: options.length ? "" : say("Size", "Plan"), values: [] }])} data-testid="add-option">
           <Plus aria-hidden="true" />
-          {options.length ? "Add another option" : "Add options, like size or color"}
+          {options.length ? "Add another option" : say("Add options, like size or color", "Add options, like Monthly / Annual or 5 / 10 / 20 classes")}
         </button>
       )}
-      {options.length > 0 && <span className={m.hint}>Separate choices with commas. Each combination becomes a version with its own price.</span>}
+      {options.length > 0 && <span className={m.hint}>{say("Separate choices with commas. Each combination becomes a version with its own price.", "Separate choices with commas. Each combination gets its own price.")}</span>}
     </div>
   );
 }
 
 export function ProductEditor({ product, boxes, shopBase, canEdit, demo, currency }: Props) {
   const router = useRouter();
+  const say = useSay();
   const [p, setP] = useState<EditorProduct>(product);
   const [unit, setUnit] = useState<Unit>(product.variants.some((v) => v.weightOz >= 32) ? "lb" : "oz");
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
@@ -123,7 +126,7 @@ export function ProductEditor({ product, boxes, shopBase, canEdit, demo, currenc
 
   const save = () =>
     start(async () => {
-      if (demo) return setNotice({ ok: false, text: "This is a demo, so products aren't saved." });
+      if (demo) return setNotice({ ok: false, text: say("This is a demo, so products aren't saved.", "This is a demo, so memberships aren't saved.") });
       const r = await saveProductAction(p.id, { ...p, slug: p.slug || undefined });
       setNotice({ ok: r.ok, text: r.message });
       if (r.ok && r.id && !p.id) router.replace(`/sales/products/${r.id}`);
@@ -143,7 +146,7 @@ export function ProductEditor({ product, boxes, shopBase, canEdit, demo, currenc
     >
       <div className={s.builderMain}>
         <fieldset className={m.group} disabled={!canEdit}>
-          <legend>Product</legend>
+          <legend>{say("Product", "Details")}</legend>
           <div className={m.field}>
             <label htmlFor="pe-name" className={m.fieldLabel}>
               Name
@@ -214,7 +217,7 @@ export function ProductEditor({ product, boxes, shopBase, canEdit, demo, currenc
             <table className={s.variants} data-testid="variant-table">
               <thead>
                 <tr>
-                  {!single && <th>Version</th>}
+                  {!single && <th>{say("Version", "Option")}</th>}
                   <th>Price</th>
                   <th>Was price</th>
                   <th>SKU</th>
@@ -248,7 +251,7 @@ export function ProductEditor({ product, boxes, shopBase, canEdit, demo, currenc
         </fieldset>
 
         <fieldset className={m.group} disabled={!canEdit}>
-          <legend>Shipping</legend>
+          <legend>{say("Shipping", "Shipping, for gear")}</legend>
           <div className={m.choices} role="radiogroup" aria-label="Weight unit">
             {(["oz", "lb"] as const).map((u) => (
               <button key={u} type="button" role="radio" aria-checked={unit === u} className={m.choice} onClick={() => setUnit(u)}>
@@ -260,7 +263,7 @@ export function ProductEditor({ product, boxes, shopBase, canEdit, demo, currenc
             <table className={s.variants}>
               <thead>
                 <tr>
-                  {!single && <th>Version</th>}
+                  {!single && <th>{say("Version", "Option")}</th>}
                   <th>Weight ({unit})</th>
                   <th>Box</th>
                   <th>Fits per box</th>
@@ -311,7 +314,11 @@ export function ProductEditor({ product, boxes, shopBase, canEdit, demo, currenc
             </table>
           </div>
           <span className={m.hint}>
-            Carriers rate each box by weight. &quot;Ships alone&quot; gives every unit its own box, for bulky items. A flat shipping charge skips the carrier for that item, for freight or local delivery; use 0 for items that don&apos;t ship. Boxes are set in{" "}
+            {say(
+              `Carriers rate each box by weight. "Ships alone" gives every unit its own box, for bulky items. A flat shipping charge skips the carrier for that item, for freight or local delivery; use 0 for items that don't ship.`,
+              "Only gear ships. Give gear a weight and a box, and carriers rate each box by weight. Memberships, packs and training don't ship, so give them no shipping charge (0 in flat shipping).",
+            )}{" "}
+            Boxes are set in{" "}
             <Link href="/sales/checkout#shipping" className="link">
               Checkout
             </Link>
@@ -336,7 +343,7 @@ export function ProductEditor({ product, boxes, shopBase, canEdit, demo, currenc
               </button>
             ))}
           </div>
-          <span className={m.hint}>{p.status === "active" ? "In your shop and at its own address." : p.status === "draft" ? "Hidden until you make it active." : "Off the shop and out of the list. Past orders keep it."}</span>
+          <span className={m.hint}>{p.status === "active" ? say("In your shop and at its own address.", "In your club's online store and at its own address.") : p.status === "draft" ? "Hidden until you make it active." : say("Off the shop and out of the list. Past orders keep it.", "Off your online store and out of the list. Past purchases keep it.")}</span>
           <div className={m.field}>
             <label htmlFor="pe-cat" className={m.fieldLabel}>
               Category <em>Optional</em>
@@ -355,7 +362,7 @@ export function ProductEditor({ product, boxes, shopBase, canEdit, demo, currenc
         <fieldset className={m.group} disabled={!canEdit}>
           <legend>Its page</legend>
           <div className={s.copyRow}>
-            <input className="input mono" readOnly value={url} aria-label="Product page address" />
+            <input className="input mono" readOnly value={url} aria-label={say("Product page address", "Page address")} />
             <button type="button" className={m.iconButton} aria-label="Copy the address" onClick={() => navigator.clipboard?.writeText(url).then(() => setCopied(true))}>
               <Copy aria-hidden="true" />
             </button>
@@ -390,7 +397,7 @@ export function ProductEditor({ product, boxes, shopBase, canEdit, demo, currenc
             )}
             <div className={m.saveRow}>
               <button type="submit" className="btn btn-primary" disabled={pending} data-testid="save-product">
-                {pending ? "Saving" : "Save product"}
+                {pending ? "Saving" : say("Save product", "Save")}
               </button>
               {p.id && (
                 <button
@@ -398,7 +405,7 @@ export function ProductEditor({ product, boxes, shopBase, canEdit, demo, currenc
                   className={`btn ${m.danger}`}
                   disabled={pending}
                   onClick={() => {
-                    if (!window.confirm(`Delete ${p.name}? Past orders keep what was bought.`)) return;
+                    if (!window.confirm(say(`Delete ${p.name}? Past orders keep what was bought.`, `Delete ${p.name}? Past purchases keep what was bought.`))) return;
                     start(async () => {
                       if (demo) return setNotice({ ok: false, text: "This is a demo, so nothing is deleted." });
                       const r = await deleteProductAction(p.id!);

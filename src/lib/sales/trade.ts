@@ -6,6 +6,7 @@ import "server-only";
 // pausing or declining an account signs it out everywhere.
 import { sql } from "kysely";
 import { CATALOG } from "@/config/catalog";
+import { type EditionKey, sayFor } from "@/config/editions";
 import { checkLink, signLink } from "@/lib/email/tokens";
 import { isUuid, type Tx } from "@/lib/db";
 import type { TradeStatus } from "@/lib/db/types";
@@ -77,7 +78,8 @@ export async function listTrade(tx: Tx, status: TradeStatus | "all" = "all"): Pr
 export type TradeApplication = { company: string; name: string; email: string; phone: string; website: string; details: Record<string, string> };
 
 /** A public application. An existing account keeps its status; a declined one applies again. */
-export async function applyForTrade(tx: Tx, a: TradeApplication): Promise<{ id: string; created: boolean; status: TradeStatus }> {
+export async function applyForTrade(tx: Tx, a: TradeApplication, edition: EditionKey = "bison"): Promise<{ id: string; created: boolean; status: TradeStatus }> {
+  const say = sayFor(edition);
   const existing = await tx.selectFrom("trade_accounts").select(["id", "status"]).where("email", "=", a.email).executeTakeFirst();
   const contact = await tx
     .insertInto("contacts")
@@ -87,7 +89,7 @@ export async function applyForTrade(tx: Tx, a: TradeApplication): Promise<{ id: 
     .executeTakeFirstOrThrow();
   await tx
     .insertInto("submissions")
-    .values({ contact_id: contact.id, form_key: "trade:apply", form_type: "Trade application", fields: JSON.stringify({ company: a.company, name: a.name, email: a.email, phone: a.phone, website: a.website, ...a.details }), alert: "{}" })
+    .values({ contact_id: contact.id, form_key: "trade:apply", form_type: say("Trade application", "Corporate account application"), fields: JSON.stringify({ company: a.company, name: a.name, email: a.email, phone: a.phone, website: a.website, ...a.details }), alert: "{}" })
     .execute();
   if (existing) {
     if (existing.status !== "declined") return { id: existing.id, created: false, status: existing.status };
@@ -95,7 +97,7 @@ export async function applyForTrade(tx: Tx, a: TradeApplication): Promise<{ id: 
     return { id: existing.id, created: false, status: "applied" };
   }
   const { n } = await tx.selectFrom("trade_accounts").select((eb) => eb.fn.countAll<string>().as("n")).executeTakeFirstOrThrow();
-  if (Number(n) >= tradeLimit()) throw new TradeError("We can't take new trade applications right now. Please contact us directly.");
+  if (Number(n) >= tradeLimit()) throw new TradeError(say("We can't take new trade applications right now. Please contact us directly.", "We can't take new corporate account applications right now. Please contact the club directly."));
   const row = await tx
     .insertInto("trade_accounts")
     .values({ company: a.company, contact_name: a.name, email: a.email, phone: a.phone, website: a.website, details: JSON.stringify(a.details), contact_id: contact.id })

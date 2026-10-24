@@ -8,6 +8,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { type Action, may } from "@/config/roles";
 import { can } from "@/lib/access/entitlements";
+import { sayOf } from "@/lib/edition";
 import { demoMode } from "@/lib/env";
 import type { PageTestGoal } from "@/lib/db/types";
 import { PageDocError, parsePageDoc } from "@/lib/pages/schema";
@@ -19,7 +20,9 @@ export type TestActionResult = { ok: boolean; message: string; id?: string };
 async function testsContext(action: Action, { needsPlan = true } = {}): Promise<{ ctx: PortalContext; error: string | null }> {
   const ctx = await getPortalContext();
   if (needsPlan && !can(ctx.tenant, "marketing.tests")) return { ctx, error: "A/B tests are part of Marketing. Unlock Marketing to run them." };
-  if (!may(ctx.member.role, action)) return { ctx, error: action === "pages.publish" ? "Your role can't start or end tests. Someone who can publish pages can." : "Your role can't change landing pages or their tests." };
+  if (!may(ctx.member.role, action)) {
+    return { ctx, error: action === "pages.publish" ? "Your role can't start or end tests. Someone who can publish pages can." : sayOf(ctx)("Your role can't change landing pages or their tests.", "Your role can't change funnel pages or their tests.") };
+  }
   if (demoMode()) return { ctx, error: "This is a demo, so the tests here are examples and can't be changed. In your own account you set them up the same way." };
   return { ctx, error: null };
 }

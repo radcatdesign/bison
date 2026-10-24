@@ -1,26 +1,37 @@
 import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
-import { Suspense } from "react";
-import { CART_STATUS, ESTIMATE_STATUS, ORDER_STATUS } from "@/components/sales/labels";
+import { cache, Suspense } from "react";
+import { salesLabels } from "@/components/sales/labels";
 import s from "@/components/shop/shop.module.css";
+import { sayFor } from "@/config/editions";
 import { demoMode } from "@/lib/env";
 import { openShare } from "@/lib/sales/contact-share";
 import { formatMoney } from "@/lib/sales/money";
 
 // One contact's page, shared by the team at a signed link that expires.
-// Public. Read only, and never shows team notes.
-
-export const metadata: Metadata = { title: { absolute: "Shared contact" }, robots: { index: false, follow: false }, referrer: "no-referrer" };
-export const viewport: Viewport = { width: "device-width", initialScale: 1 };
+// Public. Read only, and never shows team notes. A club's page reads in club
+// words; the edition comes with the shared page.
 
 type Props = { params: Promise<{ token: string }> };
+
+/** The shared page, read once per request so the title and the page share it. */
+const shareFor = cache(async (token: string) => (demoMode() ? null : openShare(token)));
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { token } = await params;
+  await connection();
+  const view = await shareFor(token);
+  return { title: { absolute: sayFor(view?.edition ?? "bison")("Shared contact", "Shared lead") }, robots: { index: false, follow: false }, referrer: "no-referrer" };
+}
+
+export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 const LABELS: Record<string, string> = { name: "Name", email: "Email", phone: "Phone", message: "Message", company: "Company", cart: "Cart" };
 
 async function Body({ params }: Props) {
   const { token } = await params;
   await connection();
-  const view = demoMode() ? null : await openShare(token);
+  const view = await shareFor(token);
   if (!view) {
     return (
       <div className={s.shell}>
@@ -35,6 +46,8 @@ async function Body({ params }: Props) {
   }
   const d = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
   const c = view.contact;
+  const say = sayFor(view.edition);
+  const { CART_STATUS, ESTIMATE_STATUS, ORDER_STATUS } = salesLabels(view.edition);
   return (
     <div className={s.shell}>
       <header className={s.bar}>
@@ -58,7 +71,7 @@ async function Body({ params }: Props) {
         <div className={s.checkout}>
           <div className={s.panel}>
             <section className={s.step} aria-labelledby="sh-orders">
-              <h2 id="sh-orders">Orders</h2>
+              <h2 id="sh-orders">{say("Orders", "Purchases")}</h2>
               {view.orders.length ? (
                 view.orders.map((o) => (
                   <div key={o.id} className={s.sumLine} data-testid="share-order">
@@ -74,11 +87,11 @@ async function Body({ params }: Props) {
                   </div>
                 ))
               ) : (
-                <p className={s.note}>No orders yet.</p>
+                <p className={s.note}>{say("No orders yet.", "No purchases yet.")}</p>
               )}
             </section>
             <section className={s.step} aria-labelledby="sh-est">
-              <h2 id="sh-est">Estimates</h2>
+              <h2 id="sh-est">{say("Estimates", "Quotes")}</h2>
               {view.estimates.length ? (
                 view.estimates.map((e) => (
                   <div key={e.id} className={s.sumLine}>
@@ -92,7 +105,7 @@ async function Body({ params }: Props) {
                   </div>
                 ))
               ) : (
-                <p className={s.note}>No estimates sent.</p>
+                <p className={s.note}>{say("No estimates sent.", "No quotes sent.")}</p>
               )}
             </section>
             {view.carts.length > 0 && (

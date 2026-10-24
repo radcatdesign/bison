@@ -43,6 +43,24 @@ test("roles still apply", async ({ page }) => {
   await expect(page.getByTestId("role-blocked")).toBeVisible();
 });
 
+test("Fit Funnels: switch on the sign-in and look around a made-up gym", async ({ page }) => {
+  const t = (id: string) => page.getByTestId(id).filter({ visible: true });
+  await page.goto("/sign-in");
+  await t("edition-fit").click();
+  await expect(page.getByText("Two made-up clubs, four made-up people, nothing saved.")).toBeVisible();
+  await t("sign-in-dev_maya").click();
+  await page.waitForURL(/\/(analyze|marketing|sales)/);
+  await expect(page.getByText("Summit Strength Club").filter({ visible: true }).first()).toBeVisible();
+  await expect(page).toHaveTitle(/· Fit Funnels$/);
+  await expect(t("sample-banner")).toContainText("This is a demo");
+  await page.goto("/analyze/contacts");
+  await expect(t("contact-row").first()).toBeVisible();
+  await page.goto("/marketing/tests");
+  await expect(t("test-row")).toHaveCount(2);
+  await page.goto("/sales");
+  await expect(t("locked")).toContainText("Membership sales");
+});
+
 test("signed-out visitors land on the picker", async ({ page }) => {
   await page.goto("/analyze");
   await expect(page).toHaveURL(/\/sign-in/);

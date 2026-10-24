@@ -3,13 +3,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import h from "@/app/(portal)/marketing/overview.module.css";
-import { pillClass, FULFILLMENT, ORDER_STATUS } from "@/components/sales/labels";
+import { pillClass, salesLabels } from "@/components/sales/labels";
 import m from "@/components/marketing/marketing.module.css";
 import { salesGate } from "@/components/sales/gate";
 import s from "@/components/sales/sales.module.css";
 import { Card, Metric, MetricStrip, PageHeader } from "@/components/ui";
-import { CATALOG } from "@/config/catalog";
+import { itemOf, type Say } from "@/config/editions";
 import { daysLeft } from "@/lib/access/entitlements";
+import { sayOf } from "@/lib/edition";
 import { demoMode } from "@/lib/env";
 import { formatChange } from "@/lib/format";
 import { progressOf } from "@/lib/marketing/setup-steps";
@@ -20,14 +21,14 @@ import { loadSalesSetup } from "@/lib/sales/setup";
 
 export const metadata: Metadata = { title: "Sales" };
 
-const TOOLS = [
-  { href: "/sales/estimates", name: "Estimates", body: "Quotes clients approve on their own page, then pay by invoice.", icon: ClipboardList },
-  { href: "/sales/orders", name: "Orders", body: "Every paid order, with refunds and where it is in fulfillment.", icon: Package },
-  { href: "/sales/products", name: "Products", body: "Your catalog, with options, prices, photos and weights.", icon: Boxes },
-  { href: "/sales/discounts", name: "Discount codes", body: "Private codes with limits, spelled out before you save.", icon: Tag },
-  { href: "/sales/trade", name: "Trade accounts", body: "Wholesale buyers, their tiers and what they've bought.", icon: Users },
-  { href: "/sales/carts", name: "Carts", body: "Carts people left behind, and the ones that came back.", icon: ShoppingCart },
-  { href: "/sales/checkout", name: "Checkout", body: "Shipping, tax, order limits and who hears about orders.", icon: Truck },
+const tools = (say: Say) => [
+  { href: "/sales/estimates", name: say("Estimates", "Quotes"), body: say("Quotes clients approve on their own page, then pay by invoice.", "Corporate memberships, PT bundles and team events, approved on their own page and paid by invoice."), icon: ClipboardList },
+  { href: "/sales/orders", name: say("Orders", "Purchases"), body: say("Every paid order, with refunds and where it is in fulfillment.", "Every paid membership, pack and training package, with refunds, and where gear is in fulfillment."), icon: Package },
+  { href: "/sales/products", name: say("Products", "Memberships"), body: say("Your catalog, with options, prices, photos and weights.", "Memberships, class packs, personal training and gear, with options and prices."), icon: Boxes },
+  { href: "/sales/discounts", name: say("Discount codes", "Promo codes"), body: "Private codes with limits, spelled out before you save.", icon: Tag },
+  { href: "/sales/trade", name: say("Trade accounts", "Corporate accounts"), body: say("Wholesale buyers, their tiers and what they've bought.", "Local companies buying for their staff, their corporate tiers and what they've bought."), icon: Users },
+  { href: "/sales/carts", name: say("Carts", "Unfinished joins"), body: say("Carts people left behind, and the ones that came back.", "People who started joining online and didn't finish, and the ones who came back."), icon: ShoppingCart },
+  { href: "/sales/checkout", name: "Checkout", body: say("Shipping, tax, order limits and who hears about orders.", "Tax, purchase limits, shipping for gear, and who hears about purchases."), icon: Truck },
   { href: "/settings/payments", name: "Payments", body: "Your own Stripe account, where every payment goes.", icon: ReceiptText },
 ];
 
@@ -35,35 +36,37 @@ async function Body() {
   const ctx = await getPortalContext();
   const blocked = salesGate(ctx, "sales.estimates");
   if (blocked) return blocked;
+  const say = sayOf(ctx);
+  const { FULFILLMENT, ORDER_STATUS } = salesLabels(ctx.tenant.edition);
   const demo = demoMode();
   const repo = salesRepo(ctx);
-  const [sum, recent, tools, estimates] = await Promise.all([repo.summary(), repo.orders({ limit: 6 }), loadSalesSetup(ctx, demo), repo.estimates("changes_requested")]);
+  const [sum, recent, steps, estimates] = await Promise.all([repo.summary(), repo.orders({ limit: 6 }), loadSalesSetup(ctx, demo), repo.estimates("changes_requested")]);
   const state = ctx.tenant.access.states["module:sales"];
-  const status = state.via === "trial" && state.trialEndsAt ? `${CATALOG["module:sales"].name} trial: ${daysLeft(state.trialEndsAt)} days left.` : state.pastDue ? "Your last payment didn't go through. Update your card in Settings to keep this on." : null;
-  const p = progressOf(tools);
+  const status = state.via === "trial" && state.trialEndsAt ? `${itemOf(ctx.tenant.edition, "module:sales").name} trial: ${daysLeft(state.trialEndsAt)} days left.` : state.pastDue ? "Your last payment didn't go through. Update your card in Settings to keep this on." : null;
+  const p = progressOf(steps);
   const money = (n: number) => formatMoney(n, sum.currency);
   const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: ctx.settings.timezone });
 
   const attention = [
-    sum.toFulfill ? { href: "/sales/orders?status=to_fulfill", text: `${sum.toFulfill} ${sum.toFulfill === 1 ? "order hasn't" : "orders haven't"} reached ShipStation yet`, tone: "warn" as const } : null,
-    estimates.length ? { href: "/sales/estimates?status=changes_requested", text: `${estimates.length} ${estimates.length === 1 ? "client asked" : "clients asked"} for changes to an estimate`, tone: "warn" as const } : null,
-    sum.tradeWaiting ? { href: "/sales/trade", text: `${sum.tradeWaiting} trade ${sum.tradeWaiting === 1 ? "application is" : "applications are"} waiting for you`, tone: "accent" as const } : null,
-    sum.abandoned ? { href: "/sales/carts", text: `${sum.abandoned} ${sum.abandoned === 1 ? "cart was" : "carts were"} left behind in 30 days, worth ${money(sum.abandonedCents)}`, tone: "neutral" as const } : null,
+    sum.toFulfill ? { href: "/sales/orders?status=to_fulfill", text: `${sum.toFulfill} ${sum.toFulfill === 1 ? say("order hasn't", "purchase hasn't") : say("orders haven't", "purchases haven't")} reached ShipStation yet`, tone: "warn" as const } : null,
+    estimates.length ? { href: "/sales/estimates?status=changes_requested", text: say(`${estimates.length} ${estimates.length === 1 ? "client asked" : "clients asked"} for changes to an estimate`, `${estimates.length} ${estimates.length === 1 ? "person asked" : "people asked"} for changes to a quote`), tone: "warn" as const } : null,
+    sum.tradeWaiting ? { href: "/sales/trade", text: `${sum.tradeWaiting} ${say("trade", "corporate account")} ${sum.tradeWaiting === 1 ? "application is" : "applications are"} waiting for you`, tone: "accent" as const } : null,
+    sum.abandoned ? { href: "/sales/carts", text: say(`${sum.abandoned} ${sum.abandoned === 1 ? "cart was" : "carts were"} left behind in 30 days, worth ${money(sum.abandonedCents)}`, `${sum.abandoned} ${sum.abandoned === 1 ? "join was" : "joins were"} left unfinished in 30 days, worth ${money(sum.abandonedCents)}`), tone: "neutral" as const } : null,
   ].filter((x): x is NonNullable<typeof x> => Boolean(x));
 
   return (
     <div data-testid="module-sales">
       <PageHeader
         title="Sales"
-        note="Estimates, orders and your shop, paid into your own Stripe account."
+        note={say("Estimates, orders and your shop, paid into your own Stripe account.", "Memberships, packs, corporate quotes and your club's online store, paid into your own Stripe account.")}
         actions={
           <>
             <Link href={`/p/${ctx.tenant.slug}/shop`} className="btn" target="_blank" rel="noopener">
               <Store aria-hidden="true" />
-              Your shop
+              {say("Your shop", "Your online store")}
             </Link>
             <Link href="/sales/estimates/new" className="btn btn-primary" data-testid="overview-new-estimate">
-              New estimate
+              {say("New estimate", "New quote")}
             </Link>
           </>
         }
@@ -73,7 +76,7 @@ async function Body() {
           {status}
         </p>
       )}
-      {repo.sample && !demo && <p className="notice" style={{ marginBottom: 20 }}>Sample data is on, so these orders, estimates and carts are made up. Turn it off in Settings when you&apos;re ready for your own.</p>}
+      {repo.sample && !demo && <p className="notice" style={{ marginBottom: 20 }}>{say("Sample data is on, so these orders, estimates and carts are made up. Turn it off in Settings when you're ready for your own.", "Sample data is on, so these purchases, quotes and unfinished joins are made up. Turn it off in Settings when you're ready for your own.")}</p>}
 
       {p.next && (
         <Link href="/sales/setup" className={`card ${h.tool}`} style={{ marginBottom: 24 }} data-testid="sales-overview-setup">
@@ -94,10 +97,10 @@ async function Body() {
       )}
 
       <MetricStrip>
-        <Metric label="Revenue, 30 days" value={money(sum.revenueCents)} change={formatChange(sum.revenueCents, sum.revenuePrevCents, 30)} testId="metric-revenue" help={<p>What paid orders came to in the last 30 days, including shipping and tax, less refunds. Orders from the shop and from paid estimates both count.{repo.sample ? " Sample data is on, so this is made up." : ""}</p>} />
-        <Metric label="Orders, 30 days" value={sum.orders.toLocaleString("en-US")} help={<p>Paid orders in the last 30 days, from the shop and from paid estimates.</p>} />
-        <Metric label="Average order" value={sum.averageOrderCents === null ? "None yet" : money(sum.averageOrderCents)} help={<p>Revenue in the last 30 days divided by the number of orders.</p>} />
-        <Metric label="Open estimates" value={money(sum.openEstimatesCents)} help={<p>The total of {sum.openEstimates} estimates that are sent, viewed, waiting on changes, approved or invoiced but not paid yet.</p>} />
+        <Metric label="Revenue, 30 days" value={money(sum.revenueCents)} change={formatChange(sum.revenueCents, sum.revenuePrevCents, 30)} testId="metric-revenue" help={<p>{say("What paid orders came to in the last 30 days, including shipping and tax, less refunds. Orders from the shop and from paid estimates both count.", "What paid purchases came to in the last 30 days, including shipping and tax, less refunds. Online purchases and paid quotes both count.")}{repo.sample ? " Sample data is on, so this is made up." : ""}</p>} />
+        <Metric label={say("Orders, 30 days", "Purchases, 30 days")} value={sum.orders.toLocaleString("en-US")} help={<p>{say("Paid orders in the last 30 days, from the shop and from paid estimates.", "Paid purchases in the last 30 days, online and from paid quotes.")}</p>} />
+        <Metric label={say("Average order", "Average purchase")} value={sum.averageOrderCents === null ? "None yet" : money(sum.averageOrderCents)} help={<p>{say("Revenue in the last 30 days divided by the number of orders.", "Revenue in the last 30 days divided by the number of purchases.")}</p>} />
+        <Metric label={say("Open estimates", "Open quotes")} value={money(sum.openEstimatesCents)} help={<p>{say(`The total of ${sum.openEstimates} estimates that are sent, viewed, waiting on changes, approved or invoiced but not paid yet.`, `The total of ${sum.openEstimates} quotes that are sent, viewed, waiting on changes, approved or invoiced but not paid yet.`)}</p>} />
       </MetricStrip>
 
       <div className={s.grid2} style={{ marginTop: 24 }}>
@@ -117,7 +120,7 @@ async function Body() {
             <p className="muted">Nothing waiting on you right now.</p>
           )}
         </Card>
-        <Card title="Latest orders" id="recent" flush aside={<Link href="/sales/orders" className="link">All orders</Link>}>
+        <Card title={say("Latest orders", "Latest purchases")} id="recent" flush aside={<Link href="/sales/orders" className="link">{say("All orders", "All purchases")}</Link>}>
           {recent.length ? (
             <table className={m.table}>
               <tbody>
@@ -143,8 +146,8 @@ async function Body() {
             </table>
           ) : (
             <div className={m.empty}>
-              <strong>No orders yet</strong>
-              <span>Share a product link or your shop page. Paid orders show up here.</span>
+              <strong>{say("No orders yet", "No purchases yet")}</strong>
+              <span>{say("Share a product link or your shop page. Paid orders show up here.", "Share a membership link or your club's online store. Paid purchases show up here.")}</span>
             </div>
           )}
         </Card>
@@ -154,7 +157,7 @@ async function Body() {
         Tools
       </h2>
       <ul className={h.tools}>
-        {TOOLS.map(({ href, name, body, icon: Icon }) => (
+        {tools(say).map(({ href, name, body, icon: Icon }) => (
           <li key={href}>
             <Link href={href} className={`card ${h.tool}`} data-testid="sales-tool">
               <span className={h.toolIcon} aria-hidden="true">

@@ -6,12 +6,14 @@
 // data on; subscriber changes are data, so sample mode refuses them.
 import { refresh } from "next/cache";
 import { CATALOG } from "@/config/catalog";
+import { editionFor, itemOf } from "@/config/editions";
 import type { FeatureKey } from "@/config/features";
 import { type Action, may } from "@/config/roles";
 import { can } from "@/lib/access/entitlements";
 import { audit } from "@/lib/audit";
 import { isUuid, withTenant } from "@/lib/db";
 import { DEMO_MESSAGE } from "@/lib/demo";
+import { editionOf, sayOf } from "@/lib/edition";
 import { demoMode } from "@/lib/env";
 import { EmailProviderError, emailProvider, NOT_SET_UP } from "@/lib/email/provider";
 import { BrandKitError, EMAIL_DOC_VERSION, parseBrandKit } from "@/lib/email/schema";
@@ -49,7 +51,7 @@ async function guard(action: Action, feature: FeatureKey, opts: { data?: boolean
 /** Email sending is shared by Marketing and Sales, so either module opens it. */
 async function sendingGuard(action: "settings.manage" | "edit"): Promise<Guarded> {
   const ctx = await getPortalContext();
-  if (!can(ctx.tenant, "marketing.newsletters") && !can(ctx.tenant, "sales.estimates")) return { ctx, error: "Email sending is part of Marketing and Sales. Unlock one of them to use it." };
+  if (!can(ctx.tenant, "marketing.newsletters") && !can(ctx.tenant, "sales.estimates")) return { ctx, error: `Email sending is part of ${itemOf(ctx.tenant.edition, "module:marketing").name} and ${itemOf(ctx.tenant.edition, "module:sales").name}. Unlock one of them to use it.` };
   const allowed = action === "edit" ? may(ctx.member.role, "marketing.edit") || may(ctx.member.role, "sales.edit") : may(ctx.member.role, action);
   if (!allowed) return { ctx, error: ROLE_MESSAGES[action === "edit" ? "marketing.edit" : action] ?? "Your role can't do that." };
   if (demoMode()) return { ctx, error: DEMO_MESSAGE };
@@ -321,7 +323,7 @@ export async function addSendingDomainAction(input: unknown): Promise<MarketingR
   const provider = emailProvider();
   if (!provider) return { ok: false, message: NOT_SET_UP };
   const domain = normalizeSendingDomain(typeof input === "string" ? input : "");
-  if (!domain) return { ok: false, message: "That doesn't look like a domain. Try something like mail.yourcompany.com." };
+  if (!domain) return { ok: false, message: sayOf(ctx)("That doesn't look like a domain. Try something like mail.yourcompany.com.", "That doesn't look like a domain. Try something like mail.yourclub.com.") };
   try {
     const current = await withTenant(scopeOf(ctx), (tx) => readSending(tx));
     if (current.domain && isVerified(current)) return { ok: false, message: `You're already sending from ${current.domain}. Remove it first to switch.` };
@@ -333,6 +335,8 @@ export async function addSendingDomainAction(input: unknown): Promise<MarketingR
     refresh();
     return { ok: true, message: `Added ${domain}. Now add the records below at your DNS host.` };
   } catch (err) {
+    // The provider names the product; a club sees its own edition's name.
+    if (err instanceof EmailProviderError) return { ok: false, message: err.message.replace(editionFor("bison").productName, editionOf(ctx).productName) };
     return failed(err, "Couldn't add that domain. Try again in a minute.");
   }
 }
@@ -402,7 +406,16 @@ export async function sendSetupTestAction(to: unknown): Promise<MarketingResult>
       signOff: true,
       fallbackName: "there",
       sections: [
-        { id: "hello", type: "text", heading: "Sending is set up", body: "Hi {first name},\n\nThis came from your own domain through Bison Ops, so your newsletters and series will arrive the same way.\n\nThe header, colors, sign-off and footer come from your brand kit. Change them there any time.", align: "left" },
+        {
+          id: "hello",
+          type: "text",
+          heading: "Sending is set up",
+          body: sayOf(ctx)(
+            "Hi {first name},\n\nThis came from your own domain through Bison Ops, so your newsletters and series will arrive the same way.\n\nThe header, colors, sign-off and footer come from your brand kit. Change them there any time.",
+            `Hi {first name},\n\nThis came from your club's own domain through ${editionOf(ctx).productName}, so your newsletters and follow-ups will arrive the same way.\n\nThe header, colors, sign-off and footer come from your brand kit. Change them there any time.`,
+          ),
+          align: "left",
+        },
       ],
     },
   });

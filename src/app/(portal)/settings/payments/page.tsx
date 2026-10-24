@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { salesGate } from "@/components/sales/gate";
 import { PaymentsSetup } from "@/components/sales/payments-setup";
-import { PageHeader } from "@/components/ui";
+import { SaidHeader } from "@/components/sales/said";
 import { may } from "@/config/roles";
 import { withTenant } from "@/lib/db";
 import { demoMode } from "@/lib/env";
@@ -15,7 +15,10 @@ import { NO_PAYMENTS, readPayments } from "@/lib/sales/store";
 
 export const metadata: Metadata = { title: "Payments" };
 
-const NOTE = "Checkout and invoices pay straight into your own Stripe account. Bison Ops never holds your money or your bank details.";
+const NOTE: [string, string] = [
+  "Checkout and invoices pay straight into your own Stripe account. Bison Ops never holds your money or your bank details.",
+  "Memberships, packs and corporate invoices pay straight into your own Stripe account. Fit Funnels never holds your money or your bank details.",
+];
 
 async function Body({ searchParams }: { searchParams: Promise<{ back?: string; error?: string }> }) {
   const ctx = await getPortalContext();
@@ -47,7 +50,7 @@ export default function PaymentsPage({ searchParams }: { searchParams: Promise<{
         <ArrowLeft aria-hidden="true" style={{ width: 15, height: 15 }} />
         Settings
       </Link>
-      <PageHeader title="Payments" note={NOTE} />
+      <SaidHeader title={["Payments", "Payments"]} note={NOTE} />
       <Suspense fallback={null}>
         <Body searchParams={searchParams} />
       </Suspense>

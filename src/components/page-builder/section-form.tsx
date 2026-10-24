@@ -4,6 +4,8 @@
 // is valid; until then the field keeps what you typed and says what's missing.
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useSay } from "@/components/edition";
+import type { Say } from "@/config/editions";
 import { describeIssues, FORM_FIELDS, type Section, sectionSchema } from "@/lib/pages/schema";
 import s from "./builder.module.css";
 
@@ -17,7 +19,8 @@ type Field =
   | { key: string; label: string; kind: "fields" }
   | { key: string; label: string; kind: "toggle"; text: string; hint?: string };
 
-const SPECS: Record<Section["type"], Field[]> = {
+/** Each type's fields. `say` gives the few labels and hints a club reads differently. */
+const specsFor = (say: Say): Record<Section["type"], Field[]> => ({
   hero: [
     { key: "eyebrow", label: "Label above the headline", kind: "text", optional: true },
     { key: "headline", label: "Headline", kind: "textarea", rows: 2 },
@@ -41,9 +44,9 @@ const SPECS: Record<Section["type"], Field[]> = {
     { key: "items", label: "Numbers", kind: "items", itemFields: [{ key: "value", label: "Number", kind: "text" }, { key: "label", label: "What it counts", kind: "text" }], min: 2, max: 4, noun: "number" },
   ],
   quote: [
-    { key: "quote", label: "Quote", kind: "textarea", rows: 4, hint: "Use a real quote from a real customer." },
+    { key: "quote", label: "Quote", kind: "textarea", rows: 4, hint: say("Use a real quote from a real customer.", "Use a real quote from a real member.") },
     { key: "name", label: "Name", kind: "text" },
-    { key: "role", label: "Company or town", kind: "text", optional: true },
+    { key: "role", label: say("Company or town", "Member since, or town"), kind: "text", optional: true },
   ],
   offer: [
     { key: "heading", label: "Heading", kind: "text" },
@@ -62,7 +65,16 @@ const SPECS: Record<Section["type"], Field[]> = {
     { key: "fields", label: "Fields", kind: "fields" },
     { key: "submit", label: "Button", kind: "text" },
     { key: "success", label: "Message after sending", kind: "textarea", rows: 2 },
-    { key: "subscribe", label: "Email list", kind: "toggle", text: "Add to email list", hint: "Everyone who sends this form also joins your email list and gets your welcome series. The choices for \"I am a\" are set in Marketing, Subscribers." },
+    {
+      key: "subscribe",
+      label: "Email list",
+      kind: "toggle",
+      text: "Add to email list",
+      hint: say(
+        "Everyone who sends this form also joins your email list and gets your welcome series. The choices for \"I am a\" are set in Marketing, Subscribers.",
+        "Everyone who sends this form also joins your email list and gets your welcome follow-ups. The choices for \"I am a\" are set in Marketing, Subscribers.",
+      ),
+    },
   ],
   cta: [
     { key: "headline", label: "Headline", kind: "textarea", rows: 2 },
@@ -73,7 +85,9 @@ const SPECS: Record<Section["type"], Field[]> = {
     { key: "heading", label: "Heading", kind: "text", optional: true },
     { key: "body", label: "Text", kind: "textarea", rows: 8, hint: "A blank line starts a new paragraph." },
   ],
-};
+});
+/** The field shapes, which are the same in every edition. */
+const SPECS = specsFor((bison) => bison);
 
 const FIELD_NAMES: Record<string, string> = { name: "Name", email: "Email", phone: "Phone", company: "Company", message: "Message", kind: "I am a..." };
 
@@ -87,6 +101,8 @@ function clean(raw: Raw, type: Section["type"]): Raw {
 }
 
 export function SectionForm({ section, onCommit, onEditStart }: { section: Section; onCommit: (next: Section) => void; onEditStart: (key: string) => void }) {
+  const say = useSay();
+  const specs = specsFor(say);
   const [raw, setRaw] = useState<Raw>(section as unknown as Raw);
   const [error, setError] = useState<string | null>(null);
   const committed = useRef(JSON.stringify(section));
@@ -120,7 +136,7 @@ export function SectionForm({ section, onCommit, onEditStart }: { section: Secti
 
   return (
     <div className={s.form} data-testid={`section-form-${section.id}`}>
-      {SPECS[section.type].map((f) => {
+      {specs[section.type].map((f) => {
         const id = `${section.id}-${f.key}`;
         switch (f.kind) {
           case "text":
@@ -164,7 +180,7 @@ export function SectionForm({ section, onCommit, onEditStart }: { section: Secti
               return (
                 <div key={f.key} className={s.field}>
                   <span className={s.fieldLabel}>{f.label}</span>
-                  <button type="button" className={s.addRow} onClick={() => update(f.key, { label: "Get in touch", href: "#form" })}>
+                  <button type="button" className={s.addRow} onClick={() => update(f.key, { label: say("Get in touch", "Claim your free pass"), href: "#form" })}>
                     <Plus aria-hidden="true" />
                     Add a button
                   </button>
@@ -272,7 +288,7 @@ export function SectionForm({ section, onCommit, onEditStart }: { section: Secti
                     </label>
                   ))}
                 </div>
-                <span className={s.hint}>Email is always on, so you can reply. Sends land in Contacts.</span>
+                <span className={s.hint}>Email is always on, so you can reply. Sends land in {say("Contacts", "Leads")}.</span>
               </fieldset>
             );
           }

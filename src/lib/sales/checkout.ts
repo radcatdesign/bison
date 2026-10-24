@@ -5,6 +5,7 @@ import "server-only";
 // with a narrow lookup, then works inside that company's RLS context. Prices
 // always come from the database, never from the browser.
 import { sql } from "kysely";
+import { sayFor } from "@/config/editions";
 import { can, loadAccess } from "@/lib/access/entitlements";
 import { type Database, db, isUuid, type Tx, withTenant } from "@/lib/db";
 import { appUrl } from "@/lib/env";
@@ -21,7 +22,7 @@ import { variantLabel } from "./catalog";
 import { variantsForPricing } from "./products";
 import { addressComplete, type Address, addressSchema, type SalesSettings } from "./settings";
 import { type ShippingOption, shippingOptions } from "./shipping";
-import { connectedCarrier, getSalesSettings, readPayments } from "./store";
+import { connectedCarrier, getSalesSettings, readEdition, readPayments } from "./store";
 import { tradeBuyer } from "./trade";
 import type { OrderItem } from "./types";
 
@@ -107,7 +108,7 @@ export async function priceFor(tx: Tx, items: CartItem[], opts: { buyer: Buyer; 
   // Codes are checked against the subtotal after trade pricing, so price once without, then with.
   const first = priceCart({ items, variants, currency, trade: trade ? { name: trade.tier.name, percentOff: trade.tier.percentOff } : null, inquiry: opts.settings.store.inquiry });
   let code: CodeResult = null;
-  if (opts.code) code = await checkCode(tx, opts.code, { subtotalCents: first.subtotalCents, email: opts.email, tradeAccountId: trade?.id ?? null, cartId: opts.cartId, now, currency, timeZone: info.timezone });
+  if (opts.code) code = await checkCode(tx, opts.code, { subtotalCents: first.subtotalCents, email: opts.email, tradeAccountId: trade?.id ?? null, cartId: opts.cartId, now, currency, timeZone: info.timezone, edition: await readEdition(tx) });
   const priced = code ? priceCart({ items, variants, currency, trade: first.trade, inquiry: opts.settings.store.inquiry, discount: () => code }) : first;
   return { priced, code };
 }
@@ -201,16 +202,17 @@ export async function startCheckout(tenantId: string, slug: string, cartId: stri
       if (paying && code?.ok) await holdCode(tx, code, { cartId: cart.id, email, tradeAccountId: buyer.tradeAccountId, amountCents: priced.discount?.amountCents ?? 0, until: expiresAt });
       // A checkout started earlier for this cart can't be paid once this one starts.
       const earlier = cart.status === "checkout" ? cart.checkout_session_id : null;
-      return { settings, cart, priced, conn, earlier };
+      return { settings, cart, priced, conn, earlier, edition: await readEdition(tx) };
     },
     database,
   );
   const { settings, priced, conn, earlier } = prep;
+  const say = sayFor(prep.edition);
   const pub = toPublic(cartId, prep.cart.status, email, prep.cart.discount_code, priced, settings);
   if (priced.inquiry) return { kind: "inquiry", cart: pub };
   if (priced.discountError) throw new CheckoutError(priced.discountError);
   if (priced.merchandiseCents === 0) return { kind: "free", cart: pub };
-  if (!payments || !conn.accountId || !conn.chargesEnabled) throw new CheckoutError("This shop isn't taking payments online yet. Contact them to order.", 409);
+  if (!payments || !conn.accountId || !conn.chargesEnabled) throw new CheckoutError(say("This shop isn't taking payments online yet. Contact them to order.", "This club isn't taking payments online yet. Contact the club to join."), 409);
   if (earlier) await payments.expireCheckout(conn.accountId, earlier);
 
   const tax = settings.store.checkout.tax && conn.tax === "active";
@@ -282,7 +284,7 @@ export async function quoteCheckout(tenantId: string, sessionId: string, input: 
       if (!cart || cart.status !== "checkout") return null;
       const settings = await getSalesSettings(tx);
       const carrier = settings.shipping.source === "carrier" ? await connectedCarrier(tx, tenantId, settings.shipping.carrier) : null;
-      return { priced: cart.priced as PricedCart, settings, carrier, conn: await readPayments(tx) };
+      return { priced: cart.priced as PricedCart, settings, carrier, conn: await readPayments(tx), edition: await readEdition(tx) };
     },
     database,
   );
@@ -290,7 +292,7 @@ export async function quoteCheckout(tenantId: string, sessionId: string, input: 
   if (!prep.settings.store.checkout.countries.includes(to.country)) return { ok: false, message: "We don't ship to that country yet." };
   const q = await quote(prep.priced, to, prep.settings, prep.carrier);
   if (!q.ok) return q;
-  if (!payments || !prep.conn.accountId) return { ok: false, message: "This shop isn't taking payments right now." };
+  if (!payments || !prep.conn.accountId) return { ok: false, message: sayFor(prep.edition)("This shop isn't taking payments right now.", "This club isn't taking payments online right now.") };
   try {
     await payments.setCheckoutShipping(prep.conn.accountId, sessionId, { name: to.name, address: to, options: q.options, currency: prep.priced.currency, tax: prep.settings.store.checkout.tax && prep.conn.tax === "active" });
   } catch {
@@ -411,7 +413,7 @@ export async function placeFreeOrder(tenantId: string, cartId: string, input: { 
       await lockCode(tx, cart.discount_code);
       const { priced, code } = await priceFor(tx, items, { buyer, code: cart.discount_code, email, cartId: cart.id, settings });
       if (!priced.lines.length) throw new CheckoutError("That cart is empty.");
-      if (priced.merchandiseCents !== 0 || !code?.ok) throw new CheckoutError("This order needs payment. Go back and check out.");
+      if (priced.merchandiseCents !== 0 || !code?.ok) throw new CheckoutError(sayFor(await readEdition(tx))("This order needs payment. Go back and check out.", "This purchase needs payment. Go back and check out."));
       const order = await createOrder(tx, {
         source: "free",
         email,
@@ -464,12 +466,13 @@ export async function sendInquiry(tenantId: string, cartId: string, input: { ema
         .values({ contact_id: contactId, form_key: "shop:quote", form_type: "Quote request", fields: JSON.stringify({ name, email, phone, message: input.message.trim().slice(0, 2000), cart: priced.lines.map((l) => `${l.qty} × ${l.name}${l.variant ? ` (${l.variant})` : ""}`).join("; ") }), alert: "{}" })
         .execute();
       const number = await nextEstimateNumber(tx);
+      const say = sayFor(await readEdition(tx));
       const est = await tx
         .insertInto("estimates")
         .values({
           number,
           source: "inquiry",
-          title: "Quote request from the shop",
+          title: say("Quote request from the shop", "Quote request from your online store"),
           client: JSON.stringify({ name, email, company: "", phone, address: {} }),
           contact_id: contactId,
           trade_account_id: priced.trade ? buyer.tradeAccountId : null,
@@ -484,7 +487,7 @@ export async function sendInquiry(tenantId: string, cartId: string, input: { ema
         })
         .returning("id")
         .executeTakeFirstOrThrow();
-      await tx.insertInto("estimate_events").values({ estimate_id: est.id, kind: "created", actor: "shop", detail: "From a quote request in the shop" }).execute();
+      await tx.insertInto("estimate_events").values({ estimate_id: est.id, kind: "created", actor: "shop", detail: say("From a quote request in the shop", "From a quote request in your online store") }).execute();
       await tx.updateTable("carts").set({ status: "inquiry", email, name }).where("id", "=", cart.id).execute();
       return { estimateId: est.id, priced, name, phone, to: settings.store.alertEmails, sender: await salesSender(tx) };
     },

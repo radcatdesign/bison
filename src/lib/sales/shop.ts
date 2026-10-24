@@ -4,6 +4,7 @@ import "server-only";
 // requests carry no session; the company comes from the address. In the demo
 // there's no database, so the made-up catalog stands in.
 import { cookies } from "next/headers";
+import type { EditionKey } from "@/config/editions";
 import { type Database, db, withTenant } from "@/lib/db";
 import { appUrl, demoMode } from "@/lib/env";
 import { getMarketingSettings, tenantInfo } from "@/lib/marketing/store";
@@ -12,12 +13,14 @@ import { getProduct, publicProducts } from "./products";
 import { demoItems, demoShop } from "./shop-demo";
 import type { FeedProduct } from "./seo";
 import { feedProduct, type ShopItem, toShopItem } from "./shop-view";
-import { getSalesSettings, readPayments } from "./store";
+import { getSalesSettings, readEdition, readPayments } from "./store";
 import { checkTradeToken, tradeBuyer, tradeCookieName } from "./trade";
 
 export type Shop = {
   tenantId: string;
   slug: string;
+  /** The company's edition, for the shop's words: a club's store reads in club words. */
+  edition: EditionKey;
   name: string;
   accent: string;
   logo: string | null;
@@ -56,6 +59,7 @@ export async function loadShop(slug: string, database?: Database): Promise<Shop 
       return {
         tenantId,
         slug: info.slug,
+        edition: await readEdition(tx),
         name: brand.businessName || info.name,
         accent: brand.colors.accent || info.accent,
         logo: brand.logo?.src ?? null,

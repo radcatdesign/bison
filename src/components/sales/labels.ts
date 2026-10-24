@@ -1,4 +1,5 @@
 // Words and tones for Sales statuses, shared by every Sales screen.
+import type { EditionKey } from "@/config/editions";
 
 export type Tone = "good" | "warn" | "bad" | "accent" | "neutral";
 
@@ -48,4 +49,35 @@ export const SOURCE: Record<string, string> = { checkout: "Shop", estimate: "Est
 
 export function pillClass(tone: Tone): string {
   return tone === "good" ? "pill pill-good" : tone === "warn" ? "pill pill-warn" : tone === "bad" ? "pill pill-bad" : tone === "accent" ? "pill pill-accent" : "pill";
+}
+
+// ---- Fit Funnels ------------------------------------------------------------------------
+// A club's words for the same statuses: purchases, joins and corporate accounts.
+// Tones stay the same; only labels that read wrong for a club change.
+
+const FIT_LABELS = {
+  ORDER_STATUS: {},
+  FULFILLMENT: { none: "Nothing to ship" },
+  CART_STATUS: { open: "Still choosing", abandoned: "Didn't finish", ordered: "Finished" },
+  TRADE_STATUS: {},
+  ESTIMATE_STATUS: {},
+} satisfies Record<string, Record<string, string>>;
+
+const FIT_SOURCE: Record<string, string> = { checkout: "Online", estimate: "Quote", free: "Free purchase" };
+
+function withFit(base: Record<string, { label: string; tone: Tone }>, fit: Record<string, string>): Record<string, { label: string; tone: Tone }> {
+  return Object.fromEntries(Object.entries(base).map(([k, v]) => [k, fit[k] ? { ...v, label: fit[k] } : v]));
+}
+
+/** Every Sales status in this edition's words. Bison Ops gets the tables above as they are. */
+export function salesLabels(edition: EditionKey) {
+  if (edition !== "fit") return { ESTIMATE_STATUS, ORDER_STATUS, FULFILLMENT, CART_STATUS, TRADE_STATUS, SOURCE };
+  return {
+    ESTIMATE_STATUS: withFit(ESTIMATE_STATUS, FIT_LABELS.ESTIMATE_STATUS),
+    ORDER_STATUS: withFit(ORDER_STATUS, FIT_LABELS.ORDER_STATUS),
+    FULFILLMENT: withFit(FULFILLMENT, FIT_LABELS.FULFILLMENT),
+    CART_STATUS: withFit(CART_STATUS, FIT_LABELS.CART_STATUS),
+    TRADE_STATUS: withFit(TRADE_STATUS, FIT_LABELS.TRADE_STATUS),
+    SOURCE: FIT_SOURCE,
+  };
 }

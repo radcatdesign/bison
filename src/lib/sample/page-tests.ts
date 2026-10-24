@@ -1,5 +1,6 @@
 // Made-up A/B test results, for sample mode and the demo. The same test gets
-// the same numbers every time. Never written to the database.
+// the same numbers every time. Never written to the database. Gyms and studios
+// (Fit Funnels) get club headlines and hypotheses.
 import type { PageTest, DayCount, TestVersion } from "@/lib/pages/tests";
 import type { PageDoc } from "@/lib/pages/schema";
 import { seedPageFor } from "@/lib/pages/seeds";
@@ -45,7 +46,21 @@ function variantOf(doc: PageDoc, change: (d: PageDoc) => void): PageDoc {
   return copy;
 }
 
-const HEADLINES: Record<string, string> = { pools: "Glow that lasts all night, with no wiring", coffee: "Roasted this week, at your door by Friday", general: "Book a free planning call this week" };
+const HEADLINES: Record<string, string> = {
+  pools: "Glow that lasts all night, with no wiring",
+  coffee: "Roasted this week, at your door by Friday",
+  general: "Book a free planning call this week",
+  // Fit Funnels clubs
+  gym: "Seven free days, no card needed",
+  studio: "New to indoor cycling? Your first ride is free",
+};
+
+/** What the headline test expects, per kind of business. `live` is the page's headline now. */
+const HYPOTHESES: Record<string, (live: string) => string> = {
+  gym: (live) => `"${live}" says what it is. Leading with "no card needed" should bring in more free pass requests, because people worry about being signed up.`,
+  studio: (live) => `"${live}" is friendly but vague. Speaking to people who've never tried indoor cycling should bring in more first ride bookings.`,
+};
+const hypothesisFor = (industry: string, live: string) => HYPOTHESES[industry]?.(live) ?? `"${live}" says how it feels. A headline that says what you get should bring in more quote requests.`;
 
 /** The demo's tests: one running on the example page, one that's ended. */
 export function sampleTests(tenant: SampleTenant, now = new Date()): PageTest[] {
@@ -66,7 +81,7 @@ export function sampleTests(tenant: SampleTenant, now = new Date()): PageTest[] 
     pageSlug: seed.slug,
     pageLive: true,
     name: "A more concrete headline",
-    hypothesis: `"${hero && hero.type === "hero" ? hero.headline : "The headline"}" says how it feels. A headline that says what you get should bring in more quote requests.`,
+    hypothesis: hypothesisFor(tenant.industry, hero && hero.type === "hero" ? hero.headline : "The headline"),
     goal: "form",
     status: "running",
     autoEnd: false,

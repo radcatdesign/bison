@@ -6,12 +6,14 @@
 // catalog, codes and settings are content and save even with sample data on;
 // estimates, orders and trade accounts are data, so sample mode refuses them.
 import { refresh } from "next/cache";
+import { itemOf, type Say } from "@/config/editions";
 import type { FeatureKey } from "@/config/features";
 import { type Action, may } from "@/config/roles";
 import { can } from "@/lib/access/entitlements";
 import { audit } from "@/lib/audit";
 import { isUuid, withTenant } from "@/lib/db";
 import { DEMO_MESSAGE } from "@/lib/demo";
+import { sayOf } from "@/lib/edition";
 import { appUrl, demoMode } from "@/lib/env";
 import { getPortalContext, type PortalContext, scopeOf } from "@/lib/portal";
 import { SampleModeError } from "@/lib/repo/types";
@@ -34,20 +36,21 @@ import { decideTrade, TradeError, tradeLinkUrl } from "@/lib/sales/trade";
 
 export type SalesResult = { ok: boolean; message: string; id?: string; url?: string };
 
-const ROLE_MESSAGES: Partial<Record<Action, string>> = {
-  "sales.edit": "Your role can't change estimates, orders or the catalog.",
+const roleMessages = (say: Say): Partial<Record<Action, string>> => ({
+  "sales.edit": say("Your role can't change estimates, orders or the catalog.", "Your role can't change quotes, purchases or memberships."),
   "settings.manage": "Only owners and admins can change connections.",
   "refunds.issue": "Your role can't issue refunds.",
   "email.send": "Your role can't send email.",
   "data.delete": "Only owners and admins can delete that.",
-};
+});
 
 type Guarded = { ctx: PortalContext; error: null } | { ctx: PortalContext; error: string };
 
 async function guard(action: Action, feature: FeatureKey, opts: { data?: boolean } = {}): Promise<Guarded> {
   const ctx = await getPortalContext();
-  if (!can(ctx.tenant, feature)) return { ctx, error: "This is part of Sales. Unlock Sales to use it." };
-  if (!may(ctx.member.role, action)) return { ctx, error: ROLE_MESSAGES[action] ?? "Your role can't do that." };
+  const say = sayOf(ctx);
+  if (!can(ctx.tenant, feature)) return { ctx, error: say("This is part of Sales. Unlock Sales to use it.", `This is part of ${itemOf(ctx.tenant.edition, "module:sales").name}. Unlock it to use it.`) };
+  if (!may(ctx.member.role, action)) return { ctx, error: roleMessages(say)[action] ?? "Your role can't do that." };
   if (demoMode()) return { ctx, error: DEMO_MESSAGE };
   if (opts.data && ctx.settings.sampleData) return { ctx, error: new SampleModeError().message };
   return { ctx, error: null };
@@ -68,18 +71,19 @@ const actor = (ctx: PortalContext) => ctx.member.email;
 export async function saveProductAction(id: string | null, input: unknown): Promise<SalesResult> {
   const { ctx, error } = await guard("sales.edit", "sales.products");
   if (error) return { ok: false, message: error };
-  if (id !== null && !isUuid(id)) return { ok: false, message: "That product isn't here anymore." };
+  const say = sayOf(ctx);
+  if (id !== null && !isUuid(id)) return { ok: false, message: say("That product isn't here anymore.", "That membership isn't here anymore.") };
   try {
-    const product = parseProduct(input);
+    const product = parseProduct(input, ctx.tenant.edition);
     const saved = await withTenant(scopeOf(ctx), async (tx) => {
-      const pid = await saveProduct(tx, product, { id });
+      const pid = await saveProduct(tx, product, { id, edition: ctx.tenant.edition });
       await audit(tx, { action: id ? "product.updated" : "product.created", targetType: "product", targetId: pid, detail: { name: product.name, status: product.status } });
       return pid;
     });
     refresh();
-    return { ok: true, message: product.status === "active" ? "Saved. It's live in your shop." : "Saved.", id: saved };
+    return { ok: true, message: product.status === "active" ? say("Saved. It's live in your shop.", "Saved. It's live in your online store.") : "Saved.", id: saved };
   } catch (err) {
-    return failed(err, "Couldn't save the product. Try again.");
+    return failed(err, say("Couldn't save the product. Try again.", "Couldn't save it. Try again."));
   }
 }
 
@@ -89,25 +93,28 @@ export async function setProductStatusAction(id: string, status: "active" | "dra
   if (!isUuid(id) || !["active", "draft", "archived"].includes(status)) return { ok: false, message: "That didn't work." };
   await withTenant(scopeOf(ctx), (tx) => setProductStatus(tx, id, status));
   refresh();
-  return { ok: true, message: status === "archived" ? "Archived. It's off the shop and out of the list." : status === "active" ? "It's live in your shop." : "It's a draft now, hidden from the shop." };
+  const say = sayOf(ctx);
+  return { ok: true, message: status === "archived" ? say("Archived. It's off the shop and out of the list.", "Archived. It's off your online store and out of the list.") : status === "active" ? say("It's live in your shop.", "It's live in your online store.") : say("It's a draft now, hidden from the shop.", "It's a draft now, hidden from your online store.") };
 }
 
 export async function deleteProductAction(id: string): Promise<SalesResult> {
   const { ctx, error } = await guard("sales.edit", "sales.products");
   if (error) return { ok: false, message: error };
-  if (!isUuid(id)) return { ok: false, message: "That product isn't here anymore." };
+  const say = sayOf(ctx);
+  if (!isUuid(id)) return { ok: false, message: say("That product isn't here anymore.", "That membership isn't here anymore.") };
   await withTenant(scopeOf(ctx), async (tx) => {
     await deleteProduct(tx, id);
     await audit(tx, { action: "product.deleted", targetType: "product", targetId: id });
   });
   refresh();
-  return { ok: true, message: "Deleted. Past orders keep what was bought." };
+  return { ok: true, message: say("Deleted. Past orders keep what was bought.", "Deleted. Past purchases keep what was bought.") };
 }
 
 /** A file (CSV, Shopify export, feed) or an address (Shopify store, feed URL). */
 export async function importProductsAction(formData: FormData): Promise<SalesResult & { skipped?: string[] }> {
   const { ctx, error } = await guard("sales.edit", "sales.products");
   if (error) return { ok: false, message: error };
+  const say = sayOf(ctx);
   const file = formData.get("file");
   const address = String(formData.get("url") ?? "").trim();
   const kind = String(formData.get("kind") ?? "file");
@@ -123,7 +130,7 @@ export async function importProductsAction(formData: FormData): Promise<SalesRes
         try {
           json = JSON.parse(text) as { products?: unknown[] };
         } catch {
-          return { ok: false, message: "That doesn't look like a Shopify store. Check the address, or import a product export file instead." };
+          return { ok: false, message: say("That doesn't look like a Shopify store. Check the address, or import a product export file instead.", "That doesn't look like a Shopify store. Check the address, or import an export file instead.") };
         }
         pages.push(json as never);
         if (!json.products?.length || json.products.length < 250) break;
@@ -135,9 +142,9 @@ export async function importProductsAction(formData: FormData): Promise<SalesRes
       if (!(file instanceof File) || !file.size) return { ok: false, message: "Pick a file to import." };
       if (file.size > MAX_IMPORT_BYTES) return { ok: false, message: "That file is over 5 MB. Split it into smaller files." };
       const text = await file.text();
-      result = /\.(xml|tsv|txt)$/i.test(file.name) || text.trimStart().startsWith("<") ? importFeed(text) : importCsv(text);
+      result = /\.(xml|tsv|txt)$/i.test(file.name) || text.trimStart().startsWith("<") ? importFeed(text) : importCsv(text, ctx.tenant.edition);
     }
-    if (!result.products.length) return { ok: false, message: result.skipped.length ? `Nothing could be imported. ${result.skipped.slice(0, 3).join(" ")}` : "No products found in that." };
+    if (!result.products.length) return { ok: false, message: result.skipped.length ? `Nothing could be imported. ${result.skipped.slice(0, 3).join(" ")}` : say("No products found in that.", "Nothing to import in that.") };
     const source = result.format === "csv" ? "csv" : result.format === "feed" ? "feed" : "shopify";
     const summary = await withTenant(scopeOf(ctx), async (tx) => {
       const s = await saveImported(tx, result.products, source);
@@ -146,7 +153,7 @@ export async function importProductsAction(formData: FormData): Promise<SalesRes
     });
     refresh();
     const parts = [summary.created ? `Added ${summary.created}` : "", summary.updated ? `updated ${summary.updated}` : ""].filter(Boolean).join(", ");
-    return { ok: summary.created + summary.updated > 0, message: `${parts || "Nothing changed"}${summary.failed.length ? `. ${summary.failed.length} couldn't be saved.` : "."} Check weights and boxes before you turn on live rates.`, skipped: [...result.skipped, ...summary.failed].slice(0, 20) };
+    return { ok: summary.created + summary.updated > 0, message: `${parts || "Nothing changed"}${summary.failed.length ? `. ${summary.failed.length} couldn't be saved.` : "."} ${say("Check weights and boxes before you turn on live rates.", "Check shipping on your gear before you turn on live rates.")}`, skipped: [...result.skipped, ...summary.failed].slice(0, 20) };
   } catch (err) {
     return failed(err, "Couldn't import that. Try again, or try a different file.");
   }
@@ -160,7 +167,7 @@ export async function saveDiscountAction(id: string | null, input: unknown): Pro
   try {
     const d = parseDiscount(input);
     const saved = await withTenant(scopeOf(ctx), async (tx) => {
-      const did = await saveDiscount(tx, d, id && isUuid(id) ? id : null, actor(ctx));
+      const did = await saveDiscount(tx, d, id && isUuid(id) ? id : null, actor(ctx), ctx.tenant.edition);
       await audit(tx, { action: id ? "discount.updated" : "discount.created", targetType: "discount", targetId: did, detail: { code: d.code } });
       return did;
     });
@@ -180,7 +187,7 @@ export async function deleteDiscountAction(id: string): Promise<SalesResult> {
     await audit(tx, { action: "discount.deleted", targetType: "discount", targetId: id });
   });
   refresh();
-  return { ok: true, message: "Deleted. Orders that used it keep their discount." };
+  return { ok: true, message: sayOf(ctx)("Deleted. Orders that used it keep their discount.", "Deleted. Purchases that used it keep their discount.") };
 }
 
 // ---- Estimates -------------------------------------------------------------------------------
@@ -191,16 +198,16 @@ export async function createEstimateAction(input: unknown): Promise<SalesResult>
   try {
     const e = parseEstimate(input);
     const r = await withTenant(scopeOf(ctx), (tx) => createEstimate(tx, e, actor(ctx)));
-    return { ok: true, message: `Estimate #${r.number} started.`, id: r.id };
+    return { ok: true, message: `${sayOf(ctx)("Estimate", "Quote")} #${r.number} started.`, id: r.id };
   } catch (err) {
-    return failed(err, "Couldn't start the estimate. Try again.");
+    return failed(err, sayOf(ctx)("Couldn't start the estimate. Try again.", "Couldn't start the quote. Try again."));
   }
 }
 
 export async function saveEstimateAction(id: string, input: unknown): Promise<SalesResult> {
   const { ctx, error } = await guard("sales.edit", "sales.estimates", { data: true });
   if (error) return { ok: false, message: error };
-  if (!isUuid(id)) return { ok: false, message: "That estimate isn't here anymore." };
+  if (!isUuid(id)) return { ok: false, message: sayOf(ctx)("That estimate isn't here anymore.", "That quote isn't here anymore.") };
   try {
     const e = parseEstimate(input);
     await withTenant(scopeOf(ctx), (tx) => saveEstimate(tx, id, e, actor(ctx)));
@@ -213,8 +220,8 @@ export async function saveEstimateAction(id: string, input: unknown): Promise<Sa
 export async function sendEstimateAction(id: string, message: string): Promise<SalesResult> {
   const { ctx, error } = await guard("email.send", "sales.estimates", { data: true });
   if (error) return { ok: false, message: error };
-  if (!may(ctx.member.role, "sales.edit")) return { ok: false, message: ROLE_MESSAGES["sales.edit"]! };
-  if (!isUuid(id)) return { ok: false, message: "That estimate isn't here anymore." };
+  if (!may(ctx.member.role, "sales.edit")) return { ok: false, message: roleMessages(sayOf(ctx))["sales.edit"]! };
+  if (!isUuid(id)) return { ok: false, message: sayOf(ctx)("That estimate isn't here anymore.", "That quote isn't here anymore.") };
   try {
     const r = await sendEstimate(ctx.tenant.id, id, { message: String(message ?? "").slice(0, 2000), actor: actor(ctx), actorEmail: ctx.member.email });
     refresh();
@@ -227,7 +234,7 @@ export async function sendEstimateAction(id: string, message: string): Promise<S
 export async function estimateAction(id: string, what: "void" | "duplicate" | "delete" | "invoice" | "paid", note = ""): Promise<SalesResult> {
   const { ctx, error } = await guard(what === "delete" ? "sales.edit" : "sales.edit", "sales.estimates", { data: true });
   if (error) return { ok: false, message: error };
-  if (!isUuid(id)) return { ok: false, message: "That estimate isn't here anymore." };
+  if (!isUuid(id)) return { ok: false, message: sayOf(ctx)("That estimate isn't here anymore.", "That quote isn't here anymore.") };
   try {
     if (what === "void") {
       const r = await voidEstimate(ctx.tenant.id, id, actor(ctx));
@@ -236,7 +243,7 @@ export async function estimateAction(id: string, what: "void" | "duplicate" | "d
     }
     if (what === "duplicate") {
       const r = await withTenant(scopeOf(ctx), (tx) => duplicateEstimate(tx, id, actor(ctx)));
-      return { ok: true, message: `Copied as estimate #${r.number}.`, id: r.id };
+      return { ok: true, message: `Copied as ${sayOf(ctx)("estimate", "quote")} #${r.number}.`, id: r.id };
     }
     if (what === "delete") {
       await withTenant(scopeOf(ctx), (tx) => deleteEstimate(tx, id));
@@ -260,7 +267,7 @@ export async function estimateAction(id: string, what: "void" | "duplicate" | "d
 export async function refundAction(id: string, amountCents: number): Promise<SalesResult> {
   const { ctx, error } = await guard("refunds.issue", "sales.orders", { data: true });
   if (error) return { ok: false, message: error };
-  if (!isUuid(id)) return { ok: false, message: "That order isn't here anymore." };
+  if (!isUuid(id)) return { ok: false, message: sayOf(ctx)("That order isn't here anymore.", "That purchase isn't here anymore.") };
   const r = await refundOrder(ctx.tenant.id, id, Math.round(Number(amountCents)), actor(ctx));
   refresh();
   return r;
@@ -269,7 +276,7 @@ export async function refundAction(id: string, amountCents: number): Promise<Sal
 export async function orderAction(id: string, what: "alert" | "fulfill" | "shipped", tracking = ""): Promise<SalesResult> {
   const { ctx, error } = await guard("sales.edit", "sales.orders", { data: true });
   if (error) return { ok: false, message: error };
-  if (!isUuid(id)) return { ok: false, message: "That order isn't here anymore." };
+  if (!isUuid(id)) return { ok: false, message: sayOf(ctx)("That order isn't here anymore.", "That purchase isn't here anymore.") };
   try {
     if (what === "alert") {
       const d = await alertTeam(ctx.tenant.id, id);

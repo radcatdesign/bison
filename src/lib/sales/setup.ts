@@ -63,5 +63,5 @@ export function demoSalesFacts(ctx: PortalContext): SalesFacts {
 }
 
 export async function loadSalesSetup(ctx: PortalContext, demo: boolean): Promise<SalesTool[]> {
-  return buildSalesSetup(demo ? demoSalesFacts(ctx) : await loadSalesFacts(ctx));
+  return buildSalesSetup(demo ? demoSalesFacts(ctx) : await loadSalesFacts(ctx), ctx.tenant.edition);
 }

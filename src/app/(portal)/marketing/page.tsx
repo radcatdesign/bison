@@ -5,9 +5,10 @@ import { Suspense } from "react";
 import { marketingGate } from "@/components/marketing/gate";
 import { SetupProgress } from "@/components/marketing/setup-progress";
 import { Metric, MetricStrip, PageHeader } from "@/components/ui";
-import { CATALOG } from "@/config/catalog";
+import { itemOf, type Say } from "@/config/editions";
 import { daysLeft } from "@/lib/access/entitlements";
 import { withTenant } from "@/lib/db";
+import { sayOf } from "@/lib/edition";
 import { demoMode } from "@/lib/env";
 import { emailsThisMonth } from "@/lib/marketing/people";
 import { isVerified, readSending } from "@/lib/marketing/sending";
@@ -22,15 +23,15 @@ import h from "./overview.module.css";
 
 export const metadata: Metadata = { title: "Marketing" };
 
-const TOOLS = [
-  { href: "/marketing/newsletters", name: "Newsletters", body: "Build an email on the email itself, test it, send or schedule it.", icon: Mail },
-  { href: "/marketing/series", name: "Email series", body: "Emails that go out on their own, days after someone joins or sends a form.", icon: Repeat },
-  { href: "/marketing/subscribers", name: "Subscribers", body: "Your list, lists inside it, imports, and who unsubscribed.", icon: Users },
-  { href: "/marketing/pages", name: "Pages", body: "Landing pages the agent builds while you watch. Forms send to Contacts.", icon: AppWindow },
+const toolsFor = (say: Say) => [
+  { href: "/marketing/newsletters", name: "Newsletters", body: say("Build an email on the email itself, test it, send or schedule it.", "Member updates, class schedules and challenges. Build it, test it, send or schedule it."), icon: Mail },
+  { href: "/marketing/series", name: "Email series", body: say("Emails that go out on their own, days after someone joins or sends a form.", "Follow-ups that go out on their own, days after a lead signs up or a member joins."), icon: Repeat },
+  { href: "/marketing/subscribers", name: "Subscribers", body: say("Your list, lists inside it, imports, and who unsubscribed.", "Members and leads on your list, lists inside it, imports, and who unsubscribed."), icon: Users },
+  { href: "/marketing/pages", name: say("Pages", "Funnel pages"), body: say("Landing pages the agent builds while you watch. Forms send to Contacts.", "Pages for free passes, tours and intro offers that the agent builds while you watch. Forms send to Leads."), icon: AppWindow },
   { href: "/marketing/brand", name: "Brand kit", body: "Logo, colors, fonts and sign-off, used in every email.", icon: Palette },
-  { href: "/marketing/offer", name: "Welcome offer", body: "A one-time code for each new subscriber's first order.", icon: BadgePercent },
+  { href: "/marketing/offer", name: say("Welcome offer", "Intro offer"), body: say("A one-time code for each new subscriber's first order.", "A one-time code for each new lead's first membership or class pack."), icon: BadgePercent },
   { href: "/marketing/search", name: "Search pack", body: "Titles, social cards, sitemap and llms.txt from your content.", icon: ScanSearch },
-  { href: "/settings/email", name: "Email sending", body: "Send from your own verified domain.", icon: Send },
+  { href: "/settings/email", name: "Email sending", body: say("Send from your own verified domain.", "Send from your club's own verified domain."), icon: Send },
 ];
 
 async function Body() {
@@ -38,10 +39,11 @@ async function Body() {
   const blocked = marketingGate(ctx, "marketing.newsletters");
   if (blocked) return blocked;
   const demo = demoMode();
+  const say = sayOf(ctx);
   const state = ctx.tenant.access.states["module:marketing"];
   const status =
     state.via === "trial" && state.trialEndsAt
-      ? `${CATALOG["module:marketing"].name} trial: ${daysLeft(state.trialEndsAt)} days left.`
+      ? `${itemOf(ctx.tenant.edition, "module:marketing").name} trial: ${daysLeft(state.trialEndsAt)} days left.`
       : state.pastDue
         ? "Your last payment didn't go through. Update your card in Settings to keep this on."
         : null;
@@ -56,7 +58,7 @@ async function Body() {
   let tools = null;
   if (!demo) {
     const loaded = await withTenant(scopeOf(ctx), async (tx) => {
-      await ensureStarterSeries(tx, ctx.sites[0]?.domain);
+      await ensureStarterSeries(tx, ctx.sites[0]?.domain, ctx.tenant.edition);
       return {
         used: await emailsThisMonth(tx),
         next: await tx.selectFrom("newsletters").select(["subject", "scheduled_for"]).where("status", "=", "scheduled").orderBy("scheduled_for").limit(1).executeTakeFirst(),
@@ -74,7 +76,7 @@ async function Body() {
 
   return (
     <div data-testid="module-marketing">
-      <PageHeader title="Marketing" note="Landing pages and email, in your own colors." />
+      <PageHeader title="Marketing" note={say("Landing pages and email, in your own colors.", "Funnel pages and email, in your club's colors.")} />
       {status && (
         <p className="notice" style={{ marginBottom: 20 }}>
           {status}
@@ -109,9 +111,9 @@ async function Body() {
         </div>
         <div className={`card ${h.nowCard}`}>
           <span className={h.label}>Email series</span>
-          <strong>{demo ? "Welcome series" : seriesOn ? `${seriesOn} on` : "None on yet"}</strong>
+          <strong>{demo ? say("Welcome series", "New lead follow-up") : seriesOn ? `${seriesOn} on` : "None turned on yet"}</strong>
           <Link href="/marketing/series" className="link">
-            {seriesOn ? "See them" : "Turn on the welcome series"}
+            {seriesOn ? "See them" : say("Turn on the welcome series", "Turn on the new lead follow-up")}
           </Link>
         </div>
         <div className={`card ${h.nowCard}`}>
@@ -125,7 +127,7 @@ async function Body() {
 
       <h2 className={h.heading}>Tools</h2>
       <ul className={h.tools}>
-        {TOOLS.map(({ href, name, body, icon: Icon }) => (
+        {toolsFor(say).map(({ href, name, body, icon: Icon }) => (
           <li key={href}>
             <Link href={href} className={`card ${h.tool}`} data-testid="marketing-tool">
               <span className={h.toolIcon} aria-hidden="true">

@@ -662,6 +662,13 @@
   backdrop-filter: blur(10px);
 }
 
+/* On phones the bottom dock is fixed at the foot of the screen, so the bar sits just above it. */
+@media (max-width: 860px) {
+  .saveBar {
+    bottom: calc(var(--bo-dock-h) + 24px + env(safe-area-inset-bottom));
+  }
+}
+
 .saveRow {
   display: flex;
   flex-wrap: wrap;

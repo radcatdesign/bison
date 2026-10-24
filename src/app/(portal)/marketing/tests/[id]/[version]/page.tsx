@@ -10,6 +10,7 @@ import { demoMode, pageAgentName } from "@/lib/env";
 import { getMarketingSettings, settingsTenantOf } from "@/lib/marketing/store";
 import { versionForEditing } from "@/lib/pages/tests";
 import { publicPageUrl } from "@/lib/pages/urls";
+import { sayOf } from "@/lib/edition";
 import { getPortalContext, scopeOf } from "@/lib/portal";
 
 export const metadata: Metadata = { title: "Edit version" };
@@ -20,7 +21,7 @@ async function Body({ params }: { params: Promise<{ id: string; version: string 
   const ctx = await getPortalContext();
   const blocked = marketingGate(ctx, "marketing.tests");
   if (blocked) return blocked;
-  if (!may(ctx.member.role, "pages.edit")) return <RoleBlocked mode="Pages" />;
+  if (!may(ctx.member.role, "pages.edit")) return <RoleBlocked mode={sayOf(ctx)("Pages", "Funnel pages")} />;
   const { id, version } = await params;
   // The demo's tests are examples that have already started, so there's nothing to edit.
   if (demoMode()) redirect(`/marketing/tests/${id}`);

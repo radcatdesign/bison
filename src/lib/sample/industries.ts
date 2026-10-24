@@ -1,4 +1,5 @@
 // What sample data looks like for each kind of business. Add industries here.
+// Onboarding lists each edition's industries by these labels.
 
 export type IndustryPreset = {
   label: string;
@@ -55,6 +56,41 @@ export const INDUSTRIES: Record<string, IndustryPreset> = {
     signupTypes: [
       { value: "customer", label: "Customer" },
       { value: "business", label: "Business" },
+    ],
+  },
+  // Fit Funnels: the paths match the made-up traffic in the seed.
+  gym: {
+    label: "Gym or health club",
+    dailyVisitors: 160,
+    pages: ["/", "/memberships", "/classes", "/personal-training", "/free-pass"],
+    forms: [
+      { type: "Free trial pass", messages: ["Can I use the trial pass on a Saturday?", "Is the pool open to trial members?", "Can I bring a friend on my free pass?", "What time is the strength floor quietest?"] },
+      { type: "Club tour", messages: ["Do you have childcare during morning classes?", "Can I come by for a tour after work, around 6?", "Switching gyms. Could someone show me the strength floor?"] },
+      { type: "Personal training", messages: ["Looking for a coach to get back into lifting after an injury.", "Do any of your trainers work with older adults?", "Interested in a few sessions to learn the basics."] },
+      { type: "Corporate membership", messages: ["We have 25 people downtown. What does a corporate rate look like?", "Does the club work with company wellness budgets?"] },
+    ],
+    referrers: ["google.com", "instagram.com", "facebook.com", "yelp.com", "classpass.com", "bing.com"],
+    signupTypes: [
+      { value: "thinking-about-joining", label: "Thinking about joining" },
+      { value: "member", label: "Member" },
+      { value: "former-member", label: "Former member" },
+    ],
+  },
+  studio: {
+    label: "Boutique studio",
+    dailyVisitors: 110,
+    pages: ["/", "/schedule", "/first-ride", "/packs", "/instructors"],
+    forms: [
+      { type: "First ride free", messages: ["Do I need clip-in shoes for my first class?", "Is the 6 am class good for beginners?", "Booked for Thursday, see you then.", "Can I bring a friend to my first ride?"] },
+      { type: "Private event", messages: ["Team ride for 18 people on a Friday evening?", "Birthday ride for 12. Any Saturdays open?"] },
+      { type: "Corporate membership", messages: ["Class packs for our office wellness budget?", "Could we set up a monthly ride for our team?"] },
+      { type: "Class pack question", messages: ["Do 10-class packs expire?", "Can I share a pack with my partner?"] },
+    ],
+    referrers: ["google.com", "instagram.com", "tiktok.com", "classpass.com", "facebook.com", "yelp.com"],
+    signupTypes: [
+      { value: "new-rider", label: "New rider" },
+      { value: "member", label: "Member" },
+      { value: "company", label: "Company or team" },
     ],
   },
 };

@@ -4,6 +4,7 @@ import "server-only";
 // withTenant, so RLS keeps every company to its own catalog.
 import { sql } from "kysely";
 import { CATALOG } from "@/config/catalog";
+import { type EditionKey, sayFor } from "@/config/editions";
 import { isUuid, type Tx } from "@/lib/db";
 import type { ProductSource, ProductStatus } from "@/lib/db/types";
 import { type ProductInput, type ProductOption, type ProductPhoto, priceRange, slugify, variantLabel } from "./catalog";
@@ -124,15 +125,16 @@ async function checkPhotos(tx: Tx, photos: ProductPhoto[]) {
 }
 
 /** Creates or replaces a product and its variants. Variants not in the input are removed. */
-export async function saveProduct(tx: Tx, input: ProductInput, opts: { id?: string | null; source?: ProductSource; sourceId?: string } = {}): Promise<string> {
+export async function saveProduct(tx: Tx, input: ProductInput, opts: { id?: string | null; source?: ProductSource; sourceId?: string; edition?: EditionKey } = {}): Promise<string> {
+  const say = sayFor(opts.edition ?? "bison");
   await checkPhotos(tx, input.photos);
   const id = opts.id ?? null;
   if (id) {
     const exists = await tx.selectFrom("products").select("id").where("id", "=", id).executeTakeFirst();
-    if (!exists) throw new ProductError("That product isn't here anymore.");
+    if (!exists) throw new ProductError(say("That product isn't here anymore.", "That membership isn't here anymore."));
   } else {
     const { n } = await tx.selectFrom("products").select((eb) => eb.fn.countAll<string>().as("n")).executeTakeFirstOrThrow();
-    if (Number(n) >= productLimit()) throw new ProductError(`Your plan holds up to ${productLimit().toLocaleString("en-US")} products. Archive or delete some first.`);
+    if (Number(n) >= productLimit()) throw new ProductError(say(`Your plan holds up to ${productLimit().toLocaleString("en-US")} products. Archive or delete some first.`, `Your plan holds up to ${productLimit().toLocaleString("en-US")} memberships, packs and gear in all. Archive or delete some first.`));
   }
   const slug = await uniqueSlug(tx, input.slug || input.name, id);
   const values = {
@@ -162,7 +164,7 @@ export async function saveProduct(tx: Tx, input: ProductInput, opts: { id?: stri
       if (v.id && keep.has(v.id)) await tx.updateTable("product_variants").set(row).where("id", "=", v.id).execute();
       else await tx.insertInto("product_variants").values({ ...row, product_id: productId }).execute();
     } catch (err) {
-      if ((err as { code?: string }).code === "23505") throw new ProductError(`The SKU ${v.sku} is already used by another product.`);
+      if ((err as { code?: string }).code === "23505") throw new ProductError(say(`The SKU ${v.sku} is already used by another product.`, `The SKU ${v.sku} is already used by another membership, pack or item.`));
       throw err;
     }
   }

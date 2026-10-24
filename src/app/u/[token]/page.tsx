@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { sayFor } from "@/config/editions";
 import { accentInk } from "@/lib/color";
 import { demoMode } from "@/lib/env";
 import { viewUnsubscribe } from "@/lib/marketing/unsubscribe";
@@ -30,12 +31,18 @@ async function Body({ params, searchParams }: Props) {
     );
   }
 
+  // No portal here: the words follow the company's edition from its own row.
+  const say = sayFor(view.edition);
+
   if (view.unsubscribed) {
     return (
       <div className={s.card} data-testid="unsubscribed">
         <h1>You&apos;re unsubscribed</h1>
         <p>
-          {view.maskedEmail} won&apos;t get any more marketing email from {view.business}. Anything already scheduled for you has been canceled.
+          {say(
+            `${view.maskedEmail} won't get any more marketing email from ${view.business}. Anything already scheduled for you has been canceled.`,
+            `${view.maskedEmail} won't get any more newsletters, follow-ups or other marketing email from ${view.business}. Anything already scheduled for you has been canceled.`,
+          )}
         </p>
         {view.canResubscribe && (
           <form action={undoUnsubscribe}>
@@ -55,7 +62,10 @@ async function Body({ params, searchParams }: Props) {
       {back && <p className={s.ok}>You&apos;re subscribed again. Welcome back.</p>}
       <h1>Unsubscribe from {view.business}?</h1>
       <p>
-        {view.maskedEmail} will stop getting their newsletters and email series. Emails about an order or a quote you asked for may still arrive.
+        {say(
+          `${view.maskedEmail} will stop getting their newsletters and email series. Emails about an order or a quote you asked for may still arrive.`,
+          `${view.maskedEmail} will stop getting their newsletters and follow-ups. Emails about your membership, a purchase or a quote you asked for may still arrive.`,
+        )}
       </p>
       <form action={confirmUnsubscribe}>
         <input type="hidden" name="token" value={token} />

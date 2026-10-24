@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { ClearCart } from "@/components/shop/clear-cart";
 import { ShopFrame } from "@/components/shop/frame";
 import s from "@/components/shop/shop.module.css";
+import { sayFor } from "@/config/editions";
 import { demoMode } from "@/lib/env";
 import { orderForSession, recordCheckout } from "@/lib/sales/checkout";
 import { formatMoney } from "@/lib/sales/money";
@@ -48,18 +49,17 @@ async function Order({ params, searchParams }: { params: Params; searchParams: S
   }
   const money = (n: number) => formatMoney(n, order.currency);
   const items = (Array.isArray(order.items) ? order.items : []) as OrderItem[];
+  const say = sayFor(shop.edition);
   return (
     <ShopFrame shop={shop} buyer={buyer}>
       <ClearCart slug={shop.slug} />
       <h1 className={s.title} data-testid="order-thanks">
         Thank you{order.name ? `, ${order.name.split(" ")[0]}` : ""}
       </h1>
-      <p className={s.lead}>
-        Order #{order.number} is paid. A receipt is on its way to {order.email}, and we&apos;ll email you when it ships.
-      </p>
+      <p className={s.lead}>{say(`Order #${order.number} is paid. A receipt is on its way to ${order.email}, and we'll email you when it ships.`, `Purchase #${order.number} is paid. A receipt is on its way to ${order.email}. If you bought gear, we'll email you when it ships.`)}</p>
       <div className={s.checkout}>
-        <section className={s.step} aria-label="Shipping to">
-          <h2>Shipping to</h2>
+        <section className={s.step} aria-label={say("Shipping to", "Your address")}>
+          <h2>{say("Shipping to", "Your address")}</h2>
           <p>
             {addressLines(order.ship_to as Record<string, string>).map((l) => (
               <span key={l}>
@@ -70,8 +70,10 @@ async function Order({ params, searchParams }: { params: Params; searchParams: S
           </p>
           {order.shipping_service && <p className={s.note}>{order.shipping_service}</p>}
         </section>
-        <aside className={s.summary} aria-label="Order summary">
-          <strong>Order #{order.number}</strong>
+        <aside className={s.summary} aria-label={say("Order summary", "Summary")}>
+          <strong>
+            {say("Order", "Purchase")} #{order.number}
+          </strong>
           {items.map((l, i) => (
             <div key={`${l.sku}-${i}`} className={s.sumLine}>
               <div>

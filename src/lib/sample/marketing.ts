@@ -32,14 +32,25 @@ const LISTS: Record<string, string[]> = {
   general: ["Customers", "Leads"],
 };
 
+/** Clubs' lists follow what people said they are: members, people trying the club, companies. */
+type ClubList = { name: string; kinds?: string[]; share?: number };
+const CLUB_LISTS: Record<string, ClubList[]> = {
+  gym: [{ name: "Members", kinds: ["member"] }, { name: "Trial leads", kinds: ["thinking-about-joining"] }, { name: "Corporate", share: 0.12 }],
+  studio: [{ name: "Members", kinds: ["member"] }, { name: "New riders", kinds: ["new-rider"] }, { name: "Corporate and teams", kinds: ["company"] }],
+};
+
+/** The funnel page most made-up signups came from. */
+const SIGNUP_PAGE: Record<string, string> = { gym: "page:free-pass", studio: "page:first-ride" };
+
 export function sampleLists(tenant: SampleTenant): SampleList[] {
-  return (LISTS[tenant.industry] ?? LISTS.general).map((name, i) => ({ id: `sample-list-${tenant.id.slice(0, 8)}-${i}`, name }));
+  return (CLUB_LISTS[tenant.industry]?.map((l) => l.name) ?? LISTS[tenant.industry] ?? LISTS.general).map((name, i) => ({ id: `sample-list-${tenant.id.slice(0, 8)}-${i}`, name }));
 }
 
 export function sampleSubscribers(tenant: SampleTenant, now = new Date()): SampleSubscriber[] {
   const rand = seeded(`${tenant.id}:${tenant.name}:subscribers`);
   const preset = presetFor(tenant.industry);
   const lists = sampleLists(tenant);
+  const club = CLUB_LISTS[tenant.industry];
   const total = rand.int(780, 1340);
   const today = Math.floor(now.getTime() / DAY) * DAY;
   const used = new Set<string>();
@@ -57,7 +68,14 @@ export function sampleSubscribers(tenant: SampleTenant, now = new Date()): Sampl
     const gone = i > 6 && rand.chance(0.06);
     const status: SubscriberStatus = gone ? (rand.chance(0.15) ? "bounced" : "unsubscribed") : "subscribed";
     const source: SubscriberSource = rand.chance(0.55) ? "page" : rand.chance(0.5) ? "import" : rand.chance(0.6) ? "form" : "manual";
-    const listIds = lists.filter((_, li) => (li === 0 ? type === preset.signupTypes[0]?.value : li === 1 ? type && type !== preset.signupTypes[0]?.value : rand.chance(0.2))).map((l) => l.id);
+    const listIds = club
+      ? lists
+          .filter((_, li) => {
+            const l = club[li];
+            return l.kinds ? l.kinds.includes(type) : rand.chance(l.share ?? 0.2);
+          })
+          .map((l) => l.id)
+      : lists.filter((_, li) => (li === 0 ? type === preset.signupTypes[0]?.value : li === 1 ? type && type !== preset.signupTypes[0]?.value : rand.chance(0.2))).map((l) => l.id);
     out.push({
       id: `sample-sub-${tenant.id.slice(0, 8)}-${i}`,
       email,
@@ -65,7 +83,7 @@ export function sampleSubscribers(tenant: SampleTenant, now = new Date()): Sampl
       kind: type,
       status,
       source,
-      sourceDetail: source === "page" ? "page:spring-sale" : source === "import" ? "Imported" : "",
+      sourceDetail: source === "page" ? (SIGNUP_PAGE[tenant.industry] ?? "page:spring-sale") : source === "import" ? "Imported" : "",
       subscribedAt,
       unsubscribedAt: gone ? new Date(Math.min(now.getTime() - DAY / 2, subscribedAt.getTime() + rand.int(5, 200) * DAY)) : null,
       listIds,
@@ -82,4 +100,17 @@ export function sampleSendStats(seed: string, recipients: number): SampleSendSta
   const bounced = Math.round(recipients * (0.004 + rand.next() * 0.008));
   const complained = rand.chance(0.4) ? 1 : 0;
   return { recipients, delivered: recipients - bounced, bounced, complained, unsubscribed: Math.round(recipients * (0.002 + rand.next() * 0.004)) };
+}
+
+/** The newsletter that already went out in the demo, in the company's own words. */
+export function sampleSentNewsletter(industry: string): { subject: string; preheader: string; headline: string; filler: string } {
+  if (industry === "gym") return { subject: "October at the club: new classes on the schedule", preheader: "What's new on the floor, in the pool and in the studio.", headline: "New on the schedule this month", filler: "More at the front desk" };
+  if (industry === "studio") return { subject: "October rides: new time slots and a team challenge", preheader: "New classes, new playlists, and who's teaching what.", headline: "New rides this month", filler: "More on the schedule" };
+  return { subject: "October news: night swims are back", preheader: "Three projects we loved this month.", headline: "Night swims are back", filler: "More on our site" };
+}
+
+/** What a made-up subscriber's history shows: the series they were in and the email it sent. */
+export function sampleSeriesHistory(industry: string): { series: string; subject: string } {
+  if (industry === "gym" || industry === "studio") return { series: "New lead follow-up", subject: "Thanks for asking about the club" };
+  return { series: "Welcome series", subject: "Welcome! Here's what to expect" };
 }

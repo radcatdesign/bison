@@ -1,9 +1,10 @@
 // Search data for products: structured data on each product page and the
 // product feed Google Merchant Center (and others) read. Pure.
+import { type EditionKey, sayFor } from "@/config/editions";
 import { descriptionSummary, variantLabel } from "./catalog";
 import { minorPerMajor } from "./money";
 
-export type FeedShop = { name: string; slug: string; base: string; currency: string };
+export type FeedShop = { name: string; slug: string; base: string; currency: string; edition?: EditionKey };
 export type FeedProduct = {
   slug: string;
   name: string;
@@ -73,5 +74,5 @@ export function merchantFeed(s: FeedShop, products: FeedProduct[]): string {
         return `    <item>\n${fields.map(([k, val]) => `      <${k}>${xml(String(val))}</${k}>`).join("\n")}\n    </item>`;
       }),
   );
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">\n  <channel>\n    <title>${xml(s.name)}</title>\n    <link>${xml(`${s.base}/p/${s.slug}/shop`)}</link>\n    <description>${xml(`Products from ${s.name}`)}</description>\n${items.join("\n")}\n  </channel>\n</rss>\n`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">\n  <channel>\n    <title>${xml(s.name)}</title>\n    <link>${xml(`${s.base}/p/${s.slug}/shop`)}</link>\n    <description>${xml(sayFor(s.edition ?? "bison")(`Products from ${s.name}`, `Memberships, class packs and gear from ${s.name}`))}</description>\n${items.join("\n")}\n  </channel>\n</rss>\n`;
 }

@@ -3,27 +3,33 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { setContactStatus } from "@/app/(portal)/actions";
+import { EditionPageHeader } from "@/components/marketing/edition-header";
 import { ContactSales } from "@/components/sales/contact-sales";
 import { ActionForm } from "@/components/ui/action-form";
 import { PageHeader, SampleBanner } from "@/components/ui";
+import type { Say } from "@/config/editions";
 import { may } from "@/config/roles";
 import type { ContactStatus } from "@/lib/db/types";
+import { sayOf } from "@/lib/edition";
 import { demoMode } from "@/lib/env";
 import { formatAgo } from "@/lib/format";
 import { getPortalContext, type PortalContext, scopeOf } from "@/lib/portal";
 import { getRepos, type Repos } from "@/lib/repo";
 import s from "./contacts.module.css";
 
-export const metadata: Metadata = { title: "Contacts" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: sayOf(await getPortalContext())("Contacts", "Leads") };
+}
 
-const STATUS: Record<ContactStatus, { label: string; tone: string }> = {
+/** Statuses keep their stored values; a club reads them as steps toward joining. */
+const statusFor = (say: Say): Record<ContactStatus, { label: string; tone: string }> => ({
   new: { label: "New", tone: "pill pill-accent" },
   contacted: { label: "Contacted", tone: "pill" },
-  qualified: { label: "Qualified", tone: "pill pill-warn" },
-  won: { label: "Won", tone: "pill pill-good" },
-  lost: { label: "Lost", tone: "pill" },
+  qualified: { label: say("Qualified", "Visit booked"), tone: "pill pill-warn" },
+  won: { label: say("Won", "Joined"), tone: "pill pill-good" },
+  lost: { label: say("Lost", "Didn't join"), tone: "pill" },
   spam: { label: "Spam", tone: "pill pill-bad" },
-};
+});
 
 function initials(name: string, email: string) {
   const parts = (name || email.split("@")[0]).split(/[\s._-]+/).filter(Boolean);
@@ -31,13 +37,15 @@ function initials(name: string, email: string) {
 }
 
 async function Panel({ id, repos, ctx }: { id: string; repos: Repos; ctx: PortalContext }) {
+  const say = sayOf(ctx);
+  const STATUS = statusFor(say);
   const contact = await repos.contacts.get(id);
   if (!contact) {
     return (
       <>
-        <Link href="/analyze/contacts" className={s.scrim} scroll={false} aria-label="Close contact" tabIndex={-1} />
-        <aside className={s.panel} aria-label="Contact">
-          <p>That contact isn&apos;t here. It may have been deleted.</p>
+        <Link href="/analyze/contacts" className={s.scrim} scroll={false} aria-label={say("Close contact", "Close lead")} tabIndex={-1} />
+        <aside className={s.panel} aria-label={say("Contact", "Lead")}>
+          <p>{say("That contact isn't here. It may have been deleted.", "That lead isn't here. It may have been deleted.")}</p>
           <Link href="/analyze/contacts" className="btn" scroll={false}>
             Close
           </Link>
@@ -48,8 +56,8 @@ async function Panel({ id, repos, ctx }: { id: string; repos: Repos; ctx: Portal
   const canEdit = may(ctx.member.role, "contacts.edit");
   return (
     <>
-      <Link href="/analyze/contacts" className={s.scrim} scroll={false} aria-label="Close contact" tabIndex={-1} />
-      <aside className={s.panel} aria-label={`Contact: ${contact.displayName}`} data-testid="contact-panel">
+      <Link href="/analyze/contacts" className={s.scrim} scroll={false} aria-label={say("Close contact", "Close lead")} tabIndex={-1} />
+      <aside className={s.panel} aria-label={`${say("Contact", "Lead")}: ${contact.displayName}`} data-testid="contact-panel">
         <div className={s.panelHead}>
           <span className={s.bigAvatar} aria-hidden="true">
             {initials(contact.name, contact.email)}
@@ -110,7 +118,7 @@ async function Panel({ id, repos, ctx }: { id: string; repos: Repos; ctx: Portal
         <ContactSales ctx={ctx} contactId={contact.id} titleClass={s.timelineTitle} />
 
         <div className={s.timeline}>
-          <h3 className={s.timelineTitle}>What they sent</h3>
+          <h3 className={s.timelineTitle}>{say("What they sent", "What they asked")}</h3>
           {contact.submissions.map((sub) => (
             <article key={sub.id} className={s.submission}>
               <div className={s.submissionHead}>
@@ -132,13 +140,15 @@ async function Contacts({ searchParams }: { searchParams: Promise<{ c?: string }
   const repos = getRepos({ scope: scopeOf(ctx), tenant: ctx.tenant, sampleData: ctx.settings.sampleData, timezone: ctx.settings.timezone });
   const contacts = await repos.contacts.list();
   const fresh = contacts.filter((c) => c.isNew).length;
+  const say = sayOf(ctx);
+  const STATUS = statusFor(say);
 
   return (
     <>
       {repos.mode === "sample" && <SampleBanner demo={demoMode()} />}
       <PageHeader
-        title="Contacts"
-        note="Everyone who sent a form on your site, newest first."
+        title={say("Contacts", "Leads")}
+        note={say("Everyone who sent a form on your site, newest first.", "Everyone who asked about your club on your site, like a free pass, a tour or a class, newest first.")}
         actions={
           <span className="pill pill-accent">
             <span className="num">{fresh}</span> new
@@ -148,11 +158,11 @@ async function Contacts({ searchParams }: { searchParams: Promise<{ c?: string }
       <div className={`card ${s.table}`} role="list" data-testid="contacts">
         <div className={`${s.row} ${s.head}`} aria-hidden="true">
           <span>Person</span>
-          <span className={s.hideSmall}>Form</span>
+          <span className={s.hideSmall}>{say("Form", "Asked for")}</span>
           <span>Status</span>
           <span className={`${s.hideSmall} ${s.right}`}>Last seen</span>
         </div>
-        {contacts.length === 0 && <p className={s.empty}>No contacts yet. When someone sends a form on your site, they show up here.</p>}
+        {contacts.length === 0 && <p className={s.empty}>{say("No contacts yet. When someone sends a form on your site, they show up here.", "No leads yet. When someone asks for a free pass, a tour or a class on your site, they show up here.")}</p>}
         {contacts.map((c) => (
           <Link
             key={c.id}
@@ -190,7 +200,7 @@ async function Contacts({ searchParams }: { searchParams: Promise<{ c?: string }
 
 export default function ContactsPage({ searchParams }: PageProps<"/analyze/contacts">) {
   return (
-    <Suspense fallback={<PageHeader title="Contacts" note="Loading contacts" />}>
+    <Suspense fallback={<EditionPageHeader title={["Contacts", "Leads"]} note={["Loading contacts", "Loading leads"]} />}>
       <Contacts searchParams={searchParams as Promise<{ c?: string }>} />
     </Suspense>
   );

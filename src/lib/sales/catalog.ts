@@ -1,6 +1,9 @@
 // Products and their variants as the editor and imports hand them in. Pure:
 // validation, slugs, option combinations. The database layer is products.ts.
+// For a Fit Funnels club these are memberships, packs and gear, and the
+// messages say so.
 import { z } from "zod";
+import { type EditionKey, type Say, sayFor } from "@/config/editions";
 import { describeIssues } from "@/lib/email/schema";
 
 export const MAX_OPTIONS = 3;
@@ -11,15 +14,16 @@ export const MAX_PHOTOS = 12;
 /** One of this company's uploads, or any https image (imports keep their image addresses). */
 export const PHOTO_SRC = /^(\/f\/[0-9a-f-]{36}|https:\/\/[^\s<>"']{4,1000})$/;
 
-const optionSchema = z.object({
-  name: z.string().trim().min(1, "Name each option, like Size or Color.").max(40),
-  values: z
-    .array(z.string().trim().min(1).max(60))
-    .min(1, "Give each option at least one choice.")
-    .max(MAX_VALUES)
-    .refine((v) => new Set(v.map((x) => x.toLowerCase())).size === v.length, "Each choice can only be listed once."),
-});
-export type ProductOption = z.infer<typeof optionSchema>;
+const optionSchemaFor = (say: Say) =>
+  z.object({
+    name: z.string().trim().min(1, say("Name each option, like Size or Color.", "Name each option, like Plan or Classes.")).max(40),
+    values: z
+      .array(z.string().trim().min(1).max(60))
+      .min(1, "Give each option at least one choice.")
+      .max(MAX_VALUES)
+      .refine((v) => new Set(v.map((x) => x.toLowerCase())).size === v.length, "Each choice can only be listed once."),
+  });
+export type ProductOption = z.infer<ReturnType<typeof optionSchemaFor>>;
 
 const photoSchema = z.object({
   src: z.string().trim().regex(PHOTO_SRC, "Use an uploaded photo or a full https:// image address."),
@@ -49,50 +53,53 @@ export type VariantInput = z.infer<typeof variantInputSchema>;
 
 export const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-export const productInputSchema = z
-  .object({
-    name: z.string().trim().min(1, "Give the product a name.").max(160),
-    slug: z.string().trim().max(80).regex(SLUG, "Use lowercase letters, numbers and single dashes.").optional(),
-    description: z.string().trim().max(20_000).default(""),
-    status: z.enum(["active", "draft", "archived"]).default("draft"),
-    category: z.string().trim().max(80).default(""),
-    taxCode: z
-      .string()
-      .trim()
-      .regex(/^(txcd_[0-9]{8})?$/, "Stripe tax codes look like txcd_99999999.")
-      .default(""),
-    options: z
-      .array(optionSchema)
-      .max(MAX_OPTIONS, `Up to ${MAX_OPTIONS} options.`)
-      .default([])
-      .refine((o) => new Set(o.map((x) => x.name.toLowerCase())).size === o.length, "Each option needs its own name."),
-    photos: z.array(photoSchema).max(MAX_PHOTOS, `Up to ${MAX_PHOTOS} photos.`).default([]),
-    seo: z.object({ title: z.string().trim().max(70).default(""), description: z.string().trim().max(170).default("") }).default({ title: "", description: "" }),
-    variants: z.array(variantInputSchema).min(1, "A product needs a price.").max(MAX_VARIANTS, `Up to ${MAX_VARIANTS} variants.`),
-  })
-  .superRefine((p, ctx) => {
-    if (!p.options.length && p.variants.length > 1) ctx.addIssue({ code: "custom", message: "Add an option (like Size) to sell more than one version.", path: ["variants"] });
-    const seen = new Set<string>();
-    for (const [i, v] of p.variants.entries()) {
-      for (const o of p.options) {
-        const chosen = v.options[o.name];
-        if (chosen === undefined || !o.values.includes(chosen)) ctx.addIssue({ code: "custom", message: `Pick a ${o.name} for every version.`, path: ["variants", i, "options"] });
+const productSchemaFor = (say: Say) =>
+  z
+    .object({
+      name: z.string().trim().min(1, say("Give the product a name.", "Give it a name.")).max(160),
+      slug: z.string().trim().max(80).regex(SLUG, "Use lowercase letters, numbers and single dashes.").optional(),
+      description: z.string().trim().max(20_000).default(""),
+      status: z.enum(["active", "draft", "archived"]).default("draft"),
+      category: z.string().trim().max(80).default(""),
+      taxCode: z
+        .string()
+        .trim()
+        .regex(/^(txcd_[0-9]{8})?$/, "Stripe tax codes look like txcd_99999999.")
+        .default(""),
+      options: z
+        .array(optionSchemaFor(say))
+        .max(MAX_OPTIONS, `Up to ${MAX_OPTIONS} options.`)
+        .default([])
+        .refine((o) => new Set(o.map((x) => x.name.toLowerCase())).size === o.length, "Each option needs its own name."),
+      photos: z.array(photoSchema).max(MAX_PHOTOS, `Up to ${MAX_PHOTOS} photos.`).default([]),
+      seo: z.object({ title: z.string().trim().max(70).default(""), description: z.string().trim().max(170).default("") }).default({ title: "", description: "" }),
+      variants: z.array(variantInputSchema).min(1, say("A product needs a price.", "It needs a price.")).max(MAX_VARIANTS, say(`Up to ${MAX_VARIANTS} variants.`, `Up to ${MAX_VARIANTS} prices.`)),
+    })
+    .superRefine((p, ctx) => {
+      if (!p.options.length && p.variants.length > 1) ctx.addIssue({ code: "custom", message: say("Add an option (like Size) to sell more than one version.", "Add an option (like Plan) to sell it at more than one price."), path: ["variants"] });
+      const seen = new Set<string>();
+      for (const [i, v] of p.variants.entries()) {
+        for (const o of p.options) {
+          const chosen = v.options[o.name];
+          if (chosen === undefined || !o.values.includes(chosen)) ctx.addIssue({ code: "custom", message: say(`Pick a ${o.name} for every version.`, `Pick a ${o.name} for every price.`), path: ["variants", i, "options"] });
+        }
+        if (Object.keys(v.options).some((k) => !p.options.some((o) => o.name === k))) ctx.addIssue({ code: "custom", message: say("A version names an option the product doesn't have.", "A price names an option this one doesn't have."), path: ["variants", i, "options"] });
+        const sig = variantKey(v.options, p.options);
+        if (seen.has(sig)) ctx.addIssue({ code: "custom", message: say("Two versions have the same choices.", "Two prices have the same choices."), path: ["variants", i, "options"] });
+        seen.add(sig);
+        if (v.compareAtCents !== null && v.compareAtCents <= v.priceCents) ctx.addIssue({ code: "custom", message: "The was price should be higher than the price, or empty.", path: ["variants", i, "compareAtCents"] });
       }
-      if (Object.keys(v.options).some((k) => !p.options.some((o) => o.name === k))) ctx.addIssue({ code: "custom", message: "A version names an option the product doesn't have.", path: ["variants", i, "options"] });
-      const sig = variantKey(v.options, p.options);
-      if (seen.has(sig)) ctx.addIssue({ code: "custom", message: "Two versions have the same choices.", path: ["variants", i, "options"] });
-      seen.add(sig);
-      if (v.compareAtCents !== null && v.compareAtCents <= v.priceCents) ctx.addIssue({ code: "custom", message: "The was price should be higher than the price, or empty.", path: ["variants", i, "compareAtCents"] });
-    }
-    const skus = p.variants.map((v) => v.sku.toLowerCase()).filter(Boolean);
-    if (new Set(skus).size !== skus.length) ctx.addIssue({ code: "custom", message: "Each SKU can only be used once.", path: ["variants"] });
-  });
+      const skus = p.variants.map((v) => v.sku.toLowerCase()).filter(Boolean);
+      if (new Set(skus).size !== skus.length) ctx.addIssue({ code: "custom", message: "Each SKU can only be used once.", path: ["variants"] });
+    });
+export const productInputSchema = productSchemaFor(sayFor("bison"));
+const FIT_PRODUCT_SCHEMA = productSchemaFor(sayFor("fit"));
 export type ProductInput = z.infer<typeof productInputSchema>;
 
 export class ProductInputError extends Error {}
 
-export function parseProduct(input: unknown): ProductInput {
-  const r = productInputSchema.safeParse(input);
+export function parseProduct(input: unknown, edition: EditionKey = "bison"): ProductInput {
+  const r = (edition === "fit" ? FIT_PRODUCT_SCHEMA : productInputSchema).safeParse(input);
   if (!r.success) throw new ProductInputError(describeIssues(r.error));
   return r.data;
 }

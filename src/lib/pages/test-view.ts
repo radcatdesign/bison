@@ -1,6 +1,7 @@
 // What the A/B test screens show, worked out on the server from a test and its
 // daily counts: each version's results, the verdict, what each version changes,
 // and the lines for the chart. Plain values only, so it can go to the browser.
+import type { EditionKey } from "@/config/editions";
 import type { PageTestEndReason, PageTestGoal, PageTestStatus } from "@/lib/db/types";
 import type { PageDoc } from "./schema";
 import { describeChanges } from "./test-diff";
@@ -80,7 +81,8 @@ function cumulative(days: DayCount[], keys: VersionKey[]): ChartPoint[] {
   });
 }
 
-export function testView(t: PageTest, days: DayCount[], opts: { timeZone: string; now?: number }): TestView {
+/** `edition` only changes the words, like what a version changes. */
+export function testView(t: PageTest, days: DayCount[], opts: { timeZone: string; now?: number; edition?: EditionKey }): TestView {
   const now = opts.now ?? Date.now();
   const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: opts.timeZone });
   const rs = results(t.versions.map((v) => ({ key: v.key, visitors: v.visitors, conversions: v.conversions })));
@@ -117,7 +119,7 @@ export function testView(t: PageTest, days: DayCount[], opts: { timeZone: string
       rate: rs[i].rate,
       lift: rs[i].lift,
       chance: rs[i].chance,
-      change: v.key === "a" ? "" : describeChanges(a?.doc ?? null, v.doc) || "The same as A so far.",
+      change: v.key === "a" ? "" : describeChanges(a?.doc ?? null, v.doc, opts.edition) || "The same as A so far.",
       kept: v.id === t.keptVersionId,
     })),
     verdict: verdict(rs, { days: fullDays(t, now), goal: goal.verb, running: t.status === "running", earlier: earlierTotals(days, keys, asOf) }),

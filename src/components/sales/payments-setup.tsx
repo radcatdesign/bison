@@ -6,7 +6,9 @@
 import { Check, ExternalLink } from "lucide-react";
 import { useState, useTransition } from "react";
 import { checkPaymentsAction, disconnectPaymentsAction } from "@/app/(portal)/sales/actions";
+import { useEdition } from "@/components/edition";
 import m from "@/components/marketing/marketing.module.css";
+import { type Edition, itemOf, sayFor } from "@/config/editions";
 
 type Props = {
   serverReady: boolean;
@@ -18,15 +20,18 @@ type Props = {
   error: string | null;
 };
 
-const ERRORS: Record<string, string> = {
+const errorsFor = (e: Edition): Record<string, string> => ({
   role: "Only owners and admins can connect Stripe.",
   demo: "This is a demo, so it can't connect a real Stripe account.",
-  locked: "Payments are part of Sales. Unlock Sales first.",
+  locked: sayFor(e)("Payments are part of Sales. Unlock Sales first.", `Payments are part of ${itemOf(e, "module:sales").name}. Unlock it first.`),
   busy: "Stripe is busy right now. Try again in a minute.",
   stripe: "Stripe didn't start the connection. Try again, and if it keeps happening, contact support.",
-};
+});
 
 export function PaymentsSetup({ serverReady, canManage, isOwner, demo, conn, dashboardUrl, error }: Props) {
+  const edition = useEdition();
+  const ERRORS = errorsFor(edition);
+  const product = edition.productName;
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(error ? { ok: false, text: ERRORS[error] ?? "That didn't work." } : null);
   const [pending, start] = useTransition();
   const step = !conn.accountId ? 1 : !conn.chargesEnabled ? 2 : 3;
@@ -39,7 +44,7 @@ export function PaymentsSetup({ serverReady, canManage, isOwner, demo, conn, das
     <div className={m.wizard} data-testid="payments-setup">
       {!serverReady && !demo && (
         <p className="notice notice-error" role="alert">
-          Payments aren&apos;t switched on for this Bison Ops server yet (no STRIPE_SECRET_KEY). The steps below work once they are.
+          Payments aren&apos;t switched on for this {product} server yet (no STRIPE_SECRET_KEY). The steps below work once they are.
         </p>
       )}
       {!canManage && <p className="notice">Only owners and admins can connect Stripe. You can see where it stands here.</p>}
@@ -50,7 +55,7 @@ export function PaymentsSetup({ serverReady, canManage, isOwner, demo, conn, das
         </span>
         <div className={m.wizardBody}>
           <h2>Connect your Stripe account</h2>
-          <p className={m.hint}>Payments go straight to your Stripe account, never through Bison Ops. Stripe asks for your business details and a bank account for payouts; have your tax ID handy. It takes about ten minutes. If you already use Stripe, sign in and Stripe fills in what it can.</p>
+          <p className={m.hint}>Payments go straight to your Stripe account, never through {product}. Stripe asks for your business details and a bank account for payouts; have your tax ID handy. It takes about ten minutes. If you already use Stripe, sign in and Stripe fills in what it can.</p>
           {step === 1 ? (
             canManage && !demo && serverReady ? (
               <a href="/settings/payments/connect" className="btn btn-primary" data-testid="connect-stripe" style={{ justifySelf: "start" }}>
@@ -136,7 +141,7 @@ export function PaymentsSetup({ serverReady, canManage, isOwner, demo, conn, das
             className="btn"
             disabled={pending}
             onClick={() => {
-              if (window.confirm("Disconnect your Stripe account from Bison Ops?")) run(disconnectPaymentsAction);
+              if (window.confirm(`Disconnect your Stripe account from ${product}?`)) run(disconnectPaymentsAction);
             }}
           >
             Disconnect

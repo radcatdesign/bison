@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { EditionPageHeader } from "@/components/marketing/edition-header";
 import { marketingGate } from "@/components/marketing/gate";
 import { SendingSetup } from "@/components/marketing/sending-setup";
 import { PageHeader } from "@/components/ui";
@@ -9,6 +10,7 @@ import { may } from "@/config/roles";
 import { can } from "@/lib/access/entitlements";
 import { withTenant } from "@/lib/db";
 import { demoTeam } from "@/lib/demo";
+import { sayOf } from "@/lib/edition";
 import { demoMode } from "@/lib/env";
 import { emailProvider } from "@/lib/email/provider";
 import { NO_SENDING, readSending } from "@/lib/marketing/sending";
@@ -19,6 +21,7 @@ import { getPortalContext, scopeOf } from "@/lib/portal";
 export const metadata: Metadata = { title: "Email sending" };
 
 const NOTE = "Newsletters, series, estimates and order alerts go out from your own domain. Set it up once; it takes about 15 minutes plus waiting for DNS.";
+const CLUB_NOTE = "Newsletters, follow-ups, quotes and purchase alerts go out from your club's own domain. Set it up once; it takes about 15 minutes plus waiting for DNS.";
 
 async function Body() {
   const ctx = await getPortalContext();
@@ -26,7 +29,8 @@ async function Body() {
   const blocked = can(ctx.tenant, "sales.estimates") ? null : marketingGate(ctx, "marketing.newsletters");
   if (blocked) return blocked;
   const demo = demoMode();
-  const site = ctx.sites[0]?.domain ?? "yourcompany.com";
+  const say = sayOf(ctx);
+  const site = ctx.sites[0]?.domain ?? say("yourcompany.com", "yourclub.com");
   const data = demo
     ? { state: NO_SENDING, fromName: defaultMarketingSettings(settingsTenantOf(ctx)).brand.fromName, team: demoTeam(ctx).map((m) => ({ email: m.email, name: m.name })), tested: false }
     : await withTenant(scopeOf(ctx), async (tx) => ({
@@ -37,7 +41,7 @@ async function Body() {
       }));
   return (
     <>
-      <PageHeader title="Email sending" note={NOTE} />
+      <PageHeader title="Email sending" note={say(NOTE, CLUB_NOTE)} />
       <SendingSetup
         state={data.state}
         storage={demo ? "browser" : "server"}
@@ -61,7 +65,7 @@ export default function EmailSendingPage() {
         <ArrowLeft aria-hidden="true" style={{ width: 15, height: 15 }} />
         Settings
       </Link>
-      <Suspense fallback={<PageHeader title="Email sending" note={NOTE} />}>
+      <Suspense fallback={<EditionPageHeader title={["Email sending", "Email sending"]} note={[NOTE, CLUB_NOTE]} />}>
         <Body />
       </Suspense>
     </>

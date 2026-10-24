@@ -22,7 +22,7 @@ async function Body() {
     const base = { subscribers: sampleSubscribers(ctx.tenant).filter((x) => x.status === "subscribed").length, lists: sampleLists(ctx.tenant).length };
     return <SetupHub tools={null} demo={{ tenantId: ctx.tenant.id, base }} />;
   }
-  await withTenant(scopeOf(ctx), (tx) => ensureStarterSeries(tx, ctx.sites[0]?.domain));
+  await withTenant(scopeOf(ctx), (tx) => ensureStarterSeries(tx, ctx.sites[0]?.domain, ctx.tenant.edition));
   return <SetupHub tools={await loadSetup(ctx)} demo={null} />;
 }
 

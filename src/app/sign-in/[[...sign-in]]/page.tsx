@@ -3,10 +3,14 @@ import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { Bison, Mark } from "@/components/mark";
-import { BRAND } from "@/config/brand";
+import Link from "next/link";
+import type { CSSProperties } from "react";
+import { Glyph, Mark } from "@/components/mark";
+import { type EditionKey, EDITIONS, editionFor } from "@/config/editions";
 import { ROLES } from "@/config/roles";
-import { DEV_PEOPLE, devTenantName } from "@/lib/auth/dev-people";
+import { devPeopleIn, devTenantName, devTenantsIn } from "@/lib/auth/dev-people";
+import { accentInk } from "@/lib/color";
+import { requestEdition } from "@/lib/edition";
 import { authProvider, ConfigError, demoMode } from "@/lib/env";
 import { signInAsDevPerson } from "../actions";
 import s from "../sign-in.module.css";
@@ -38,19 +42,38 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-function DevPicker({ demo }: { demo: boolean }) {
+/** Bison Ops or Fit Funnels, for the made-up people. Real accounts open their own edition. */
+function EditionSwitch({ current }: { current: EditionKey }) {
+  return (
+    <nav className={s.editions} aria-label="Edition" data-testid="edition-switch">
+      {Object.values(EDITIONS).map((e) => (
+        <Link key={e.key} href={e.key === "bison" ? "/sign-in" : `/sign-in?edition=${e.key}`} className={s.edition} aria-current={current === e.key ? "page" : undefined} data-testid={`edition-${e.key}`}>
+          <Mark size={20} edition={e.key} />
+          {e.productName}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+function DevPicker({ demo, edition }: { demo: boolean; edition: EditionKey }) {
+  const e = editionFor(edition);
+  const companies = devTenantsIn(edition).length;
+  const people = devPeopleIn(edition);
+  const kind = edition === "fit" ? (companies === 1 ? "club" : "clubs") : companies === 1 ? "company" : "companies";
   return (
     <div className={s.people}>
+      <EditionSwitch current={edition} />
       <div className={s.formHead}>
         <h1 className={s.formTitle}>{demo ? "Choose who to be" : "Sign in"}</h1>
         <p className={s.lede}>
           {demo
-            ? "Pick someone to see Bison Ops the way they would. Two made-up companies, four made-up people, nothing saved."
-            : "Test sign-in. Pick a person to see Bison Ops the way they would. Real accounts use Clerk."}
+            ? `Pick someone to see ${e.productName} the way they would. ${companies === 2 ? "Two" : companies} made-up ${kind}, ${people.length === 4 ? "four" : people.length} made-up people, nothing saved.`
+            : `Test sign-in. Pick a person to see ${e.productName} the way they would. Real accounts use Clerk.`}
         </p>
       </div>
       <ul className={s.list}>
-        {DEV_PEOPLE.map((p) => (
+        {people.map((p) => (
           <li key={p.userId}>
             <form action={signInAsDevPerson}>
               <input type="hidden" name="userId" value={p.userId} />
@@ -75,7 +98,7 @@ function DevPicker({ demo }: { demo: boolean }) {
 }
 
 // Which sign-in to show depends on runtime env, so it's decided per request, not at build.
-async function SignInBody() {
+async function SignInBody({ edition }: { edition: EditionKey }) {
   await connection();
   let provider: "clerk" | "dev" | "misconfigured" = "misconfigured";
   let configMessage = "";
@@ -87,26 +110,28 @@ async function SignInBody() {
   }
 
   if (provider === "clerk") return <SignIn />;
-  if (provider === "dev") return <DevPicker demo={demoMode()} />;
+  if (provider === "dev") return <DevPicker demo={demoMode()} edition={edition} />;
   return <p className="notice notice-error">{configMessage}</p>;
 }
 
-export default function SignInPage({ searchParams }: PageProps<"/sign-in/[[...sign-in]]">) {
+async function SignInScreen({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const edition = editionFor(await requestEdition((await searchParams).edition));
+  const theme = { "--bo-accent": edition.defaultAccent, "--bo-accent-ink": accentInk(edition.defaultAccent) } as CSSProperties;
   return (
-    <main className={s.split}>
+    <main className={s.split} style={theme} data-edition={edition.key} data-accent="">
       <section className={s.brand} aria-hidden="true">
         <div className={s.brandTop}>
-          <Bison width={40} />
-          <span className={s.brandName}>{BRAND.productName}</span>
+          <Glyph edition={edition.key} width={40} />
+          <span className={s.brandName}>{edition.productName}</span>
         </div>
         <div className={s.brandBody}>
-          <p className={s.pitch}>Every visitor, every lead and every sale from your website, in one place.</p>
+          <p className={s.pitch}>{edition.pitch}</p>
           <div className={s.preview}>
             <div className={s.previewHead}>
-              <span>Visitors</span>
+              <span>{edition.previewLabel}</span>
               <span className={s.previewChip}>+13%</span>
             </div>
-            <span className={`num ${s.previewNum}`}>2,675</span>
+            <span className={`num ${s.previewNum}`}>{edition.key === "fit" ? "184" : "2,675"}</span>
             <svg viewBox="0 0 300 80" className={s.previewLine} preserveAspectRatio="none">
               <defs>
                 <linearGradient id="signin-fill" x1="0" y1="0" x2="0" y2="1">
@@ -119,23 +144,29 @@ export default function SignInPage({ searchParams }: PageProps<"/sign-in/[[...si
             </svg>
           </div>
         </div>
-        <span className={s.brandFoot}>{BRAND.maker}</span>
+        <span className={s.brandFoot}>{edition.maker}</span>
       </section>
 
       <section className={s.formSide}>
         <div className={s.card}>
           <div className={s.mobileBrand}>
-            <Mark size={28} />
-            <span className={s.brandName}>{BRAND.productName}</span>
+            <Mark size={28} edition={edition.key} />
+            <span className={s.brandName}>{edition.productName}</span>
           </div>
-          <Suspense>
-            <ErrorNote searchParams={searchParams} />
-          </Suspense>
+          <ErrorNote searchParams={searchParams} />
           <Suspense fallback={<p className="label">Loading sign-in</p>}>
-            <SignInBody />
+            <SignInBody edition={edition.key} />
           </Suspense>
         </div>
       </section>
     </main>
+  );
+}
+
+export default function SignInPage({ searchParams }: PageProps<"/sign-in/[[...sign-in]]">) {
+  return (
+    <Suspense fallback={<main className={s.split} />}>
+      <SignInScreen searchParams={searchParams} />
+    </Suspense>
   );
 }

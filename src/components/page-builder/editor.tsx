@@ -8,8 +8,10 @@ import { saveVersionAction } from "@/app/(portal)/marketing/tests/actions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useEditionKey } from "@/components/edition";
 import type { SignupChoices } from "@/components/landing/landing-page";
 import type { Device } from "@/components/page-preview";
+import { sayFor } from "@/config/editions";
 import type { AgentEvent } from "@/lib/pages/agent/types";
 import { applyOp, type PageOp } from "@/lib/pages/ops";
 import type { PageStatus } from "@/lib/pages/repo";
@@ -52,6 +54,7 @@ const MAX_UNDO = 60;
 
 /** Loads a demo page from this browser, then opens the editor on it. */
 export function Editor(props: Props) {
+  const say = sayFor(useEditionKey());
   const client = useIsClient();
   const page = useMemo(() => (props.initial || !client ? null : demoPage(props.tenant.id, props.pageId)), [props.initial, client, props.tenant.id, props.pageId]);
   if (props.initial) return <EditorCore {...props} initial={props.initial} />;
@@ -62,7 +65,7 @@ export function Editor(props: Props) {
         <h1>This page isn&apos;t here</h1>
         <p>Demo pages live in the browser they were made in.</p>
         <Link href="/marketing/pages" className="btn">
-          Back to Pages
+          {say("Back to Pages", "Back to Funnel pages")}
         </Link>
       </div>
     );
@@ -79,7 +82,9 @@ function versionStore(versionId: string): PageStore {
 
 function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, agentName, autoBuild, signup, version, runningTest }: Props & { initial: EditorInitial }) {
   const router = useRouter();
-  const store = useMemo(() => (version ? versionStore(version.id) : storage === "server" ? serverStore : browserStore(tenant.id, publicBase)), [version, storage, tenant.id, publicBase]);
+  const edition = useEditionKey();
+  const say = sayFor(edition);
+  const store = useMemo(() => (version ? versionStore(version.id) : storage === "server" ? serverStore : browserStore(tenant.id, publicBase, edition)), [version, storage, tenant.id, publicBase, edition]);
 
   const [doc, setDoc] = useState<PageDoc | null>(initial.doc);
   const [meta, setMeta] = useState({ title: initial.title, slug: initial.slug, status: initial.status, publicUrl: initial.publicUrl });
@@ -125,7 +130,7 @@ function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, 
       const current = docRef.current;
       if (!current) return null;
       try {
-        const r = applyOp(current, op);
+        const r = applyOp(current, op, edition);
         change(r.doc, key);
         return r;
       } catch (err) {
@@ -133,7 +138,7 @@ function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, 
         return null;
       }
     },
-    [change],
+    [change, edition],
   );
 
   const undo = () => {
@@ -294,7 +299,7 @@ function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, 
   };
 
   const addSection = (type: SectionType) => {
-    const r = apply({ op: "add_section", section: starterSection(type, tenant.name), after: selectedId ?? undefined });
+    const r = apply({ op: "add_section", section: starterSection(type, tenant.name, edition), after: selectedId ?? undefined });
     if (r?.sectionId) select(r.sectionId);
   };
 
@@ -341,7 +346,7 @@ function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, 
   return (
     <div className={s.editor} data-tab={tab} data-testid="page-editor" data-no-pull>
       <header className={s.topbar}>
-        <Link href={backHref} className={s.back} aria-label={version ? "Back to the test" : "Back to Pages"}>
+        <Link href={backHref} className={s.back} aria-label={version ? "Back to the test" : say("Back to Pages", "Back to Funnel pages")}>
           <ArrowLeft aria-hidden="true" />
         </Link>
         <div className={s.titleBlock}>

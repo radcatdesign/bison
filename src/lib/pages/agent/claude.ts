@@ -4,6 +4,7 @@ import "server-only";
 // preview fills in while the agent is still writing.
 import Anthropic from "@anthropic-ai/sdk";
 import type { MessageParam, Tool, ToolResultBlockParam } from "@anthropic-ai/sdk/resources/messages";
+import { editionFor, sayFor } from "@/config/editions";
 import { applyOp, type PageOp } from "../ops";
 import { FORM_FIELDS, MAX_SECTIONS, type PageDoc, PageDocError, SECTION_TYPES } from "../schema";
 import { AGENT_BANNED_WORDS } from "./banned-words";
@@ -15,7 +16,8 @@ export function agentModel(): string {
   return process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
 }
 
-const SECTION_GUIDE = `Section types and their fields (all text is plain text, no HTML or markdown):
+/** The section reference. `inbox` is where form sends land: Contacts, or a club's Leads. */
+const sectionGuide = (inbox: string) => `Section types and their fields (all text is plain text, no HTML or markdown):
 - hero: headline (max 120), eyebrow? (short label, max 60), body? (max 400), primary? {label, href}, secondary? {label, href}, align "left"|"center", art "glow"|"grid"|"orbs"|"none". Use one hero, first.
 - features: heading?, intro?, items [{title (max 80), body (max 280)}] 1 to 6.
 - steps: heading?, items [{title, body}] 2 to 6. Numbered, for how it works.
@@ -23,35 +25,52 @@ const SECTION_GUIDE = `Section types and their fields (all text is plain text, n
 - quote: quote (max 400), name, role?. Only a real quote the person gave you; otherwise placeholders.
 - offer: heading (max 100), price?, note?, bullets [text] up to 8, cta? {label, href}.
 - faq: heading?, items [{q (max 160), a (max 600)}] 1 to 10.
-- form: heading, body?, fields (any of ${FORM_FIELDS.join(", ")}; must include email), submit (button text), success (message shown after sending). Sends land in the company's Contacts.
+- form: heading, body?, fields (any of ${FORM_FIELDS.join(", ")}; must include email), submit (button text), success (message shown after sending). Sends land in ${inbox}.
 - cta: headline, body?, cta {label, href}. A closing band.
 - text: heading?, body (blank lines split paragraphs, max 2000).
 Buttons: label max 40. href is "#<section id>" (like "#form"), or a full https://, mailto: or tel: address the person gave you.
 Theme: mode "light"|"dark", accent "#rrggbb", font "modern" (sans) | "editorial" (serif) | "technical" (mono), corners "soft"|"sharp"|"round".
 A page holds up to ${MAX_SECTIONS} sections.`;
 
+/** What kind of club a Fit Funnels company is, from its industry. */
+const clubKind = (industry: string) => (industry === "studio" ? "a fitness studio" : industry === "gym" ? "a gym and health club" : "a gym or fitness studio");
+
 function systemPrompt(input: AgentInput): string {
-  return `You build and edit landing pages for ${input.brand} (${input.domain}, industry: ${input.industry}) inside Bison Ops. The person you're talking to works there.
+  const edition = editionFor(input.edition);
+  const say = sayFor(edition);
+  const intro = say(
+    `You build and edit landing pages for ${input.brand} (${input.domain}, industry: ${input.industry}) inside ${edition.productName}. The person you're talking to works there.`,
+    `You build and edit funnel pages (landing pages) for ${input.brand} (${input.domain}, industry: ${input.industry}) inside ${edition.productName}. ${input.brand} is ${clubKind(input.industry)}. Its pages bring in new members: free trial passes, intro offers, class sign-ups, club tours and personal training consults. The person you're talking to works there, at the front desk, as a coach or running the club.`,
+  );
+  const asks = say("get in touch, book, get a quote or sign up", "claim a pass or an offer, book a tour, a class or a consult, get a quote or sign up");
+  const voice = say("like the owner talking to a customer", "like the owner talking to someone thinking about joining");
+  const facts = say(
+    `- Never invent facts about the business: no made-up testimonials, reviews, ratings, customer counts, awards, prices, discounts, dates, delivery times, guarantees or statistics. Use only what the person told you or what's already on the page.
+- When a section needs a fact you don't have, write a placeholder in exactly this form: [Add ...], for example [Add a real customer quote] or [Add the price].`,
+    `- Never invent facts about the club: no made-up testimonials, reviews, ratings, member counts, results, before-and-after claims, awards, prices, intro offers, discounts, class times, schedules, dates, coach names, guarantees or statistics. Use only what the person told you or what's already on the page.
+- Never promise health, weight-loss or fitness results.
+- When a section needs a fact you don't have, write a placeholder in exactly this form: [Add ...], for example [Add a real member quote], [Add the class times] or [Add the price].`,
+  );
+  return `${intro}
 
 You change the page only by calling tools. The person watches a live preview update with each call.
 
 How to work:
 - For a new page: call set_theme if the request implies a look, then add_section once per section, top to bottom, then set_seo. A good page is usually a hero, three to five supporting sections, and a form or call to action at the end. Don't pad it.
 - For changes: make the smallest set of edits that does what was asked. Refer to sections by id. Keep the person's existing words unless they ask you to change them.
-- When the page asks people to get in touch, book, get a quote or sign up, include a form section with id "form" and point the main buttons at "#form".
+- When the page asks people to ${asks}, include a form section with id "form" and point the main buttons at "#form".
 
 Writing:
-- Plain, direct and specific, like the owner talking to a customer. Short sentences. Concrete over clever.
+- Plain, direct and specific, ${voice}. Short sentences. Concrete over clever.
 - Never use em dashes. Never use words like ${AGENT_BANNED_WORDS.join(", ")}. No exclamation marks unless asked.
 
 Facts:
-- Never invent facts about the business: no made-up testimonials, reviews, ratings, customer counts, awards, prices, discounts, dates, delivery times, guarantees or statistics. Use only what the person told you or what's already on the page.
-- When a section needs a fact you don't have, write a placeholder in exactly this form: [Add ...], for example [Add a real customer quote] or [Add the price]. The page can't be published until placeholders are filled in, so use them only where they're needed.
+${facts} The page can't be published until placeholders are filled in, so use them only where they're needed.
 - Never invent web addresses.
 
 After your tool calls, reply in one or two short sentences: what you changed, and which placeholders to fill in if you added any. Don't list every section. If the request isn't about this page, say what you can help with and change nothing.
 
-${SECTION_GUIDE}`;
+${sectionGuide(say("the company's Contacts", "the club's Leads"))}`;
 }
 
 const looseObject = { type: "object" as const, additionalProperties: true };
@@ -168,7 +187,7 @@ export async function runClaude(input: AgentInput, emit: Emit, signal?: AbortSig
     stream.on("contentBlock", (block) => {
       if (block.type !== "tool_use") return;
       try {
-        const r = applyOp(doc, toOp(block.name, block.input));
+        const r = applyOp(doc, toOp(block.name, block.input), input.edition);
         doc = r.doc;
         changes.push(r.label);
         emit({ type: "op", label: r.label, doc, sectionId: r.sectionId });

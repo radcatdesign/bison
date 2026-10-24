@@ -2,17 +2,19 @@
 
 // The trade page's two forms: sign in with an email link, and apply.
 import { useState } from "react";
+import { useSay } from "@/components/edition";
+import type { Say } from "@/config/editions";
 import s from "./shop.module.css";
 
 type Reply = { ok: boolean; message: string } | null;
 
-async function send(url: string, body: unknown): Promise<{ ok: boolean; message: string }> {
+async function send(url: string, body: unknown, say: Say): Promise<{ ok: boolean; message: string }> {
   try {
     const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     const data = (await res.json().catch(() => null)) as { ok: boolean; message?: string } | null;
     return { ok: Boolean(data?.ok), message: data?.message ?? "That didn't send. Try again." };
   } catch {
-    return { ok: false, message: "Couldn't reach the shop. Check your connection and try again." };
+    return { ok: false, message: say("Couldn't reach the shop. Check your connection and try again.", "Couldn't reach the store. Check your connection and try again.") };
   }
 }
 
@@ -26,6 +28,7 @@ function Note({ reply, testId }: { reply: Reply; testId: string }) {
 }
 
 export function TradeSignIn({ slug }: { slug: string }) {
+  const say = useSay();
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [reply, setReply] = useState<Reply>(null);
@@ -36,7 +39,7 @@ export function TradeSignIn({ slug }: { slug: string }) {
       onSubmit={(e) => {
         e.preventDefault();
         setBusy(true);
-        void send(`/p/${slug}/trade/link`, { email }).then((r) => {
+        void send(`/p/${slug}/trade/link`, { email }, say).then((r) => {
           setBusy(false);
           setReply(r);
         });
@@ -57,6 +60,7 @@ export function TradeSignIn({ slug }: { slug: string }) {
 }
 
 export function TradeApply({ slug, token, intro }: { slug: string; token: string; intro: string }) {
+  const say = useSay();
   const [form, setForm] = useState({ company: "", name: "", email: "", phone: "", website: "", type: "", resale: "", volume: "", message: "", trap: "" });
   const [busy, setBusy] = useState(false);
   const [reply, setReply] = useState<Reply>(null);
@@ -76,14 +80,14 @@ export function TradeApply({ slug, token, intro }: { slug: string; token: string
       onSubmit={(e) => {
         e.preventDefault();
         setBusy(true);
-        void send(`/p/${slug}/trade/apply`, { ...form, token }).then((r) => {
+        void send(`/p/${slug}/trade/apply`, { ...form, token }, say).then((r) => {
           setBusy(false);
           setReply(r);
         });
       }}
     >
-      <h2 id="trade-apply">Apply for a trade account</h2>
-      <p className={s.note}>{intro || "Contractors, designers and resellers get trade prices across the shop once approved."}</p>
+      <h2 id="trade-apply">{say("Apply for a trade account", "Apply for a corporate account")}</h2>
+      <p className={s.note}>{intro || say("Contractors, designers and resellers get trade prices across the shop once approved.", "Local employers buy memberships and class packs for their staff at corporate prices once approved.")}</p>
       <div className={s.row2}>
         <label className={s.field}>
           Company
@@ -111,17 +115,17 @@ export function TradeApply({ slug, token, intro }: { slug: string; token: string
         </label>
         <label className={s.field}>
           Type of business <span>Optional</span>
-          <input className={s.input} maxLength={120} placeholder="Builder, designer, retailer" {...f("type")} />
+          <input className={s.input} maxLength={120} placeholder={say("Builder, designer, retailer", "Office, school, clinic")} {...f("type")} />
         </label>
       </div>
       <div className={s.row2}>
         <label className={s.field}>
-          Resale number <span>Optional</span>
+          {say("Resale number", "How many people work there")} <span>Optional</span>
           <input className={s.input} maxLength={60} {...f("resale")} />
         </label>
         <label className={s.field}>
-          Expected yearly volume <span>Optional</span>
-          <input className={s.input} maxLength={120} {...f("volume")} />
+          {say("Expected yearly volume", "What you'd like to buy")} <span>Optional</span>
+          <input className={s.input} maxLength={120} placeholder={say("", "Memberships for staff, class packs") || undefined} {...f("volume")} />
         </label>
       </div>
       <label className={s.field}>

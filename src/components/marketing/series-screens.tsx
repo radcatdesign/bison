@@ -8,11 +8,14 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { addStepAction, createSeriesAction, deleteSeriesAction, deleteStepAction, saveStepAction, setSeriesStatusAction, startSeriesForListAction, testStepAction, updateSeriesAction } from "@/app/(portal)/marketing/series/actions";
 import { EmailBuilder, type EmailContent } from "@/components/email-builder/builder";
+import { useEditionKey, useSay } from "@/components/edition";
+import { type EditionKey, itemOf } from "@/config/editions";
 import type { SequenceTrigger } from "@/lib/db/types";
 import { emailProblems } from "@/lib/email/ops";
 import { renderEmail } from "@/lib/email/render";
 import { type BrandKit, EMAIL_DOC_VERSION } from "@/lib/email/schema";
-import { starterSeries } from "@/lib/marketing/starter";
+import { sampleOfferCode } from "@/lib/marketing/settings";
+import { extraStarterSeries, starterSeries } from "@/lib/marketing/starter";
 import { useIsClient } from "@/lib/use-is-client";
 import { useDemoMarketing } from "./demo-setup";
 import { type DemoSeries, demoId, writeDemo } from "./demo-store";
@@ -24,13 +27,18 @@ export type StepView = { id: string; delayDays: number; subject: string; prehead
 export type SeriesView = { id: string; name: string; trigger: SequenceTrigger; triggerDetail: string; status: "on" | "off"; starter: boolean; steps: StepView[]; active: number; done: number; stopped: number };
 export type TriggerInfo = Record<SequenceTrigger, { label: string; note: string; ready: boolean }>;
 
-type Common = { storage: "server" | "browser"; tenantId: string; site: string; canEdit: boolean; triggers: TriggerInfo };
+type Common = { storage: "server" | "browser"; tenantId: string; site: string; canEdit: boolean; triggers: TriggerInfo; edition: EditionKey };
 
 // ---- Demo storage ------------------------------------------------------------------------
 
-function demoSeed(site: string): DemoSeries[] {
-  const st = starterSeries(site.replace(/^https:\/\//, ""));
-  return [{ id: "welcome", name: st.name, trigger: "joined", triggerDetail: "", status: "off", starter: true, steps: st.steps.map((x, i) => ({ id: `step-${i}`, delayDays: x.delayDays, subject: x.subject, preheader: x.preheader, doc: x.doc })) }];
+function demoSeed(site: string, edition: EditionKey): DemoSeries[] {
+  const domain = site.replace(/^https:\/\//, "");
+  const st = starterSeries(domain, edition);
+  const steps = (list: typeof st.steps, prefix: string) => list.map((x, i) => ({ id: `${prefix}${i}`, delayDays: x.delayDays, subject: x.subject, preheader: x.preheader, doc: x.doc }));
+  return [
+    { id: "welcome", name: st.name, trigger: "joined", triggerDetail: "", status: "off", starter: true, steps: steps(st.steps, "step-") },
+    ...extraStarterSeries(domain, edition).map((x, n) => ({ id: `starter-${n + 1}`, name: x.name, trigger: x.trigger, triggerDetail: "", status: "off" as const, starter: false, steps: steps(x.steps, `step-${n + 1}-`) })),
+  ];
 }
 
 function toView(d: DemoSeries): SeriesView {
@@ -54,19 +62,20 @@ export function useSeries(c: Common, server: SeriesView[]): SeriesView[] | null 
   return useMemo(() => {
     if (c.storage === "server") return server;
     if (!client) return null;
-    return (demo.series ?? demoSeed(c.site)).map(toView);
-  }, [c.storage, c.site, server, demo.series, client]);
+    return (demo.series ?? demoSeed(c.site, c.edition)).map(toView);
+  }, [c.storage, c.site, c.edition, server, demo.series, client]);
 }
 
-function writeSeries(tenantId: string, site: string, change: (all: DemoSeries[]) => DemoSeries[]) {
-  writeDemo(tenantId, (d) => ({ ...d, series: change(d.series ?? demoSeed(site)) }));
+function writeSeries(c: Pick<Common, "tenantId" | "site" | "edition">, change: (all: DemoSeries[]) => DemoSeries[]) {
+  writeDemo(c.tenantId, (d) => ({ ...d, series: change(d.series ?? demoSeed(c.site, c.edition)) }));
 }
 
 // ---- Pieces -----------------------------------------------------------------------------
 
 function triggerText(v: SeriesView, triggers: TriggerInfo, forms: { value: string; label: string }[]): string {
   if (v.trigger === "form") return `Starts when someone sends ${forms.find((f) => f.value === v.triggerDetail)?.label ?? (v.triggerDetail || "a form you pick")}`;
-  return `Starts when ${triggers[v.trigger].label.charAt(0).toLowerCase()}${triggers[v.trigger].label.slice(1)}`.replace("when you start it for a list", "you start it for a list");
+  if (v.trigger === "manual") return "You start it by hand, for a list you pick";
+  return `Starts when ${triggers[v.trigger].label.charAt(0).toLowerCase()}${triggers[v.trigger].label.slice(1)}`;
 }
 
 function StatusSwitch({ view, c }: { view: SeriesView; c: Common }) {
@@ -89,7 +98,7 @@ function StatusSwitch({ view, c }: { view: SeriesView; c: Common }) {
               if (c.storage === "browser") {
                 const blocked = view.steps.find((x) => x.problems);
                 if (next && blocked) return setMessage({ ok: false, text: `The day ${blocked.delayDays} email isn't ready: fill in the yellow spots first.` });
-                writeSeries(c.tenantId, c.site, (all) => all.map((x) => (x.id === view.id ? { ...x, status: next ? "on" : "off" } : x)));
+                writeSeries(c, (all) => all.map((x) => (x.id === view.id ? { ...x, status: next ? "on" : "off" } : x)));
                 return setMessage({ ok: true, text: next ? "On in this browser. In your own account, new subscribers start it from now." : "Off." });
               }
               const r = await setSeriesStatusAction(view.id, next);
@@ -110,7 +119,8 @@ function StatusSwitch({ view, c }: { view: SeriesView; c: Common }) {
 }
 
 function StepThumb({ step, brand, baseUrl }: { step: StepView; brand: BrandKit; baseUrl: string }) {
-  const html = useMemo(() => renderEmail({ doc: step.doc, brand, subject: step.subject, baseUrl, builder: { selectedId: null, outlines: false } }).html, [step, brand, baseUrl]);
+  const edition = useEditionKey();
+  const html = useMemo(() => renderEmail({ doc: step.doc, brand, subject: step.subject, baseUrl, builder: { selectedId: null, outlines: false, sampleCode: sampleOfferCode(edition) } }).html, [step, brand, baseUrl, edition]);
   return (
     <span className={q.thumb}>
       <EmailFrame html={html} thumb={{ height: 150 }} title={`Preview of the day ${step.delayDays} email`} />
@@ -122,6 +132,7 @@ function StepThumb({ step, brand, baseUrl }: { step: StepView; brand: BrandKit; 
 
 export function SeriesList({ c, server, forms, brand, baseUrl }: { c: Common; server: SeriesView[]; forms: { value: string; label: string }[]; brand: BrandKit; baseUrl: string }) {
   const router = useRouter();
+  const say = useSay();
   const list = useSeries(c, server);
   const [trigger, setTrigger] = useState<SequenceTrigger>("joined");
   if (!list) return <div aria-busy="true" style={{ minHeight: 300 }} />;
@@ -183,7 +194,7 @@ export function SeriesList({ c, server, forms, brand, baseUrl }: { c: Common; se
                   e.preventDefault();
                   const data = new FormData(e.currentTarget);
                   const id = demoId("series");
-                  writeSeries(c.tenantId, c.site, (all) => [
+                  writeSeries(c, (all) => [
                     ...all,
                     {
                       id,
@@ -208,7 +219,7 @@ export function SeriesList({ c, server, forms, brand, baseUrl }: { c: Common; se
               <label htmlFor="series-name" className={s.fieldLabel}>
                 Name
               </label>
-              <input id="series-name" name="name" className="input" maxLength={80} required placeholder="Quote follow-up" />
+              <input id="series-name" name="name" className="input" maxLength={80} required placeholder={say("Quote follow-up", "Trial pass follow-up")} />
             </div>
             <div className={s.field}>
               <label htmlFor="series-trigger" className={s.fieldLabel}>
@@ -218,7 +229,7 @@ export function SeriesList({ c, server, forms, brand, baseUrl }: { c: Common; se
                 {(Object.keys(c.triggers) as SequenceTrigger[]).map((t) => (
                   <option key={t} value={t}>
                     {c.triggers[t].label}
-                    {c.triggers[t].ready ? "" : " (needs Sales)"}
+                    {c.triggers[t].ready ? "" : ` (needs ${itemOf(c.edition, "module:sales").name})`}
                   </option>
                 ))}
               </select>
@@ -230,7 +241,7 @@ export function SeriesList({ c, server, forms, brand, baseUrl }: { c: Common; se
                 Which form
               </label>
               <select id="series-form" name="detail" className="select" required>
-                {forms.length === 0 && <option value="">No forms yet. Add one to a landing page first.</option>}
+                {forms.length === 0 && <option value="">{say("No forms yet. Add one to a landing page first.", "No forms yet. Add one to a funnel page first.")}</option>}
                 {forms.map((f) => (
                   <option key={f.value} value={f.value}>
                     {f.label}
@@ -327,7 +338,7 @@ export function SeriesDetail({ c, id, server, forms, lists, brand, baseUrl, canS
                     onClick={() => {
                       if (!window.confirm(`Remove the day ${st.delayDays} email from this series?`)) return;
                       start(async () => {
-                        if (c.storage === "browser") writeSeries(c.tenantId, c.site, (all) => all.map((x) => (x.id === view.id ? { ...x, steps: x.steps.filter((y) => y.id !== st.id) } : x)));
+                        if (c.storage === "browser") writeSeries(c, (all) => all.map((x) => (x.id === view.id ? { ...x, steps: x.steps.filter((y) => y.id !== st.id) } : x)));
                         else {
                           const r = await deleteStepAction(st.id);
                           if (r && !r.ok) setMessage({ ok: false, text: r.message });
@@ -351,7 +362,7 @@ export function SeriesDetail({ c, id, server, forms, lists, brand, baseUrl, canS
                 if (c.storage === "browser") {
                   if (view.steps.some((x) => x.delayDays === nextDay)) return setMessage({ ok: false, text: `There's already an email on day ${nextDay}. Pick another day.` });
                   const stepId = demoId("step");
-                  writeSeries(c.tenantId, c.site, (all) =>
+                  writeSeries(c, (all) =>
                     all.map((x) => (x.id === view.id ? { ...x, steps: [...x.steps, { id: stepId, delayDays: nextDay, subject: "[Add a subject]", preheader: "", doc: { version: EMAIL_DOC_VERSION, signOff: true, fallbackName: "there", sections: [{ id: "note", type: "text", body: "Hi {first name},\n\n[Add what this email says.]", align: "left" }] } }] } : x)),
                   );
                   router.push(`/marketing/series/${view.id}/steps/${stepId}`);
@@ -431,7 +442,7 @@ export function SeriesDetail({ c, id, server, forms, lists, brand, baseUrl, canS
             if (!window.confirm(`Delete ${view.name}? Anyone in it stops getting its emails.`)) return;
             start(async () => {
               if (c.storage === "browser") {
-                writeSeries(c.tenantId, c.site, (all) => all.filter((x) => x.id !== view.id));
+                writeSeries(c, (all) => all.filter((x) => x.id !== view.id));
                 router.push("/marketing/series");
               } else {
                 const r = await deleteSeriesAction(view.id);
@@ -453,6 +464,7 @@ function SeriesSettings({ c, view, forms, onMessage }: { c: Common; view: Series
   const [trigger, setTrigger] = useState<SequenceTrigger>(view.trigger);
   const [detail, setDetail] = useState(view.triggerDetail || forms[0]?.value || "");
   const [pending, start] = useTransition();
+  const say = useSay();
   return (
     <form
       className={q.block}
@@ -460,7 +472,7 @@ function SeriesSettings({ c, view, forms, onMessage }: { c: Common; view: Series
         e.preventDefault();
         start(async () => {
           if (c.storage === "browser") {
-            writeSeries(c.tenantId, c.site, (all) => all.map((x) => (x.id === view.id ? { ...x, name, trigger, triggerDetail: trigger === "form" ? detail : "" } : x)));
+            writeSeries(c, (all) => all.map((x) => (x.id === view.id ? { ...x, name, trigger, triggerDetail: trigger === "form" ? detail : "" } : x)));
             return onMessage({ ok: true, text: "Saved in this browser." });
           }
           const r = await updateSeriesAction(view.id, { name, trigger, detail });
@@ -484,7 +496,7 @@ function SeriesSettings({ c, view, forms, onMessage }: { c: Common; view: Series
             {(Object.keys(c.triggers) as SequenceTrigger[]).map((t) => (
               <option key={t} value={t}>
                 {c.triggers[t].label}
-                {c.triggers[t].ready ? "" : " (needs Sales)"}
+                {c.triggers[t].ready ? "" : ` (needs ${itemOf(c.edition, "module:sales").name})`}
               </option>
             ))}
           </select>
@@ -496,7 +508,7 @@ function SeriesSettings({ c, view, forms, onMessage }: { c: Common; view: Series
             Which form
           </label>
           <select id="series-edit-form" className="select" value={detail} onChange={(e) => setDetail(e.target.value)}>
-            {forms.length === 0 && <option value="">No forms yet. Add one to a landing page first.</option>}
+            {forms.length === 0 && <option value="">{say("No forms yet. Add one to a landing page first.", "No forms yet. Add one to a funnel page first.")}</option>}
             {forms.map((f) => (
               <option key={f.value} value={f.value}>
                 {f.label}
@@ -532,7 +544,7 @@ export function StepEditor(props: {
   const found = useMemo(() => {
     if (props.c.storage === "server") return props.server;
     if (!client) return null;
-    const series = (demo.series ?? demoSeed(props.c.site)).find((x) => x.id === props.seriesId);
+    const series = (demo.series ?? demoSeed(props.c.site, props.c.edition)).find((x) => x.id === props.seriesId);
     const st = series?.steps.find((x) => x.id === props.stepId);
     return series && st ? { step: { ...st, problems: 0, sent: 0 }, seriesName: series.name, seriesStatus: series.status } : null;
     // Read once: the builder keeps its own copy from here on.
@@ -557,7 +569,7 @@ export function StepEditor(props: {
 
   const save = async (content: EmailContent) => {
     if (browser) {
-      writeSeries(props.c.tenantId, props.c.site, (all) => all.map((x) => (x.id === props.seriesId ? { ...x, steps: x.steps.map((y) => (y.id === props.stepId ? { ...y, ...content, delayDays: currentDay } : y)) } : x)));
+      writeSeries(props.c, (all) => all.map((x) => (x.id === props.seriesId ? { ...x, steps: x.steps.map((y) => (y.id === props.stepId ? { ...y, ...content, delayDays: currentDay } : y)) } : x)));
       return { ok: true, message: "Saved in this browser" };
     }
     return saveStepAction(props.stepId, { ...content, delayDays: currentDay });

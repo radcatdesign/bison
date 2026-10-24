@@ -1,7 +1,9 @@
 // The offline page agent. Used when Claude isn't connected (tests, local work,
 // and the demo until an API key is set). It understands a brief for a new page
 // and short, direct changes. It never makes up facts: anything only the business
-// knows becomes an [Add ...] placeholder.
+// knows becomes an [Add ...] placeholder. Fit Funnels clubs get club pages:
+// free passes, intro offers, classes, tours, personal training and the like.
+import { type EditionKey, editionOfIndustry } from "@/config/editions";
 import { SAMPLE_SITES } from "@/lib/sample/sites";
 import { applyOp, type PageOp } from "../ops";
 import { findPlaceholders, type PageDoc, type Section, type SectionType } from "../schema";
@@ -18,6 +20,83 @@ const INTENTS: { intent: Intent; test: RegExp; cta: string; formHeading: string;
   { intent: "buy", test: /\b(buy|shop|order|purchase|preorder|pre-order)\b/, cta: "Order now", formHeading: "Place an order", submit: "Send my order", fields: ["name", "email", "message"], success: "Thanks. We'll confirm your order by email." },
 ];
 const CONTACT = { intent: "contact" as Intent, cta: "Get in touch", formHeading: "Get in touch", submit: "Send", fields: ["name", "email", "message"], success: "Thanks. We'll get back to you soon." };
+
+// ---- Club pages (Fit Funnels) ----------------------------------------------------
+
+type ClubIntent = "corporate" | "presale" | "challenge" | "pt" | "ride" | "pass" | "intro" | "class" | "tour" | "signup" | "contact";
+type ClubPlan = { intent: ClubIntent; cta: string; formHeading: string; submit: string; fields: string[]; success: string };
+
+// Checked in order: "a corporate quote" is corporate, "a free first ride" is a ride.
+const CLUB_INTENTS: (ClubPlan & { test: RegExp })[] = [
+  { intent: "corporate", test: /\b(corporate|employers?|staff|workplace|wellness program|team memberships?)\b/, cta: "Get a corporate quote", formHeading: "Get a corporate quote", submit: "Send my request", fields: ["name", "email", "phone", "company", "message"], success: "Thanks. We'll be in touch with a quote soon." },
+  { intent: "presale", test: /\b(presale|pre-sale|founding|new location|new club|grand opening|opening soon)\b/, cta: "Join the presale", formHeading: "Join the presale", submit: "Join the presale", fields: ["name", "email", "phone"], success: "You're on the list. We'll be in touch before the doors open." },
+  { intent: "challenge", test: /\b(challenge|six[- ]week|6[- ]week|boot ?camp)\b/, cta: "Join the challenge", formHeading: "Join the challenge", submit: "Save my spot", fields: ["name", "email", "phone"], success: "You're in. We'll send the details by email." },
+  { intent: "pt", test: /\b(personal training|personal trainer|trainers?|pt|one[- ]on[- ]one|consult(ation)?s?)\b/, cta: "Book a consult", formHeading: "Book a personal training consult", submit: "Request a consult", fields: ["name", "email", "phone", "message"], success: "Thanks. A trainer will be in touch to find a time." },
+  { intent: "ride", test: /\b(free (first )?rides?|first ride (is )?free|ride free)\b/, cta: "Book your free ride", formHeading: "Book your free ride", submit: "Book my free ride", fields: ["name", "email", "phone"], success: "Thanks. We'll be in touch soon to book your first ride." },
+  { intent: "pass", test: /\b(free (week|pass|trial|class|session|visit|day)|trial|guest pass|day pass|week pass|first (class|session|visit))\b/, cta: "Claim your free pass", formHeading: "Claim your free pass", submit: "Claim my pass", fields: ["name", "email", "phone"], success: "Thanks. We'll be in touch soon to set up your first visit." },
+  { intent: "intro", test: /\b(intro|introductory|first month|new member offer|joining offer|membership offer|sale|promo)\b/, cta: "Claim the offer", formHeading: "Claim the intro offer", submit: "Claim the offer", fields: ["name", "email", "phone"], success: "Thanks. We'll be in touch to get you started." },
+  { intent: "class", test: /\b(class|classes|schedule|timetable|yoga|spin|hiit|pilates|cycling)\b/, cta: "Save my spot", formHeading: "Save my spot", submit: "Save my spot", fields: ["name", "email", "phone"], success: "You're on the list. We'll email the details soon." },
+  { intent: "tour", test: /\b(tour|tours|visit|open house|come see|walk ?through)\b/, cta: "Book a tour", formHeading: "Book a tour", submit: "Request a tour", fields: ["name", "email", "phone"], success: "Thanks. We'll be in touch to find a time for your tour." },
+  { intent: "signup", test: /\b(sign ?up|waitlist|wait list|newsletter|notify|early access)\b/, cta: "Join the list", formHeading: "Join the list", submit: "Join", fields: ["name", "email"], success: "You're on the list. We'll be in touch." },
+];
+const CLUB_CONTACT: ClubPlan = { intent: "contact", cta: "Book a tour", formHeading: "Book a tour or ask a question", submit: "Send", fields: ["name", "email", "phone", "message"], success: "Thanks. We'll get back to you soon." };
+
+function clubIntentOf(text: string): ClubPlan {
+  const plan = CLUB_INTENTS.find((i) => i.test.test(text)) ?? CLUB_CONTACT;
+  // A trial pass is only called free when the brief says so.
+  if (plan.intent === "pass" && !/\bfree\b/.test(text)) return { ...plan, cta: "Claim your pass", formHeading: "Claim your pass" };
+  return plan;
+}
+
+/** Common questions a club gets for each kind of page. Answers are always the club's to write. */
+const CLUB_FAQ: Record<ClubIntent, string[]> = {
+  corporate: ["Is there a minimum number of staff?", "How does billing work?", "Can staff add family members?"],
+  presale: ["When does it open?", "Where is it?", "How long is the founding rate locked?"],
+  challenge: ["Do I need to be a member?", "What if I miss a session?", "Is it right for beginners?"],
+  pt: ["How much are sessions?", "Do I need a membership?", "What happens in the consult?"],
+  ride: ["I've never done indoor cycling. Is that okay?", "What should I bring?", "What happens after my first ride?"],
+  pass: ["Is it really free?", "What should I bring?", "What happens after my pass ends?"],
+  intro: ["What's included?", "What happens when the offer ends?", "Can I cancel?"],
+  class: ["Do I need to be a member?", "Is it right for beginners?", "What should I bring?"],
+  tour: ["How much is a membership?", "When are you open?", "Can I try a class first?"],
+  signup: ["How much is a membership?", "When are you open?", "Can I try a class first?"],
+  contact: ["How much is a membership?", "When are you open?", "Can I try a class first?"],
+};
+
+/** How it works, for the kinds of club page that need it. Anything only the club knows is left to fill in. */
+const CLUB_STEPS: Partial<Record<ClubIntent, { title: string; body: string }[]>> = {
+  pass: [
+    { title: "Claim your pass", body: "Send the form. It takes a minute." },
+    { title: "Pick your first day", body: "[Add how you confirm, like a text from the front desk]" },
+    { title: "Come in and train", body: "Check in at the front desk and we'll take it from there." },
+  ],
+  ride: [
+    { title: "Book your ride", body: "Send the form. It takes a minute." },
+    { title: "Pick your class", body: "[Add how they pick a class and a bike]" },
+    { title: "Come in and ride", body: "[Add what happens before the first ride, like a bike fit]" },
+  ],
+  pt: [
+    { title: "Book a consult", body: "Send the form and we'll find a time that works." },
+    { title: "Meet your trainer", body: "[Add how long the consult is and what happens]" },
+    { title: "Get a plan", body: "[Add what they leave with, like a plan and session prices]" },
+  ],
+  corporate: [
+    { title: "Tell us about your team", body: "How many people, and what they'd like to do." },
+    { title: "Get a quote", body: "[Add how soon you reply]" },
+    { title: "Your staff sign up", body: "Approve the quote online and your team can start." },
+  ],
+  tour: [
+    { title: "Pick a time", body: "Send the form with a day that suits you." },
+    { title: "We confirm it", body: "[Add how soon you reply]" },
+    { title: "Come see the club", body: "[Add who shows them around and how long it takes]" },
+  ],
+};
+
+/** The topic with the brief's own capitals, so "HIIT" stays "HIIT". */
+function asWritten(topic: string, instruction: string): string {
+  const at = instruction.toLowerCase().indexOf(topic);
+  return at >= 0 ? instruction.slice(at, at + topic.length) : topic;
+}
 
 const COLORS: Record<string, string> = {
   blue: "#3b5bff",
@@ -48,6 +127,14 @@ const TYPE_WORDS: { type: SectionType; test: RegExp }[] = [
   { type: "text", test: /\b(text|paragraph|about section|story)\b/ },
   { type: "hero", test: /\bhero\b/ },
 ];
+
+/** A club also asks for a "member quote" or a "member story". */
+const CLUB_QUOTE_WORDS = /\b(member quote|member quotes|member story|member stories)\b/;
+
+function typeOf(clause: string, edition: EditionKey): SectionType | undefined {
+  if (edition === "fit" && CLUB_QUOTE_WORDS.test(clause)) return "quote";
+  return TYPE_WORDS.find((t) => t.test.test(clause))?.type;
+}
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const clip = (s: string, n: number) => (s.length <= n ? s : `${s.slice(0, n - 1).replace(/\s+\S*$/, "")}`);
@@ -118,7 +205,11 @@ function themeOps(text: string, explicit = false): PageOp[] {
 
 // ---- A new page from a brief ------------------------------------------------
 
+/** The company's edition: as given, or from its kind of business. */
+const editionOf = (input: Pick<AgentInput, "edition" | "industry">): EditionKey => input.edition ?? editionOfIndustry(input.industry);
+
 export function planPage(input: AgentInput): PageOp[] {
+  if (editionOf(input) === "fit") return planClubPage(input);
   const brief = input.instruction.toLowerCase();
   const site = SAMPLE_SITES[input.industry] ?? SAMPLE_SITES.general;
   const intent = intentOf(brief);
@@ -197,6 +288,100 @@ export function planPage(input: AgentInput): PageOp[] {
   return ops;
 }
 
+/** A club page from a brief: a free pass, an intro offer, a class, a consult and so on. */
+function planClubPage(input: AgentInput): PageOp[] {
+  const brief = input.instruction.toLowerCase();
+  const site = SAMPLE_SITES[input.industry] ?? SAMPLE_SITES.general;
+  const plan = clubIntentOf(brief);
+  const offer = offerOf(brief);
+  const until = untilOf(input.instruction);
+  const { topic, explicit } = topicOf(input.instruction, input.industry);
+  const brand = input.brand;
+  const shown = asWritten(topic, input.instruction);
+  // A price the brief gives, like "$1", goes in the offer box. Anything else is the club's to fill in.
+  const price = offer ? null : (input.instruction.match(/\$\d[\d,]*(?:\.\d{2})?/)?.[0] ?? null);
+  // Only a page the brief names borrows the club's own words; otherwise the page says what it's for.
+  const known = explicit
+    ? Object.values(site.pages).find((p) => {
+        const t = p.title.toLowerCase();
+        return t === topic || (topic.length > 4 && (t.includes(topic) || topic.includes(t)));
+      })
+    : undefined;
+  const named = (fallback: string, word: RegExp) => (explicit && word.test(topic) ? cap(shown) : fallback);
+  const bare = shown.replace(/^(the|our|a|an)\s+/i, "");
+  const byIntent: Record<ClubIntent, string> = {
+    corporate: `${brand} for your team`,
+    presale: `A new ${brand} is on the way`,
+    challenge: /challenge/.test(topic) && explicit ? `Join the ${bare}` : "Join the challenge",
+    pt: explicit ? `Book ${article(topic)}${shown}` : "Train with a coach who plans it around you",
+    ride: `Book your first ride at ${brand}`,
+    pass: explicit && /\b(pass|trial|week|class|session|visit)\b/.test(topic) ? `Claim your ${bare}` : `Try ${brand} before you join`,
+    intro: named(`A simple way to start at ${brand}`, /\b(offer|intro)\b/),
+    class: explicit ? `${cap(shown)}, now on the schedule` : "Something new on the schedule",
+    tour: `Come see ${brand}`,
+    signup: /\b(list|waitlist|newsletter|club)$/.test(topic) ? `Join the ${bare}` : `Be first to hear about ${shown}`,
+    contact: explicit ? cap(shown) : `Come see ${brand}`,
+  };
+  const bodies: Record<ClubIntent, string> = {
+    corporate: "Memberships and class packs for your staff at corporate pricing. Tell us about your team and we'll send a quote.",
+    presale: "Join the presale list to hear first and get the founding member offer before the doors open.",
+    challenge: "Six weeks of training with a plan and a group behind you. Save your spot and we'll send the details.",
+    pt: "Start with a consult. You'll talk through what you want to work on and leave with a clear next step.",
+    ride: `Book a class, ride with us and see if ${brand} fits. Booking it doesn't sign you up for anything.`,
+    pass: `Come in, train with us and see if ${brand} fits your week. Claiming a pass doesn't sign you up for anything.`,
+    intro: "One price to try the club, meet the coaches and find a routine before you pick a membership.",
+    class: "Be one of the first in the room. Save a spot and we'll send you the details.",
+    tour: "Book a tour, or send a question, and we'll get back to you.",
+    signup: "Leave your email and we'll tell you as soon as it's ready.",
+    contact: firstSentence(site.pages["/"].sub),
+  };
+  const headline = quoted(input.instruction) ?? known?.headline ?? (offer ? `${offer} ${shown}` : byIntent[plan.intent]);
+  const body = known ? known.sub : bodies[plan.intent];
+  const ops: PageOp[] = [...themeOps(brief, true)];
+  ops.push({
+    op: "add_section",
+    section: {
+      type: "hero",
+      eyebrow: offer ? `${cap(offer)} ${until ?? "for a limited time"}` : brand,
+      headline: clip(cap(headline), 120),
+      body: clip(body, 400),
+      primary: { label: plan.cta, href: "#form" },
+      align: /\bcenter(ed)?\b/.test(brief) ? "center" : "left",
+      art: /\b(orb|orbs|bubbles|playful)\b/.test(brief) ? "orbs" : /\b(grid|technical|tech)\b/.test(brief) ? "grid" : "glow",
+    },
+  });
+  ops.push({ op: "add_section", section: { type: "features", heading: `Why ${brand}`, items: site.features.slice(0, 3) } });
+  // What's in the deal, with the club's own numbers left to fill in.
+  const box: Partial<Record<ClubIntent, { heading: string; price: string; note: string; bullets: string[] }>> = {
+    pass: { heading: "Your free pass", price: "[Add how long, like 7 days]", note: "[Add who it's for and any limits]", bullets: ["[Add what's included]", "[Add what's included]"] },
+    ride: { heading: "Your first ride", price: "Free", note: "[Add who it's for and any limits]", bullets: ["[Add what's included, like shoe hire]"] },
+    intro: { heading: "The intro offer", price: "[Add the price]", note: "[Add who it's for and when it ends]", bullets: ["[Add what's included]", "[Add what happens when it ends]"] },
+    presale: { heading: "Founding member offer", price: "[Add the founding rate]", note: "[Add how many spots or when presale ends]", bullets: ["[Add what's included]", "[Add how long the rate is locked]"] },
+    challenge: { heading: "The challenge", price: "[Add the price]", note: "[Add the dates and who it's for]", bullets: ["[Add what's included]", "[Add what's included]"] },
+  };
+  if (offer) {
+    ops.push({
+      op: "add_section",
+      section: { type: "offer", heading: clip(cap(`${offer} ${shown}`), 100), note: until ? `Good ${until}.` : "[Add when the offer ends]", bullets: [], cta: { label: plan.cta, href: "#form" } },
+    });
+  } else if (box[plan.intent]) {
+    const priced = price && ["intro", "presale", "challenge"].includes(plan.intent) ? { price } : {};
+    ops.push({ op: "add_section", section: { type: "offer", ...box[plan.intent], ...priced, ...(until ? { note: `Good ${until}.` } : {}), cta: { label: plan.cta, href: "#form" } } });
+  }
+  const steps = CLUB_STEPS[plan.intent];
+  if (steps) ops.push({ op: "add_section", section: { type: "steps", heading: "How it works", items: steps } });
+  else if (/\b(steps|how it works|process)\b/.test(brief)) ops.push({ op: "add_section", section: starterSection("steps", brand, "fit") });
+  if (/\b(testimonial|testimonials|review|reviews|social proof|member quotes?|member stor(y|ies))\b/.test(brief)) {
+    ops.push({ op: "add_section", section: starterSection("quote", brand, "fit") });
+  }
+  if (/\b(faq|faqs|questions)\b/.test(brief)) {
+    ops.push({ op: "add_section", section: { type: "faq", heading: "Questions", items: CLUB_FAQ[plan.intent].map((q) => ({ q, a: "[Add the answer]" })) } });
+  }
+  ops.push({ op: "add_section", section: { type: "form", id: "form", heading: plan.formHeading, body: "A few details is all it takes.", fields: plan.fields, submit: plan.submit, success: plan.success } });
+  ops.push({ op: "set_seo", changes: { title: clip(`${cap(headline)} | ${brand}`, 70), description: clip(body, 160) } });
+  return ops;
+}
+
 // ---- Changes to an existing page -----------------------------------------------
 
 function sectionOf(doc: PageDoc, type: SectionType): Section | undefined {
@@ -218,7 +403,7 @@ function insertAfter(doc: PageDoc, type: SectionType, clause: string): string | 
   return i === 0 ? "start" : doc.sections[i - 1].id;
 }
 
-export function planEdits(doc: PageDoc, instruction: string, brand: string): PageOp[] {
+export function planEdits(doc: PageDoc, instruction: string, brand: string, edition: EditionKey = "bison"): PageOp[] {
   // Keep quoted text whole while splitting the request into clauses.
   const quotes: string[] = [];
   const masked = instruction.replace(/["“]([^"”]{1,200})["”]/g, (_, q: string) => `\u0000${quotes.push(q) - 1}\u0000`);
@@ -231,7 +416,7 @@ export function planEdits(doc: PageDoc, instruction: string, brand: string): Pag
   let working = doc;
   const push = (op: PageOp) => {
     try {
-      working = applyOp(working, op).doc;
+      working = applyOp(working, op, edition).doc;
       ops.push(op);
     } catch {
       /* skip what doesn't fit */
@@ -241,7 +426,7 @@ export function planEdits(doc: PageDoc, instruction: string, brand: string): Pag
   for (const raw of clauses) {
     const c = raw.toLowerCase();
     const text = quoted(raw);
-    const named = TYPE_WORDS.find((t) => t.test.test(c))?.type;
+    const named = typeOf(c, edition);
 
     if (/\b(remove|delete|drop|get rid of|take out|cut)\b/.test(c) && named) {
       const s = sectionOf(working, named);
@@ -257,7 +442,7 @@ export function planEdits(doc: PageDoc, instruction: string, brand: string): Pag
       continue;
     }
     if (/\b(add|include|put|insert|need|want|show)\b/.test(c) && named && named !== "hero") {
-      push({ op: "add_section", section: starterSection(named, brand), after: insertAfter(working, named, c) });
+      push({ op: "add_section", section: starterSection(named, brand, edition), after: insertAfter(working, named, c) });
       continue;
     }
     if (text && /\b(headline|title|heading)\b/.test(c)) {
@@ -313,13 +498,14 @@ export async function runStandIn(input: AgentInput, emit: Emit, opts: { delayMs?
     input.doc.sections.length === 0 ||
     /\b(rebuild|start over|start again|from scratch)\b/i.test(input.instruction) ||
     /\b(build|create|make|draft|design)\s+(me\s+)?(a|an|a new|new)\b[^.]*\bpage\b/i.test(input.instruction);
-  const ops = fresh ? planPage(input) : planEdits(input.doc, input.instruction, input.brand);
+  const edition = editionOf(input);
+  const ops = fresh ? planPage(input) : planEdits(input.doc, input.instruction, input.brand, edition);
 
   let doc = fresh ? { ...input.doc, sections: [] } : input.doc;
   const changes: string[] = [];
   for (const op of ops) {
     try {
-      const r = applyOp(doc, op);
+      const r = applyOp(doc, op, edition);
       doc = r.doc;
       changes.push(r.label);
       emit({ type: "op", label: r.label, doc, sectionId: r.sectionId });

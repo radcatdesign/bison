@@ -1,11 +1,14 @@
 "use client";
 
 // Marketing > Pages: describe a new page for the agent, or open one you've made.
+// Fit Funnels calls them funnel pages and shows its own club templates.
 import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { createPageAction } from "@/app/(portal)/marketing/pages/actions";
+import { useSay } from "@/components/edition";
+import { PageHeader } from "@/components/ui";
 import type { PageStatus } from "@/lib/pages/repo";
 import { useIsClient } from "@/lib/use-is-client";
 import { emptyPageDoc, type PageDoc, titleFromBrief } from "@/lib/pages/schema";
@@ -32,7 +35,19 @@ const STATUS: Record<PageStatus, { label: string; tone: string }> = {
   changed: { label: "Live, with changes", tone: "pill pill-accent" },
 };
 
+/** The screen's title and note, in the company's words. Also the loading frame. */
+export function PagesHeader() {
+  const say = useSay();
+  return (
+    <PageHeader
+      title={say("Pages", "Funnel pages")}
+      note={say("Landing pages you build by describing them. Forms on every page send to Contacts.", "Funnel pages you build by describing them: free passes, intro offers, classes and more. Forms on every page send to Leads.")}
+    />
+  );
+}
+
 export function PagesHome({ storage, pages: serverPages, tenant, seed, canEdit, error }: Props) {
+  const say = useSay();
   const router = useRouter();
   const client = useIsClient();
   const [prompt, setPrompt] = useState("");
@@ -96,7 +111,7 @@ export function PagesHome({ storage, pages: serverPages, tenant, seed, canEdit, 
           </span>
           <div className={s.composerBody}>
             <label htmlFor="new-page-prompt" className={s.composerTitle}>
-              Describe a new page
+              {say("Describe a new page", "Describe a new funnel page")}
             </label>
             <textarea
               id="new-page-prompt"
@@ -105,7 +120,10 @@ export function PagesHome({ storage, pages: serverPages, tenant, seed, canEdit, 
               onChange={(e) => setPrompt(e.target.value)}
               rows={3}
               maxLength={2000}
-              placeholder="A page for our spring sale on glow aggregate, 15% off through May, with a quote form and a few common questions"
+              placeholder={say(
+                "A page for our spring sale on glow aggregate, 15% off through May, with a quote form and a few common questions",
+                "A free week pass page for first-time visitors, with what's included, a short form and a few common questions",
+              )}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) e.currentTarget.form?.requestSubmit();
               }}
@@ -118,7 +136,12 @@ export function PagesHome({ storage, pages: serverPages, tenant, seed, canEdit, 
               <button type="submit" name="mode" value="blank" className="btn" disabled={busy} data-testid="blank-page">
                 Start blank
               </button>
-              <span className={s.composerNote}>The agent writes plain copy and leaves yellow placeholders for anything only you know, like prices and quotes.</span>
+              <span className={s.composerNote}>
+                {say(
+                  "The agent writes plain copy and leaves yellow placeholders for anything only you know, like prices and quotes.",
+                  "The agent writes plain copy and leaves yellow placeholders for anything only you know, like prices, class times and member quotes.",
+                )}
+              </span>
             </div>
           </div>
         </form>
@@ -126,22 +149,22 @@ export function PagesHome({ storage, pages: serverPages, tenant, seed, canEdit, 
 
       <section className={s.block} aria-labelledby="templates-heading">
         <div className={s.blockHead}>
-          <h2 id="templates-heading">Start from a template</h2>
-          <p>Each one is filled in with your company name. Open one to see it at full size.</p>
+          <h2 id="templates-heading">{say("Start from a template", "Start from a club template")}</h2>
+          <p>{say("Each one is filled in with your company name. Open one to see it at full size.", "Each one is filled in with your club's name. Open one to see it at full size.")}</p>
         </div>
         <TemplateGallery tenant={tenant} canEdit={canEdit} busy={busy || creating} onUse={startFromTemplate} />
       </section>
 
       <section className={s.block} aria-labelledby="your-pages-heading">
         <div className={s.blockHead}>
-          <h2 id="your-pages-heading">Your pages</h2>
+          <h2 id="your-pages-heading">{say("Your pages", "Your funnel pages")}</h2>
         </div>
       {pages === null ? (
         <div className={s.grid} aria-busy="true">
           <div className={s.skeleton} />
         </div>
       ) : pages.length === 0 ? (
-        <p className={s.empty}>No pages yet. Describe one above, or start from a template.</p>
+        <p className={s.empty}>{say("No pages yet. Describe one above, or start from a template.", "No funnel pages yet. Describe one above, or start from a club template.")}</p>
       ) : (
         <ul className={s.grid} data-testid="page-list">
           {pages.map((p) => (

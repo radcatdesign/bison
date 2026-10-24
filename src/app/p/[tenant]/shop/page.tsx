@@ -4,12 +4,14 @@ import { notFound } from "next/navigation";
 import { type CSSProperties, Suspense } from "react";
 import { ShopFrame } from "@/components/shop/frame";
 import s from "@/components/shop/shop.module.css";
+import { sayFor } from "@/config/editions";
 import { formatMoney } from "@/lib/sales/money";
 import { currentBuyer } from "@/lib/sales/shop";
 import { getShop, getShopItems } from "@/lib/sales/shop-load";
 import { type ShopItem, tradePrice } from "@/lib/sales/shop-view";
 
-// The company's shop: every active product, by category. Public.
+// The company's shop: every active product, by category. Public. For a club,
+// this is where people join online: memberships, packs, training and gear.
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
@@ -19,8 +21,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { tenant } = await params;
   const shop = await getShop(tenant);
   if (!shop || !shop.shopOn) return { title: { absolute: "Shop not found" }, robots: { index: false } };
-  const title = `Shop | ${shop.name}`;
-  const description = `Products from ${shop.name}.`;
+  const say = sayFor(shop.edition);
+  const title = `${say("Shop", "Join online")} | ${shop.name}`;
+  const description = say(`Products from ${shop.name}.`, `Memberships, class packs and training from ${shop.name}.`);
   const url = `${shop.base}/p/${shop.slug}/shop`;
   return { title: { absolute: title }, description, alternates: { canonical: url }, openGraph: { title, description, url, siteName: shop.name, type: "website" }, robots: { index: true, follow: true } };
 }
@@ -57,22 +60,23 @@ async function ShopList({ params, searchParams }: { params: Params; searchParams
   const shop = await getShop(tenant);
   if (!shop || !shop.shopOn) notFound();
   const [items, buyer, sp] = await Promise.all([getShopItems(tenant), currentBuyer(shop), searchParams]);
+  const say = sayFor(shop.edition);
   const groups = new Map<string, ShopItem[]>();
   for (const it of items) {
-    const k = it.category || "Products";
+    const k = it.category || say("Products", "Memberships");
     groups.set(k, [...(groups.get(k) ?? []), it]);
   }
   const pct = buyer?.percentOff ?? 0;
   return (
     <ShopFrame shop={shop} buyer={buyer}>
-      <h1 className={s.title}>Shop</h1>
-      <p className={s.lead}>{buyer ? `Signed in as ${buyer.company}. Your ${buyer.tierName} prices show below and in your cart.` : `Everything ${shop.name} sells online.`}</p>
+      <h1 className={s.title}>{say("Shop", "Join online")}</h1>
+      <p className={s.lead}>{buyer ? `Signed in as ${buyer.company}. Your ${buyer.tierName} prices show below and in your cart.` : say(`Everything ${shop.name} sells online.`, `Memberships, class packs, training and gear from ${shop.name}.`)}</p>
       {sp.trade === "1" && buyer && (
         <p className={`${s.message} ${s.banner}`} data-tone="ok" role="status">
-          You&apos;re signed in. Trade prices show across the shop on this browser for 30 days.
+          {say("You're signed in. Trade prices show across the shop on this browser for 30 days.", "You're signed in. Corporate prices show across the store on this browser for 30 days.")}
         </p>
       )}
-      {!items.length && <p className={s.empty}>No products yet. Check back soon.</p>}
+      {!items.length && <p className={s.empty}>{say("No products yet. Check back soon.", "Nothing to join online yet. Check back soon, or contact the club.")}</p>}
       {[...groups.entries()].map(([name, list]) => (
         <section key={name} className={s.section} aria-label={groups.size > 1 ? name : undefined}>
           {groups.size > 1 && <h2 className={s.sectionTitle}>{name}</h2>}

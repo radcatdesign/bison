@@ -4,9 +4,11 @@
 // of how it shows in the welcome email, and the codes people have.
 import { useMemo, useState, useTransition } from "react";
 import { markCodeAction, saveOfferAction } from "@/app/(portal)/marketing/actions";
+import { useEditionKey, useSay } from "@/components/edition";
+import { itemOf, sayFor } from "@/config/editions";
 import { renderEmail } from "@/lib/email/render";
 import { type BrandKit, EMAIL_DOC_VERSION } from "@/lib/email/schema";
-import { type OfferSettings, offerSettingsSchema, offerTerms } from "@/lib/marketing/settings";
+import { type OfferSettings, offerPrefixFor, offerSettingsSchema, offerTerms } from "@/lib/marketing/settings";
 import { useIsClient } from "@/lib/use-is-client";
 import { useDemoMarketing } from "./demo-setup";
 import { writeDemo } from "./demo-store";
@@ -29,19 +31,21 @@ function OfferForm({ initial, storage, tenantId, canEdit, brand, baseUrl, timeZo
   const [o, setO] = useState<OfferSettings>(initial);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [pending, start] = useTransition();
+  const edition = useEditionKey();
+  const say = useSay();
   const set = <K extends keyof OfferSettings>(k: K, v: OfferSettings[K]) => setO((x) => ({ ...x, [k]: v }));
   const parsed = offerSettingsSchema.safeParse(o);
   const sample = useMemo(() => new Date(Date.parse(now) + (o.days || 0) * 86_400_000), [o.days, now]);
   const html = useMemo(
     () =>
       renderEmail({
-        doc: { version: EMAIL_DOC_VERSION, signOff: false, fallbackName: "there", sections: [{ id: "gift", type: "offer", heading: "A welcome gift", body: "Here's a code for your first order with us." }] },
+        doc: { version: EMAIL_DOC_VERSION, signOff: false, fallbackName: "there", sections: [{ id: "gift", type: "offer", heading: sayFor(edition)("A welcome gift", "Your intro offer"), body: sayFor(edition)("Here's a code for your first order with us.", "Here's your own code for our intro offer.") }] },
         brand,
         subject: "",
         baseUrl,
-        offer: { code: `${o.prefix || "WELCOME"}-7KQ2FA`, terms: offerTerms({ kind: o.kind, value: o.value || 0, fine: o.fine }, o.days ? sample : null, timeZone) },
+        offer: { code: `${o.prefix || offerPrefixFor(edition)}-7KQ2FA`, terms: offerTerms({ kind: o.kind, value: o.value || 0, fine: o.fine }, o.days ? sample : null, timeZone, edition) },
       }).html,
-    [o, brand, baseUrl, sample, timeZone],
+    [o, brand, baseUrl, sample, timeZone, edition],
   );
 
   const save = () =>
@@ -62,7 +66,7 @@ function OfferForm({ initial, storage, tenantId, canEdit, brand, baseUrl, timeZo
           <label className={s.checkRow}>
             <input type="checkbox" className="switch" checked={o.on} onChange={(e) => set("on", e.target.checked)} data-testid="offer-on" />
             <span>
-              <strong>Give each new subscriber a code</strong>
+              <strong>{say("Give each new subscriber a code", "Give each new lead a code")}</strong>
               <br />
               <span className={s.hint}>People already on your list don&apos;t get one. Each person gets one code, once, even if they sign up again.</span>
             </span>
@@ -108,13 +112,21 @@ function OfferForm({ initial, storage, tenantId, canEdit, brand, baseUrl, timeZo
             <label htmlFor="offer-fine" className={s.fieldLabel}>
               Fine print <em>Optional</em>
             </label>
-            <input id="offer-fine" className="input" value={o.fine} maxLength={200} onChange={(e) => set("fine", e.target.value)} placeholder="Not valid on installation." />
+            <input id="offer-fine" className="input" value={o.fine} maxLength={200} onChange={(e) => set("fine", e.target.value)} placeholder={say("Not valid on installation.", "Not valid on personal training.")} />
           </div>
-          <p className={s.hint}>Codes are for first-time buyers only. Checking that at checkout comes with Sales; until then, look a code up below when someone uses it and mark it used.</p>
+          <p className={s.hint}>
+            {say(
+              "Codes are for first-time buyers only. Checking that at checkout comes with Sales; until then, look a code up below when someone uses it and mark it used.",
+              `Codes work on a first purchase only. Checking that at checkout comes with ${itemOf("fit", "module:sales").name}; until then, look a code up below when someone uses it, online or at the front desk, and mark it used.`,
+            )}
+          </p>
         </fieldset>
         {!inEmail && (
           <p className="notice" data-testid="offer-not-in-email">
-            None of your emails show the code yet. Open your welcome series and add a &quot;Welcome offer code&quot; section to the first email.
+            {say(
+              'None of your emails show the code yet. Open your welcome series and add a "Welcome offer code" section to the first email.',
+              'None of your emails show the code yet. Open your new lead follow-up and add an "Intro offer code" section to the first email.',
+            )}
           </p>
         )}
         {canEdit && (
@@ -151,6 +163,7 @@ export function CodeActions({ code, canEdit }: { code: CodeView; canEdit: boolea
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const say = useSay();
   if (!canEdit) return null;
   if (code.usedOn) {
     return (
@@ -171,7 +184,7 @@ export function CodeActions({ code, canEdit }: { code: CodeView; canEdit: boolea
         });
       }}
     >
-      <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Order number or note" aria-label="Note" maxLength={200} style={{ flex: 1, minWidth: 140 }} />
+      <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder={say("Order number or note", "Purchase number or note")} aria-label="Note" maxLength={200} style={{ flex: 1, minWidth: 140 }} />
       <button type="submit" className="btn" disabled={pending}>
         Mark used
       </button>

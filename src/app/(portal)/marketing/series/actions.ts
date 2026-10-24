@@ -71,7 +71,7 @@ export async function deleteSeriesAction(id: string): Promise<SeriesResult> {
   const { ctx, error } = await guard();
   if (error) return { ok: false, message: error };
   try {
-    await deleteSeries(scopeOf(ctx), id);
+    await deleteSeries(scopeOf(ctx), id, ctx.tenant.edition);
   } catch (err) {
     return failed(err, "Couldn't delete the series. Try again.");
   }

@@ -5,6 +5,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { orderAction, refundAction } from "@/app/(portal)/sales/actions";
+import { useSay } from "@/components/edition";
 import m from "@/components/marketing/marketing.module.css";
 import { formatMoney, moneyInput, parseMoney } from "@/lib/sales/money";
 import s from "./sales.module.css";
@@ -13,6 +14,7 @@ type Props = { id: string; currency: string; refundableCents: number; canEdit: b
 
 export function OrderActions({ id, currency, refundableCents, canEdit, canRefund, paidByStripe, fulfillment, hasFulfillment, locked }: Props) {
   const router = useRouter();
+  const say = useSay();
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
   const [tracking, setTracking] = useState("");
@@ -83,7 +85,7 @@ export function OrderActions({ id, currency, refundableCents, canEdit, canRefund
           </div>
         </form>
       )}
-      {canRefund && !paidByStripe && <p className={m.hint}>This order wasn&apos;t paid through Stripe, so refund it where it was paid.</p>}
+      {canRefund && !paidByStripe && <p className={m.hint}>{say("This order wasn't paid through Stripe, so refund it where it was paid.", "This purchase wasn't paid through Stripe, so refund it where it was paid.")}</p>}
     </div>
   );
 }

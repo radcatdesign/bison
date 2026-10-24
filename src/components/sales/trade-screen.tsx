@@ -6,6 +6,7 @@
 import { Copy, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { decideTradeAction, saveSalesSettingsAction, saveTradeAccountAction, sendTradeLinkAction } from "@/app/(portal)/sales/actions";
+import { useEditionKey, useSay } from "@/components/edition";
 import m from "@/components/marketing/marketing.module.css";
 import { Card, Help } from "@/components/ui";
 import { formatMoney, moneyInput, parseMoney } from "@/lib/sales/money";
@@ -44,15 +45,18 @@ function NoticeLine({ value, testId }: { value: Notice; testId: string }) {
 }
 
 const DETAIL_LABELS: Record<string, string> = { type: "Business type", resale: "Resale number", volume: "Expected volume", message: "Message" };
+// A club's corporate application asks about staff instead of resale and volume.
+const FIT_DETAIL_LABELS: Record<string, string> = { type: "Business type", resale: "Staff", volume: "Looking for", message: "Message" };
 
 function Details({ details }: { details: Record<string, string> }) {
+  const labels = useEditionKey() === "fit" ? FIT_DETAIL_LABELS : DETAIL_LABELS;
   const list = Object.entries(details).filter(([, v]) => v && String(v).trim());
   if (!list.length) return null;
   return (
     <dl className={m.facts}>
       {list.map(([k, v]) => (
         <div key={k} className={x.contents}>
-          <dt>{DETAIL_LABELS[k] ?? k}</dt>
+          <dt>{labels[k] ?? k}</dt>
           <dd>{v}</dd>
         </div>
       ))}
@@ -61,6 +65,7 @@ function Details({ details }: { details: Record<string, string> }) {
 }
 
 export function TradeScreen(p: Props) {
+  const say = useSay();
   const [openId, setOpenId] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, start] = useTransition();
@@ -84,7 +89,7 @@ export function TradeScreen(p: Props) {
       <NoticeLine value={notice} testId="trade-notice" />
 
       {applied.length > 0 && (
-        <Card title="Waiting for you" note="Approve a buyer and they get an email with a link to sign in. Decline and they keep seeing regular prices." testId="trade-applications">
+        <Card title="Waiting for you" note={say("Approve a buyer and they get an email with a link to sign in. Decline and they keep seeing regular prices.", "Approve a company and it gets an email with a link to sign in. Decline and it keeps seeing regular prices.")} testId="trade-applications">
           <ul className={x.applications}>
             {applied.map((r) => (
               <li key={r.id} className={x.application} data-testid="trade-application" data-company={r.company}>
@@ -141,8 +146,8 @@ export function TradeScreen(p: Props) {
       <Card title="Accounts" flush testId="trade-accounts">
         {accounts.length === 0 ? (
           <div className={m.empty}>
-            <strong>No trade accounts yet.</strong>
-            <span>Share your application page with builders, designers and resellers. Applications land here for you to approve.</span>
+            <strong>{say("No trade accounts yet.", "No corporate accounts yet.")}</strong>
+            <span>{say("Share your application page with builders, designers and resellers. Applications land here for you to approve.", "Share your application page with local employers, schools and clinics. Applications land here for you to approve.")}</span>
           </div>
         ) : (
           <div className={x.scrollX}>
@@ -155,7 +160,7 @@ export function TradeScreen(p: Props) {
                     <span className={x.thHelp}>
                       12-month spend
                       <Help title="12-month spend">
-                        <p>What the account paid for products in the last 12 months, from the shop and from paid estimates. It&apos;s after discounts and refunds, and before shipping and tax. Their tier follows it, unless you set one by hand.</p>
+                        <p>{say("What the account paid for products in the last 12 months, from the shop and from paid estimates. It's after discounts and refunds, and before shipping and tax. Their tier follows it, unless you set one by hand.", "What the account paid for memberships, packs and gear in the last 12 months, online and from paid quotes. It's after discounts and refunds, and before shipping and tax. Their tier follows it, unless you set one by hand.")}</p>
                       </Help>
                     </span>
                   </th>
@@ -188,7 +193,7 @@ export function TradeScreen(p: Props) {
                         {money(r.spendCents)}
                         <span className="muted">
                           {" "}
-                          · {r.orderCount} {r.orderCount === 1 ? "order" : "orders"}
+                          · {r.orderCount} {r.orderCount === 1 ? say("order", "purchase") : say("orders", "purchases")}
                         </span>
                       </td>
                       <td>
@@ -218,6 +223,7 @@ export function TradeScreen(p: Props) {
 // ---- One account ---------------------------------------------------------------------------------
 
 function AccountPanel({ row, settings, currency, canEdit, canSend, locked, onClose, fmtDate }: Props & { row: TradeRow; locked: string | null; onClose: () => void; fmtDate: Intl.DateTimeFormat }) {
+  const say = useSay();
   const [tierKey, setTierKey] = useState(row.tierOverride);
   const [note, setNote] = useState(row.note);
   const [notice, setNotice] = useState<Notice>(null);
@@ -282,13 +288,13 @@ function AccountPanel({ row, settings, currency, canEdit, canSend, locked, onClo
                 <span className={x.thHelp}>
                   12-month spend
                   <Help title="12-month spend" idSuffix="-panel">
-                    <p>Products paid for in the last 12 months, from the shop and from paid estimates, after discounts and refunds, before shipping and tax.</p>
+                    <p>{say("Products paid for in the last 12 months, from the shop and from paid estimates, after discounts and refunds, before shipping and tax.", "Memberships, packs and gear paid for in the last 12 months, online and from paid quotes, after discounts and refunds, before shipping and tax.")}</p>
                   </Help>
                 </span>
               </dt>
               <dd className={s.money}>
                 <span className={x.spend}>
-                  {money(row.spendCents)} over {row.orderCount} {row.orderCount === 1 ? "order" : "orders"}
+                  {money(row.spendCents)} over {row.orderCount} {row.orderCount === 1 ? say("order", "purchase") : say("orders", "purchases")}
                   {next && row.status === "approved" && (
                     <small>
                       {money(next.moreCents)} more reaches {next.tier.name} ({next.tier.percentOff}% off)
@@ -356,7 +362,7 @@ function AccountPanel({ row, settings, currency, canEdit, canSend, locked, onClo
                   </option>
                 ))}
               </select>
-              <span className={m.hint}>Set a tier by hand for a buyer you&apos;ve agreed terms with. It stays until you change it back.</span>
+              <span className={m.hint}>{say("Set a tier by hand for a buyer you've agreed terms with. It stays until you change it back.", "Set a tier by hand for a company you've agreed terms with. It stays until you change it back.")}</span>
             </div>
             <div className={m.field}>
               <label htmlFor="ta-note" className={m.fieldLabel}>
@@ -429,6 +435,7 @@ function keyFor(name: string, taken: Set<string>): string {
 }
 
 function ProgramSettings({ settings, currency, canEdit, demo, publicUrl }: Props) {
+  const say = useSay();
   const [open, setOpen] = useState(settings.open);
   const [intro, setIntro] = useState(settings.intro);
   const [tiers, setTiers] = useState<TierDraft[]>(() => [...settings.tiers].sort((a, b) => a.minSpendCents - b.minSpendCents).map((t) => toDraft(t, currency)));
@@ -455,12 +462,12 @@ function ProgramSettings({ settings, currency, canEdit, demo, publicUrl }: Props
         out.push({ key, name: t.name.trim(), minSpendCents, percentOff });
       }
       const r = await saveSalesSettingsAction("trade", { open, intro, tiers: out });
-      setNotice({ ok: r.ok, text: r.ok ? "Saved. Prices follow the new tiers from the next page a buyer opens." : r.message });
+      setNotice({ ok: r.ok, text: r.ok ? say("Saved. Prices follow the new tiers from the next page a buyer opens.", "Saved. Prices follow the new tiers from the next page a company opens.") : r.message });
       if (r.ok) setTiers(out.sort((a, b) => a.minSpendCents - b.minSpendCents).map((t) => toDraft(t, currency)));
     });
 
   return (
-    <Card title="Trade program" id="tiers" note="Who can apply, what the application page says, and the tiers that set each buyer's price." testId="trade-settings">
+    <Card title={say("Trade program", "Corporate program")} id="tiers" note={say("Who can apply, what the application page says, and the tiers that set each buyer's price.", "Who can apply, what the application page says, and the corporate tiers that set each company's price.")} testId="trade-settings">
       <form
         className={s.stack}
         onSubmit={(e) => {
@@ -471,7 +478,7 @@ function ProgramSettings({ settings, currency, canEdit, demo, publicUrl }: Props
         <div className={m.field}>
           <span className={m.fieldLabel}>Your application and sign-in page</span>
           <div className={s.copyRow}>
-            <input className="input mono" readOnly value={publicUrl} aria-label="Trade page address" data-testid="trade-public-url" />
+            <input className="input mono" readOnly value={publicUrl} aria-label={say("Trade page address", "Corporate accounts page address")} data-testid="trade-public-url" />
             <button
               type="button"
               className="btn"
@@ -486,7 +493,7 @@ function ProgramSettings({ settings, currency, canEdit, demo, publicUrl }: Props
               Open
             </a>
           </div>
-          <span className={m.hint}>Buyers apply here, and approved buyers sign in here with an emailed link. The shop also links to it.</span>
+          <span className={m.hint}>{say("Buyers apply here, and approved buyers sign in here with an emailed link. The shop also links to it.", "Companies apply here, and approved ones sign in here with an emailed link. Your online store also links to it.")}</span>
         </div>
 
         <fieldset className={x.plainFieldset} disabled={!canEdit || pending}>
@@ -494,7 +501,7 @@ function ProgramSettings({ settings, currency, canEdit, demo, publicUrl }: Props
             <input type="checkbox" checked={open} onChange={(e) => setOpen(e.target.checked)} data-testid="trade-open" />
             <span>
               Take new applications
-              <span className={`${m.hint} ${x.block}`}>Turn this off and approved buyers can still sign in.</span>
+              <span className={`${m.hint} ${x.block}`}>{say("Turn this off and approved buyers can still sign in.", "Turn this off and approved companies can still sign in.")}</span>
             </span>
           </label>
 
@@ -502,12 +509,12 @@ function ProgramSettings({ settings, currency, canEdit, demo, publicUrl }: Props
             <label htmlFor="tp-intro" className={m.fieldLabel}>
               A few lines at the top of the application <em>Optional</em>
             </label>
-            <textarea id="tp-intro" className={`input ${m.textarea}`} rows={3} maxLength={600} value={intro} placeholder="For pool builders and dealers. Approved accounts get trade prices across the shop, and better prices as they buy more." onChange={(e) => setIntro(e.target.value)} data-testid="trade-intro" />
+            <textarea id="tp-intro" className={`input ${m.textarea}`} rows={3} maxLength={600} value={intro} placeholder={say("For pool builders and dealers. Approved accounts get trade prices across the shop, and better prices as they buy more.", "For local employers who want to offer memberships to their staff. Approved companies get corporate prices on memberships and packs, and better prices as they buy more.")} onChange={(e) => setIntro(e.target.value)} data-testid="trade-intro" />
           </div>
 
           <div className={m.field}>
             <span className={m.fieldLabel}>Tiers</span>
-            <span className={m.hint}>Each approved account gets the highest tier its 12-month spend reaches, and the lowest tier is where everyone starts. Spend counts products after discounts and refunds, not shipping or tax.</span>
+            <span className={m.hint}>{say("Each approved account gets the highest tier its 12-month spend reaches, and the lowest tier is where everyone starts. Spend counts products after discounts and refunds, not shipping or tax.", "Each approved account gets the highest corporate tier its 12-month spend reaches, and the lowest tier is where everyone starts. Spend counts memberships, packs and gear after discounts and refunds, not shipping or tax.")}</span>
             <div className={x.tierList} data-testid="trade-tiers">
               <div className={x.tierHead} aria-hidden="true">
                 <span>Name</span>

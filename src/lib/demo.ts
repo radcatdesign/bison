@@ -2,8 +2,8 @@ import "server-only";
 // The public demo: made-up companies, no database, nothing saved on the server.
 // Every screen reads sample data. Modules and add-ons can be turned on, and that
 // lives in a cookie in the visitor's own browser. Every other action answers DEMO_MESSAGE.
-import { BRAND } from "@/config/brand";
 import { CATALOG, isPaidItemKey, type PaidItemKey } from "@/config/catalog";
+import { editionFor } from "@/config/editions";
 import { type EntitlementRow, resolveAccess } from "@/lib/access/entitlements";
 import { DEV_PEOPLE, DEV_TENANTS } from "@/lib/auth/dev-people";
 import type { Identity } from "@/lib/auth/identity";
@@ -15,7 +15,7 @@ const DAY = 86_400_000;
 
 /** What each demo company starts with. Same as the seed, so the demo shows locked and unlocked modes. */
 function demoEntitlements(tenantId: string, now: Date): EntitlementRow[] {
-  if (tenantId !== DEV_TENANTS.brightwater.id) return [];
+  if (tenantId !== DEV_TENANTS.brightwater.id && tenantId !== DEV_TENANTS.summit.id) return [];
   return [
     { item_key: "module:marketing", source: "grant", status: "active", starts_at: new Date(now.getTime() - 30 * DAY), ends_at: null },
     { item_key: "addon:calculator", source: "trial", status: "active", starts_at: new Date(now.getTime() - 5 * DAY), ends_at: new Date(now.getTime() + 9 * DAY) },
@@ -93,9 +93,9 @@ export function demoContext(identity: Identity, now = new Date(), unlocks: DemoU
   if (!person || !tenant) return null;
   const rows = [...demoEntitlements(tenant.id, now), ...unlockRows(unlocks, now)];
   return {
-    tenant: { id: tenant.id, name: tenant.name, slug: tenant.domain.split(".")[0], industry: tenant.industry, access: resolveAccess(rows, now) },
+    tenant: { id: tenant.id, name: tenant.name, slug: tenant.domain.split(".")[0], industry: tenant.industry, edition: tenant.edition, access: resolveAccess(rows, now) },
     member: { id: `member-${person.userId}`, userId: person.userId, email: person.email, name: person.name, role: person.role },
-    settings: { sampleData: true, accent: BRAND.defaultAccent, timezone: "America/Los_Angeles" },
+    settings: { sampleData: true, accent: editionFor(tenant.edition).defaultAccent, timezone: "America/Los_Angeles" },
     sites: [{ id: `site-${tenant.id.slice(0, 8)}`, domain: tenant.domain, siteKey: "site_demo", firstEventAt: null }],
   };
 }

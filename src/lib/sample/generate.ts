@@ -1,5 +1,6 @@
 // Realistic, made-up data for a tenant. Same tenant, same data; different tenant,
 // different data. Never written to the database.
+import { editionOfIndustry } from "@/config/editions";
 import type { ContactStatus } from "@/lib/db/types";
 import type { AnalyticsSummary, ContactDetail, DailyPoint, LandingPage, Totals } from "@/lib/repo/types";
 import { samplePageTitle } from "./sites";
@@ -13,6 +14,8 @@ const FIRST = ["Avery", "Jordan", "Maya", "Luis", "Priya", "Noah", "Hana", "Marc
 const LAST = ["Bennett", "Okafor", "Nguyen", "Alvarez", "Shah", "Fischer", "Tanaka", "Reid", "Moreno", "Hart", "Kowalski", "Price", "Delgado", "Brooks", "Ito", "Sullivan", "Haddad", "Larsen", "Ford", "Castillo", "Weiss", "Park", "Rowe", "Quinn", "Mendez"];
 const MAIL = ["gmail.com", "outlook.com", "icloud.com", "yahoo.com"];
 const BIZ = ["builds", "co", "group", "studio", "works", "homes", "design"];
+// Club leads who write from work use a local business address, like a dental office or a law firm.
+const CLUB_BIZ = ["dental", "law", "realty", "cpa", "clinic", "insurance", "design"];
 const STATUSES: ContactStatus[] = ["new", "new", "new", "contacted", "contacted", "qualified", "won", "lost"];
 
 const HOUR = 3_600_000;
@@ -32,12 +35,13 @@ export function sampleContacts(tenant: SampleTenant, now = new Date(), count = 2
   const base = anchor(now);
   const used = new Set<string>();
   const out: ContactDetail[] = [];
+  const biz = editionOfIndustry(tenant.industry) === "fit" ? CLUB_BIZ : BIZ;
 
   for (let i = 0; i < count; i++) {
     const first = rand.pick(FIRST);
     const last = rand.pick(LAST);
     const business = rand.chance(0.45);
-    let email = business ? `${first.toLowerCase()}@${last.toLowerCase()}${rand.pick(BIZ)}.com` : `${first.toLowerCase()}.${last.toLowerCase()}@${rand.pick(MAIL)}`;
+    let email = business ? `${first.toLowerCase()}@${last.toLowerCase()}${rand.pick(biz)}.com` : `${first.toLowerCase()}.${last.toLowerCase()}@${rand.pick(MAIL)}`;
     if (used.has(email)) email = email.replace("@", `${rand.int(2, 99)}@`);
     used.add(email);
 
@@ -126,7 +130,7 @@ export function sampleLandingPages(tenant: SampleTenant, rangeDays: number, now 
   const total = weights.reduce((a, b) => a + b, 0);
   const pages = preset.pages.map((path, i) => {
     const entries = Math.max(1, Math.round((current.visits * weights[i]) / total));
-    const intent = /quote|contact|wholesale|dealers|pricing/.test(path);
+    const intent = /quote|contact|wholesale|dealers|pricing|free-pass|first-ride|memberships|packs|personal-training/.test(path);
     return {
       path,
       title: samplePageTitle(tenant.industry, path),

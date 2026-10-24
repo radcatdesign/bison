@@ -4,7 +4,8 @@
 // and entitlements on the server. Nothing from the form decides tenant or role.
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
-import { CATALOG, isPaidItemKey } from "@/config/catalog";
+import { isPaidItemKey } from "@/config/catalog";
+import { type EditionKey, itemOf, sayFor } from "@/config/editions";
 import { type Action, may } from "@/config/roles";
 import { audit } from "@/lib/audit";
 import { startTrial, subscribe } from "@/lib/billing";
@@ -34,10 +35,20 @@ const NOT_ALLOWED: Record<Action, string> = {
   "sales.edit": "Your role can't change estimates, orders or the catalog.",
 };
 
+/** The same notes in Fit Funnels words, where they differ. */
+const CLUB_NOT_ALLOWED: Partial<Record<Action, string>> = {
+  "contacts.edit": "Your role can view leads but not change them.",
+  "pages.edit": "Your role can't change funnel pages.",
+  "pages.publish": "Your role can't publish funnel pages.",
+  "sales.edit": "Your role can't change quotes, purchases or memberships.",
+};
+
+const notAllowed = (action: Action, edition: EditionKey): string => (edition === "fit" ? (CLUB_NOT_ALLOWED[action] ?? NOT_ALLOWED[action]) : NOT_ALLOWED[action]);
+
 /** Role check first. In the demo, only actions that opt in (turning things on) go ahead. */
 async function contextFor(action: Action, { demoAllowed = false } = {}): Promise<{ ctx: PortalContext; error: null } | { ctx: PortalContext; error: string }> {
   const ctx = await getPortalContext();
-  if (!may(ctx.member.role, action)) return { ctx, error: NOT_ALLOWED[action] };
+  if (!may(ctx.member.role, action)) return { ctx, error: notAllowed(action, ctx.tenant.edition) };
   if (demoMode() && !demoAllowed) return { ctx, error: DEMO_MESSAGE };
   return { ctx, error: null };
 }
@@ -93,7 +104,7 @@ export async function subscribeAction(_prev: ActionState, formData: FormData): P
   } catch (err) {
     if (err instanceof ConfigError) return { ok: false, message: err.message };
     console.error("subscribe failed", err);
-    return { ok: false, message: `Stripe didn't accept that request, so ${CATALOG[item].name} wasn't added. Try again in a minute.` };
+    return { ok: false, message: `Stripe didn't accept that request, so ${itemOf(ctx.tenant.edition, item).name} wasn't added. Try again in a minute.` };
   }
   if (result.ok && "redirectUrl" in result && result.redirectUrl) redirect(result.redirectUrl);
   if (result.ok) refresh();
@@ -122,7 +133,8 @@ export async function setContactStatus(_prev: ActionState, formData: FormData): 
   try {
     await repos.contacts.setStatus(id, status);
   } catch (err) {
-    if (err instanceof SampleModeError || err instanceof NotFoundError) return { ok: false, message: err.message };
+    if (err instanceof SampleModeError) return { ok: false, message: err.message };
+    if (err instanceof NotFoundError) return { ok: false, message: sayFor(ctx.tenant.edition)(err.message, "That lead doesn't exist. It may have been deleted.") };
     console.error("setContactStatus failed", err);
     return { ok: false, message: "Couldn't save that. Reload the page and try again." };
   }

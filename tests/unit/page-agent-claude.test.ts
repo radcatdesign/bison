@@ -88,6 +88,28 @@ describe("the Claude page agent", () => {
     expect(requests[0].tools.map((t) => t.name)).toEqual(["add_section", "update_section", "remove_section", "move_section", "set_theme", "set_seo"]);
   });
 
+  it("tells the model it's working for a gym or studio in Fit Funnels, with club facts it must not make up", async () => {
+    const system = async (over: Record<string, unknown>) => {
+      const { client, requests } = fakeClient([sse([{ type: "text", text: "Nothing to change." }], "end_turn")]);
+      await runClaude({ ...input("Hi"), ...over }, () => {}, undefined, client);
+      return (requests[0].system as { text: string }[])[0].text;
+    };
+    const gym = await system({ brand: "Summit Strength Club", industry: "gym", domain: "summitstrengthclub.com", edition: "fit" });
+    expect(gym).toContain("inside Fit Funnels");
+    expect(gym).toContain("Summit Strength Club is a gym and health club.");
+    expect(gym).toMatch(/class times, schedules/);
+    expect(gym).toMatch(/member counts, results, before-and-after claims/);
+    expect(gym).toContain("Never promise health, weight-loss or fitness results.");
+    expect(gym).toContain("Sends land in the club's Leads.");
+    expect(gym).not.toMatch(/Bison Ops|customer|Contacts/);
+    expect(gym).not.toMatch(/—/);
+    expect(await system({ brand: "Pulse Cycle Studio", industry: "studio", edition: "fit" })).toContain("Pulse Cycle Studio is a fitness studio.");
+    const pools = await system({});
+    expect(pools).toContain("inside Bison Ops. The person you're talking to works there.");
+    expect(pools).toContain("Sends land in the company's Contacts.");
+    expect(pools).not.toContain("Fit Funnels");
+  });
+
   it("stops after a few rounds even if the model keeps calling tools", async () => {
     const loop = () => sse([{ type: "tool_use", id: `t${Math.random()}`, name: "remove_section", input: { id: "nope" } }], "tool_use");
     const { client, requests } = fakeClient(Array.from({ length: 10 }, loop));

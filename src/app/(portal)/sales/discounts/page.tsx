@@ -3,19 +3,27 @@ import { Suspense } from "react";
 import { type DiscountItem, DiscountScreen } from "@/components/sales/discount-screen";
 import { salesGate } from "@/components/sales/gate";
 import type { Tone } from "@/components/sales/labels";
+import { SaidHeader } from "@/components/sales/said";
 import { SalesSetupFor } from "@/components/sales/setup";
-import { PageHeader, SampleBanner } from "@/components/ui";
+import { SampleBanner } from "@/components/ui";
+import type { EditionKey } from "@/config/editions";
 import { may } from "@/config/roles";
 import { withTenant } from "@/lib/db";
+import { sayOf } from "@/lib/edition";
 import { demoMode } from "@/lib/env";
 import { getPortalContext, scopeOf } from "@/lib/portal";
 import { sampleUuid } from "@/lib/sample/sales";
 import { type DiscountRow, listDiscounts } from "@/lib/sales/discount-codes";
 import { getSalesSettings } from "@/lib/sales/store";
 
-export const metadata: Metadata = { title: "Discount codes" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: sayOf(await getPortalContext())("Discount codes", "Promo codes") };
+}
 
-const NOTE = "Private codes for the shop. Each one is spelled out in a sentence, so everyone on the team knows what it does. Welcome codes from Marketing are made one per person and aren't listed here.";
+const NOTE: [string, string] = [
+  "Private codes for the shop. Each one is spelled out in a sentence, so everyone on the team knows what it does. Welcome codes from Marketing are made one per person and aren't listed here.",
+  "Private codes for your club's online store. Each one is spelled out in a sentence, so your front desk, coaches and trainers know what it does. Intro offer codes from Marketing are made one per person and aren't listed here.",
+];
 
 const DAY = 86_400_000;
 
@@ -28,9 +36,17 @@ function stateOf(r: DiscountRow, now: Date, timeZone: string): { label: string; 
   return { label: "On", tone: "good" };
 }
 
-/** A few made-up codes for the demo, which has no database. */
-function demoCodes(tenantId: string, now: Date): DiscountRow[] {
+/** A few made-up codes for the demo, which has no database. A club's are promo codes for joining. */
+function demoCodes(tenantId: string, now: Date, edition: EditionKey): DiscountRow[] {
   const base = { tradeAccountId: null, tradeAccountName: null, startsAt: null, held: 0, createdAt: now };
+  if (edition === "fit") {
+    return [
+      { ...base, id: sampleUuid(`${tenantId}:code:welcome`), code: "FIRSTMONTH", percentOff: 50, amountOffCents: null, usage: "per_account", maxUses: null, minOrderCents: null, expiresAt: null, active: true, note: "On the join page banner", uses: 48, held: 1 },
+      { ...base, id: sampleUuid(`${tenantId}:code:spring`), code: "SUMMER15", percentOff: null, amountOffCents: 1500, usage: "unlimited", maxUses: 300, minOrderCents: 9000, expiresAt: new Date(now.getTime() + 24 * DAY), active: true, note: "Summer challenge newsletter", uses: 112 },
+      { ...base, id: sampleUuid(`${tenantId}:code:show`), code: "FRIENDS-2026", percentOff: 20, amountOffCents: null, usage: "per_account", maxUses: 200, minOrderCents: null, expiresAt: new Date(now.getTime() - 40 * DAY), active: true, note: "Bring a friend week", uses: 61 },
+      { ...base, id: sampleUuid(`${tenantId}:code:sample`), code: "MAKEGOOD", percentOff: 100, amountOffCents: null, usage: "single_use", maxUses: 1, minOrderCents: null, expiresAt: null, active: true, note: "For a member whose class was canceled", uses: 1 },
+    ];
+  }
   return [
     { ...base, id: sampleUuid(`${tenantId}:code:welcome`), code: "WELCOME10", percentOff: 10, amountOffCents: null, usage: "per_account", maxUses: null, minOrderCents: null, expiresAt: null, active: true, note: "On the shop's welcome banner", uses: 64, held: 1 },
     { ...base, id: sampleUuid(`${tenantId}:code:spring`), code: "SPRING25", percentOff: null, amountOffCents: 2500, usage: "unlimited", maxUses: 500, minOrderCents: 20000, expiresAt: new Date(now.getTime() + 24 * DAY), active: true, note: "April newsletter", uses: 131 },
@@ -47,7 +63,7 @@ async function Body() {
   const now = new Date();
   const timeZone = ctx.settings.timezone;
   const data = demo
-    ? { rows: demoCodes(ctx.tenant.id, now), currency: "usd", trade: [] as { id: string; company: string }[] }
+    ? { rows: demoCodes(ctx.tenant.id, now, ctx.tenant.edition), currency: "usd", trade: [] as { id: string; company: string }[] }
     : await withTenant(scopeOf(ctx), async (tx) => ({
         rows: await listDiscounts(tx),
         currency: (await getSalesSettings(tx)).store.currency,
@@ -66,7 +82,7 @@ async function Body() {
 export default function DiscountsPage() {
   return (
     <>
-      <PageHeader title="Discount codes" note={NOTE} />
+      <SaidHeader title={["Discount codes", "Promo codes"]} note={NOTE} />
       <Suspense fallback={null}>
         <Body />
       </Suspense>

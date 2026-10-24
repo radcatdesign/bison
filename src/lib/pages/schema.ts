@@ -3,6 +3,7 @@
 // and everything that comes in (from the browser or from the agent) is checked
 // against it before it's saved or shown. Works in the browser and on the server.
 import { z } from "zod";
+import { type EditionKey, sayFor } from "@/config/editions";
 
 export const PAGE_DOC_VERSION = 1;
 export const MAX_SECTIONS = 16;
@@ -151,6 +152,11 @@ export const SECTION_LABELS: Record<SectionType, string> = {
   cta: "Call to action",
   text: "Text",
 };
+
+/** A section type's name in one edition. Fit Funnels calls a customer quote a member quote. */
+export function sectionLabel(type: SectionType, edition: EditionKey = "bison"): string {
+  return type === "quote" ? sayFor(edition)(SECTION_LABELS.quote, "Member quote") : SECTION_LABELS[type];
+}
 
 export const themeSchema = z.object({
   mode: z.enum(["light", "dark"]).default("light"),

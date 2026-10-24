@@ -25,7 +25,7 @@ async function Body({ searchParams }: { searchParams: Promise<{ error?: string }
   const site = ctx.sites[0]?.domain ? `https://${ctx.sites[0].domain}` : "https://example.com";
   const [series, forms, brand] = demo
     ? [[] as SeriesView[], [], defaultMarketingSettings(settingsTenantOf(ctx)).brand]
-    : await Promise.all([listSeries(scopeOf(ctx), ctx.sites[0]?.domain), formChoices(scopeOf(ctx)), withTenant(scopeOf(ctx), async (tx) => (await getMarketingSettings(tx, settingsTenantOf(ctx))).brand)]);
+    : await Promise.all([listSeries(scopeOf(ctx), ctx.sites[0]?.domain, ctx.tenant.edition), formChoices(scopeOf(ctx), ctx.tenant.edition), withTenant(scopeOf(ctx), async (tx) => (await getMarketingSettings(tx, settingsTenantOf(ctx))).brand)]);
   return (
     <>
       <PageHeader title="Email series" note={NOTE} />
@@ -35,7 +35,7 @@ async function Body({ searchParams }: { searchParams: Promise<{ error?: string }
           {error.slice(0, 200)}
         </p>
       )}
-      <SeriesList c={{ storage: demo ? "browser" : "server", tenantId: ctx.tenant.id, site, canEdit: may(ctx.member.role, "marketing.edit"), triggers: triggersFor(ctx.tenant) }} server={series} forms={forms} brand={brand} baseUrl={appUrl()} />
+      <SeriesList c={{ storage: demo ? "browser" : "server", tenantId: ctx.tenant.id, site, canEdit: may(ctx.member.role, "marketing.edit"), triggers: triggersFor(ctx.tenant), edition: ctx.tenant.edition }} server={series} forms={forms} brand={brand} baseUrl={appUrl()} />
     </>
   );
 }

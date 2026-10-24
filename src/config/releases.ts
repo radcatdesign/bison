@@ -4,6 +4,19 @@ export type Release = { version: string; date: string; title: string; changes: s
 
 export const RELEASES: Release[] = [
   {
+    version: "0.6.0",
+    date: "2026-10-23",
+    title: "Fit Funnels",
+    changes: [
+      "Fit Funnels: the same tools for gyms, health clubs and fitness studios, with their own name, mark and color.",
+      "Every screen speaks club: leads and members, free trial passes and tours, memberships, class packs and personal training, corporate accounts and promo codes.",
+      "Funnel page templates for a free trial pass, an intro offer, a new class, a personal training consult, a presale, corporate wellness, a six-week challenge and a club tour.",
+      "Follow-up emails for new leads and new members, written for a club, with your own details marked in yellow.",
+      "Sell memberships, packs and gear on your own site, send corporate quotes, and run corporate accounts with their own pricing.",
+      "In the demo, switch to Fit Funnels on the sign-in page and look around a made-up gym and cycling studio.",
+    ],
+  },
+  {
     version: "0.5.0",
     date: "2026-10-23",
     title: "A/B tests",

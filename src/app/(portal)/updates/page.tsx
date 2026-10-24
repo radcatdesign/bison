@@ -1,7 +1,7 @@
 import { Check } from "lucide-react";
 import type { Metadata } from "next";
-import { PageHeader } from "@/components/ui";
 import { RELEASES } from "@/config/releases";
+import { UpdatesHeader } from "./header";
 import s from "./updates.module.css";
 
 export const metadata: Metadata = { title: "Updates" };
@@ -13,7 +13,7 @@ function longDate(iso: string) {
 export default function UpdatesPage() {
   return (
     <>
-      <PageHeader title="Updates" note="What changed in Bison Ops, newest first." />
+      <UpdatesHeader />
       <ol className={s.releases}>
         {RELEASES.map((r) => (
           <li key={r.version} className={s.release}>

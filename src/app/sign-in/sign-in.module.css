@@ -267,3 +267,39 @@
     padding: calc(32px + env(safe-area-inset-top)) 16px 32px;
   }
 }
+
+/* Bison Ops or Fit Funnels, above the made-up people. */
+.editions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 20px;
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-r-control);
+  background: var(--bo-sunken);
+}
+
+.edition {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 10px;
+  border-radius: calc(var(--bo-r-control) - 3px);
+  color: var(--bo-ink-2);
+  font-size: var(--bo-text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.edition:hover {
+  color: var(--bo-ink);
+}
+
+.edition[aria-current="page"] {
+  background: var(--bo-surface);
+  color: var(--bo-ink);
+  box-shadow: var(--bo-shadow-sm);
+}

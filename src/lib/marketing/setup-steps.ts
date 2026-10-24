@@ -1,7 +1,9 @@
 // Step-by-step setup for every Marketing tool. Pure: it takes plain facts about
 // a company (what's saved, what's verified, how many subscribers) and returns
 // each tool's steps and whether each one is done. The server fills the facts
-// from the database; the demo fills them from the visitor's browser.
+// from the database; the demo fills them from the visitor's browser. Each line
+// reads right in its edition: say("Bison Ops words", "Fit Funnels words").
+import { type EditionKey, sayFor } from "@/config/editions";
 
 export type SetupFacts = {
   /** Owners and admins can set up sending; everyone else is pointed to them. */
@@ -37,19 +39,23 @@ export type SetupStep = {
 
 export type ToolSetup<K extends string = ToolKey> = { key: K; name: string; href: string; summary: string; optional?: boolean; steps: SetupStep[] };
 
-export function buildSetup(f: SetupFacts): ToolSetup[] {
+export function buildSetup(f: SetupFacts, edition: EditionKey = "bison"): ToolSetup[] {
+  const say = sayFor(edition);
   const owner = f.canManageSettings ? undefined : "An owner or admin on your team does this step.";
   return [
     {
       key: "sending",
       name: "Email sending",
       href: "/settings/email",
-      summary: "Send from your own domain, so your email lands in inboxes and carries your name.",
+      summary: say("Send from your own domain, so your email lands in inboxes and carries your name.", "Send from your club's own domain, so your email lands in inboxes and carries your name."),
       steps: [
         {
           key: "sending.domain",
           title: "Add the domain you'll send from",
-          body: "Use a subdomain like mail.yourcompany.com. It keeps marketing email apart from your everyday inbox and protects your main domain's reputation.",
+          body: say(
+            "Use a subdomain like mail.yourcompany.com. It keeps marketing email apart from your everyday inbox and protects your main domain's reputation.",
+            "Use a subdomain like mail.yourclub.com. It keeps marketing email apart from your front desk inbox and protects your main domain's reputation.",
+          ),
           done: f.sending.domain,
           href: "/settings/email#domain",
           cta: "Add domain",
@@ -67,7 +73,7 @@ export function buildSetup(f: SetupFacts): ToolSetup[] {
         {
           key: "sending.test",
           title: "Send yourself a test",
-          body: "See exactly what subscribers get, in your own inbox, from your own address.",
+          body: say("See exactly what subscribers get, in your own inbox, from your own address.", "See exactly what members and leads get, in your own inbox, from your own address."),
           done: f.sending.tested,
           href: "/settings/email#test",
           cta: "Send a test",
@@ -83,7 +89,7 @@ export function buildSetup(f: SetupFacts): ToolSetup[] {
         {
           key: "brand.look",
           title: "Set your colors and fonts",
-          body: "Start from your brand color. Every newsletter and series email uses these, so you won't pick them again.",
+          body: say("Start from your brand color. Every newsletter and series email uses these, so you won't pick them again.", "Start from your club's color. Every newsletter and follow-up uses these, so you won't pick them again."),
           done: f.brand.saved,
           href: "/marketing/brand#colors",
           cta: "Set colors",
@@ -111,12 +117,15 @@ export function buildSetup(f: SetupFacts): ToolSetup[] {
       key: "subscribers",
       name: "Subscribers",
       href: "/marketing/subscribers",
-      summary: "Everyone who agreed to hear from you, with one-click unsubscribe built in.",
+      summary: say("Everyone who agreed to hear from you, with one-click unsubscribe built in.", "Members and leads who agreed to hear from you, with one-click unsubscribe built in."),
       steps: [
         {
           key: "subscribers.types",
           title: 'Choose your "I am a..." options',
-          body: "Signup forms ask people what kind of customer they are, so you can send each group what fits them. We started you with a few.",
+          body: say(
+            "Signup forms ask people what kind of customer they are, so you can send each group what fits them. We started you with a few.",
+            "Signup forms ask people where they stand with your club, like thinking about joining or already a member, so you can send each group what fits them. We started you with a few.",
+          ),
           done: f.signup.saved,
           href: "/marketing/subscribers#signup",
           cta: "Review the options",
@@ -124,7 +133,10 @@ export function buildSetup(f: SetupFacts): ToolSetup[] {
         {
           key: "subscribers.add",
           title: "Bring in your subscribers",
-          body: "Import a spreadsheet exported from your old email tool, or add people one at a time. Only add people who agreed to get email from you.",
+          body: say(
+            "Import a spreadsheet exported from your old email tool, or add people one at a time. Only add people who agreed to get email from you.",
+            "Import a spreadsheet exported from your old email tool or member software, or add people one at a time. Only add people who agreed to get email from you.",
+          ),
           done: f.subscribers.count > 0,
           href: "/marketing/subscribers#add",
           cta: "Import or add",
@@ -132,7 +144,7 @@ export function buildSetup(f: SetupFacts): ToolSetup[] {
         {
           key: "subscribers.lists",
           title: "Group people into lists",
-          body: "Lists let you send to just homeowners, or just wholesale buyers. Skip this if you send everything to everyone.",
+          body: say("Lists let you send to just homeowners, or just wholesale buyers. Skip this if you send everything to everyone.", "Lists let you send to just members, or just trial leads. Skip this if you send everything to everyone."),
           done: f.subscribers.lists > 0,
           href: "/marketing/subscribers#lists",
           cta: "Make a list",
@@ -140,32 +152,35 @@ export function buildSetup(f: SetupFacts): ToolSetup[] {
         },
         {
           key: "subscribers.form",
-          title: "Put a signup form on a landing page",
-          body: 'Open any page, edit its form and turn on "Add to email list". New signups land here and get your welcome series.',
+          title: say("Put a signup form on a landing page", "Put a signup form on a funnel page"),
+          body: say('Open any page, edit its form and turn on "Add to email list". New signups land here and get your welcome series.', 'Open any funnel page, edit its form and turn on "Add to email list". New signups land here and get your new lead follow-up.'),
           done: f.signup.formOnPage,
           href: "/marketing/pages",
-          cta: "Open Pages",
+          cta: say("Open Pages", "Open funnel pages"),
         },
       ],
     },
     {
       key: "series",
-      name: "Welcome series",
+      name: say("Welcome series", "Follow-ups"),
       href: "/marketing/series",
-      summary: "Emails that go out on their own, a set number of days after someone joins.",
+      summary: say("Emails that go out on their own, a set number of days after someone joins.", "Emails that go out on their own, a set number of days after a lead signs up or a member joins."),
       steps: [
         {
           key: "series.fill",
-          title: "Fill in your welcome emails",
-          body: "Three emails are written for you. Fill in the yellow spots with the things only you know, like what you're known for.",
+          title: say("Fill in your welcome emails", "Fill in your new lead follow-up"),
+          body: say(
+            "Three emails are written for you. Fill in the yellow spots with the things only you know, like what you're known for.",
+            "Three emails are written for you. Fill in the yellow spots with the things only your club knows, like how to book a first visit.",
+          ),
           done: f.series.starterReady,
           href: "/marketing/series",
-          cta: "Open the welcome series",
+          cta: say("Open the welcome series", "Open the follow-ups"),
         },
         {
           key: "series.on",
-          title: "Turn the series on",
-          body: "From then on, everyone who joins your list gets the first email right away and the rest on schedule.",
+          title: say("Turn the series on", "Turn the follow-up on"),
+          body: say("From then on, everyone who joins your list gets the first email right away and the rest on schedule.", "From then on, every new lead who joins your list gets the first email right away and the rest on schedule."),
           done: f.series.anyOn,
           href: "/marketing/series",
           cta: "Turn it on",
@@ -176,7 +191,7 @@ export function buildSetup(f: SetupFacts): ToolSetup[] {
       key: "newsletters",
       name: "Newsletters",
       href: "/marketing/newsletters",
-      summary: "Build an email on the email itself, test it, then send it or schedule it.",
+      summary: say("Build an email on the email itself, test it, then send it or schedule it.", "Member updates, class schedules and challenges. Build the email on the email itself, test it, then send it or schedule it."),
       steps: [
         {
           key: "newsletters.start",
@@ -197,7 +212,7 @@ export function buildSetup(f: SetupFacts): ToolSetup[] {
         {
           key: "newsletters.send",
           title: "Send it or schedule it",
-          body: "Send to everyone or one list, now or up to 30 days ahead.",
+          body: say("Send to everyone or one list, now or up to 30 days ahead.", "Send to everyone or one list, like just your members, now or up to 30 days ahead."),
           done: f.newsletters.sentOrScheduled,
           href: "/marketing/newsletters",
           cta: "Open newsletters",
@@ -206,26 +221,26 @@ export function buildSetup(f: SetupFacts): ToolSetup[] {
     },
     {
       key: "offer",
-      name: "Welcome offer",
+      name: say("Welcome offer", "Intro offer"),
       href: "/marketing/offer",
-      summary: "An optional one-time code for each new subscriber, for their first order.",
+      summary: say("An optional one-time code for each new subscriber, for their first order.", "An optional one-time code for each new lead, for their first membership, class pack or intro deal."),
       optional: true,
       steps: [
         {
           key: "offer.choose",
-          title: "Choose the discount",
-          body: "A percent or an amount off, and how long each code lasts. Codes are for first-time buyers only, one per person.",
+          title: say("Choose the discount", "Choose the offer"),
+          body: say("A percent or an amount off, and how long each code lasts. Codes are for first-time buyers only, one per person.", "A percent or a dollar amount off, and how long each code lasts. Codes work on a first purchase only, one per person."),
           done: f.offer.saved,
           href: "/marketing/offer",
           cta: "Set the offer",
         },
         {
           key: "offer.email",
-          title: "Put the code in your welcome email",
-          body: 'Add a "Welcome offer code" section to the first email of your welcome series. Each person sees their own code.',
+          title: say("Put the code in your welcome email", "Put the code in your new lead follow-up"),
+          body: say('Add a "Welcome offer code" section to the first email of your welcome series. Each person sees their own code.', 'Add an "Intro offer code" section to the first email of your new lead follow-up. Each person sees their own code.'),
           done: f.offer.inEmail,
           href: "/marketing/series",
-          cta: "Open the welcome series",
+          cta: say("Open the welcome series", "Open the follow-ups"),
         },
         {
           key: "offer.on",
@@ -245,8 +260,11 @@ export function buildSetup(f: SetupFacts): ToolSetup[] {
       steps: [
         {
           key: "search.describe",
-          title: "Describe your business",
-          body: "A plain paragraph on what you do and who for. Search engines and AI assistants quote it when people ask about businesses like yours.",
+          title: say("Describe your business", "Describe your club"),
+          body: say(
+            "A plain paragraph on what you do and who for. Search engines and AI assistants quote it when people ask about businesses like yours.",
+            "A plain paragraph on your club: what you offer, who it's for and where. It gives search engines and AI assistants your own words to use when people ask about gyms and studios nearby.",
+          ),
           done: f.search.described,
           href: "/marketing/search#business",
           cta: "Write it",
@@ -254,18 +272,18 @@ export function buildSetup(f: SetupFacts): ToolSetup[] {
         {
           key: "search.contact",
           title: "Add your phone, email and hours",
-          body: "Shown to search engines as structured data, so they can answer questions like \"Are they open Saturday?\"",
+          body: say('Shown to search engines as structured data, so they can answer questions like "Are they open Saturday?"', 'Shown to search engines as structured data, so they can answer questions like "Is the gym open Sunday morning?"'),
           done: f.search.contact,
           href: "/marketing/search#business",
           cta: "Add details",
         },
         {
           key: "search.page",
-          title: "Publish a landing page",
-          body: "Published pages get titles, social cards and structured data on their own, and go in your sitemap and llms.txt.",
+          title: say("Publish a landing page", "Publish a funnel page"),
+          body: say("Published pages get titles, social cards and structured data on their own, and go in your sitemap and llms.txt.", "Published funnel pages get titles, social cards and structured data on their own, and go in your sitemap and llms.txt."),
           done: f.search.publishedPage,
           href: "/marketing/pages",
-          cta: "Open Pages",
+          cta: say("Open Pages", "Open funnel pages"),
         },
         {
           key: "search.submit",
@@ -282,21 +300,21 @@ export function buildSetup(f: SetupFacts): ToolSetup[] {
       key: "tests",
       name: "A/B tests",
       href: "/marketing/tests",
-      summary: "Show visitors two or three versions of a landing page and keep the one that gets more form sends or clicks.",
+      summary: say("Show visitors two or three versions of a landing page and keep the one that gets more form sends or clicks.", "Show visitors two or three versions of a funnel page and keep the one that gets more sign-ups or clicks."),
       optional: true,
       steps: [
         {
           key: "tests.page",
-          title: "Publish the page you want to improve",
-          body: "A test compares the live page with versions of it, so the page has to be live first. Pick one that already gets visitors.",
+          title: say("Publish the page you want to improve", "Publish the funnel page you want to improve"),
+          body: say("A test compares the live page with versions of it, so the page has to be live first. Pick one that already gets visitors.", "A test compares the live page with versions of it, so the page has to be live first. Pick one that already gets visitors, like your free pass page."),
           done: f.tests.publishedPage,
           href: "/marketing/pages",
-          cta: "Open Pages",
+          cta: say("Open Pages", "Open funnel pages"),
         },
         {
           key: "tests.version",
           title: "Make a version to compare",
-          body: "Start a test and B begins as a copy of the live page. Change one thing, like the headline or the button, so you know what made the difference.",
+          body: say("Start a test and B begins as a copy of the live page. Change one thing, like the headline or the button, so you know what made the difference.", "Start a test and B begins as a copy of the live page. Change one thing, like the headline or the offer button, so you know what made the difference."),
           done: f.tests.created,
           href: "/marketing/tests",
           cta: "New test",

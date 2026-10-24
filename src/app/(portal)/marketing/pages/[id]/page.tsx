@@ -12,6 +12,7 @@ import { publicPageUrl } from "@/lib/pages/urls";
 import { withTenant } from "@/lib/db";
 import { defaultMarketingSettings } from "@/lib/marketing/settings";
 import { getMarketingSettings, settingsTenantOf } from "@/lib/marketing/store";
+import { sayOf } from "@/lib/edition";
 import { getPortalContext, scopeOf } from "@/lib/portal";
 
 export const metadata: Metadata = { title: "Edit page" };
@@ -24,7 +25,7 @@ async function EditorBody({ params, searchParams }: { params: Params; searchPara
   const gate = gateMode(ctx, "marketing");
   if (gate.kind === "role") return <RoleBlocked mode={gate.label} />;
   if (gate.kind === "locked") return <Locked item={gate.item} canBuy={gate.canBuy} trialUsed={gate.trialUsed} />;
-  if (!may(ctx.member.role, "pages.edit")) return <RoleBlocked mode="Pages" />;
+  if (!may(ctx.member.role, "pages.edit")) return <RoleBlocked mode={sayOf(ctx)("Pages", "Funnel pages")} />;
 
   const { id } = await params;
   const { build } = await searchParams;

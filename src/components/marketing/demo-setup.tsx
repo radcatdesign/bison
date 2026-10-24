@@ -2,6 +2,7 @@
 
 // Setup steps in the demo, worked out from what the visitor did in this browser.
 import { useSyncExternalStore } from "react";
+import { useEditionKey } from "@/components/edition";
 import { buildSetup, type ToolKey, type ToolSetup } from "@/lib/marketing/setup-steps";
 import { type DemoMarketing, demoSetupFacts, readDemo, subscribeDemo, writeDemo } from "./demo-store";
 import { SetupGuide } from "./setup-guide";
@@ -25,7 +26,8 @@ export function useDemoMarketing(tenantId: string): DemoMarketing {
 }
 
 export function useDemoSetup(tenantId: string, base: { subscribers: number; lists: number }): ToolSetup[] {
-  return buildSetup(demoSetupFacts(useDemoMarketing(tenantId), base));
+  const demo = useDemoMarketing(tenantId);
+  return buildSetup(demoSetupFacts(demo, base), useEditionKey());
 }
 
 export function DemoToolSetup({ tenantId, tool, base }: { tenantId: string; tool: ToolKey; base: { subscribers: number; lists: number } }) {

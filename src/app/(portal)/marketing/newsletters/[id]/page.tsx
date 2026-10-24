@@ -139,6 +139,7 @@ async function Body({ params }: { params: Promise<{ id: string }> }) {
         maxWhen={maxWhen}
         canSend={canSend}
         canEdit={canEdit}
+        industry={ctx.tenant.industry}
       />
     );
   }
@@ -200,6 +201,7 @@ async function Body({ params }: { params: Promise<{ id: string }> }) {
       maxWhen={maxWhen}
       canSend={canSend}
       canEdit={canEdit}
+      industry={ctx.tenant.industry}
     />
   );
 }

@@ -3,6 +3,7 @@
 // XML, or a CSV/TSV feed). Pure: text or JSON in, products out. Every price is
 // read as written; nothing is guessed.
 import { XMLParser } from "fast-xml-parser";
+import { type EditionKey, sayFor } from "@/config/editions";
 import { parseCsv } from "@/lib/marketing/csv";
 import { MAX_OPTIONS, MAX_PHOTOS, PHOTO_SRC, type ProductOption, slugify } from "./catalog";
 
@@ -108,10 +109,10 @@ function headerIndex(header: string[], ...names: string[]): number {
   return -1;
 }
 
-export function importCsv(text: string): ImportResult {
+export function importCsv(text: string, edition: EditionKey = "bison"): ImportResult {
   if (text.length > MAX_IMPORT_BYTES) throw new ImportError("That file is over 5 MB. Split it into smaller files.");
   const rows = parseCsv(text.replace(/^\uFEFF/, ""));
-  if (rows.length < 2) throw new ImportError("That file has no products in it. The first row should be the column names.");
+  if (rows.length < 2) throw new ImportError(sayFor(edition)("That file has no products in it. The first row should be the column names.", "That file has nothing to import in it. The first row should be the column names."));
   const header = rows[0];
   if (headerIndex(header, "handle") >= 0 && headerIndex(header, "variant price") >= 0) return importShopifyCsv(rows);
 

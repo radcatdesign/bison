@@ -4,8 +4,10 @@
 // company's name; opening one previews it at desktop or phone size before use.
 import { Monitor, Smartphone, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useEditionKey } from "@/components/edition";
 import type { Device } from "@/components/page-preview";
-import { buildFromTemplate, PAGE_TEMPLATES, type PageTemplate } from "@/lib/pages/page-templates";
+import { sayFor } from "@/config/editions";
+import { buildFromTemplate, type PageTemplate, templatesFor } from "@/lib/pages/page-templates";
 import { findPlaceholders } from "@/lib/pages/schema";
 import { Canvas } from "./canvas";
 import s from "./template-gallery.module.css";
@@ -24,9 +26,12 @@ export function TemplateGallery({ tenant, canEdit, busy, onUse }: Props) {
   const [device, setDevice] = useState<Device>("desktop");
   const dialogRef = useRef<HTMLDialogElement>(null);
   const ctx = { brand: tenant.name, accent: tenant.accent };
+  // A Fit Funnels club sees its own club templates.
+  const edition = useEditionKey();
+  const say = sayFor(edition);
 
   // Cards show each template in its own colors, so the choices look different.
-  const cards = useMemo(() => PAGE_TEMPLATES.map((t) => ({ template: t, doc: buildFromTemplate(t, ctx, false) })), [ctx.brand, ctx.accent]); // eslint-disable-line react-hooks/exhaustive-deps
+  const cards = useMemo(() => templatesFor(edition).map((t) => ({ template: t, doc: buildFromTemplate(t, ctx, false) })), [ctx.brand, ctx.accent, edition]); // eslint-disable-line react-hooks/exhaustive-deps
   const previewDoc = open ? buildFromTemplate(open, ctx, brandColor) : null;
   const toFill = previewDoc ? findPlaceholders(previewDoc).length : 0;
 
@@ -106,7 +111,9 @@ export function TemplateGallery({ tenant, canEdit, busy, onUse }: Props) {
                 Use my brand color
               </label>
               <span className={s.note}>
-                {toFill ? `Your company name is in. ${toFill} yellow ${toFill === 1 ? "spot" : "spots"} for things only you know.` : "Your company name is in. Ready to edit."}
+                {toFill
+                  ? `${say("Your company name is in.", "Your club's name is in.")} ${toFill} yellow ${toFill === 1 ? "spot" : "spots"} for things only you know.`
+                  : say("Your company name is in. Ready to edit.", "Your club's name is in. Ready to edit.")}
               </span>
               {canEdit && (
                 <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onUse(open, brandColor)} data-testid="use-template">

@@ -24,7 +24,7 @@ async function Body({ params }: { params: Promise<{ id: string }> }) {
   const found = await repo.get(id);
   if (!found) notFound();
   const { test, days } = found;
-  const view = testView(test, days, { timeZone: ctx.settings.timezone });
+  const view = testView(test, days, { timeZone: ctx.settings.timezone, edition: ctx.tenant.edition });
   const signup = repo.demo ? defaultMarketingSettings(settingsTenantOf(ctx)).signup : (await withTenant(scopeOf(ctx), (tx) => getMarketingSettings(tx, settingsTenantOf(ctx)))).signup;
   return (
     <>
