@@ -3,12 +3,16 @@
 .gym {
   container-type: inline-size;
   display: grid;
+  /* One column that can shrink: a canvas's drawing size must never widen the page. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--bo-s3);
   min-width: 0;
+  max-width: 100%;
 }
 
 .bezel {
   position: relative;
+  min-width: 0;
   padding: clamp(6px, 1.6cqi, 14px);
   border-radius: var(--bo-r-panel);
   background: var(--bo-bezel);
@@ -27,6 +31,9 @@
 }
 
 .canvas {
+  /* Out of the flow, so its pixel size (up to 3x on phones) can't feed back into the layout's width. */
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;

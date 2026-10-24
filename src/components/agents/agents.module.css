@@ -2,7 +2,14 @@
 
 .stack {
   display: grid;
+  /* Columns that can shrink, so nothing here can push the page wider than the screen. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--bo-s4);
+}
+
+.top > *,
+.stack > * {
+  min-width: 0;
 }
 
 .top {

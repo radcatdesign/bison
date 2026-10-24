@@ -42,6 +42,11 @@ test.describe("Agents", () => {
     await page.goto("/agents");
     await expect(t(page, "virtual-gym").getByRole("img")).toHaveAttribute("aria-label", /Summit Strength Club/);
     await expect(t(page, "gym-mood")).toBeVisible();
+    // The gym fits the screen and stays put: its canvas never widens the page, even at 3x pixel density.
+    await page.waitForTimeout(1500);
+    const widths = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth, Math.round(document.querySelector('[data-testid="virtual-gym"]')!.getBoundingClientRect().width)]);
+    expect(widths[0]).toBeLessThanOrEqual(widths[1]);
+    expect(widths[2]).toBeLessThanOrEqual(widths[1]);
 
     // Coach reads the week.
     await t(page, "gym-agent-coach").click();
