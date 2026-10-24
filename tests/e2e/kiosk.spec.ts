@@ -144,6 +144,41 @@ test.describe("Front desk kiosk", () => {
     await tablet.close();
   });
 
+  test("a tablet picks up settings staff change while it's open", async ({ page, browser, baseURL }) => {
+    await signInMaya(page);
+    await page.goto("/settings/kiosk");
+    await t(page, "kiosk-pin-input").fill("482913");
+    await t(page, "kiosk-pin-confirm").fill("482913");
+    await t(page, "kiosk-pin-form").getByRole("button").click();
+    await expect(t(page, "kiosk-pin-form").getByTestId("action-message")).toContainText("Staff PIN saved");
+    await page.reload();
+    await t(page, "pair-make").click();
+    const code = ((await t(page, "pair-code-value").textContent()) ?? "").replace(/\s/g, "");
+    const tablet = await browser.newContext({ baseURL });
+    const k = await tablet.newPage();
+    await k.goto("/kiosk");
+    await k.getByTestId("pair-code").fill(code);
+    await k.getByTestId("pair-submit").click();
+    await k.getByTestId("kiosk-tile-pass").click();
+
+    // Staff turn free passes off while someone is filling in the form.
+    await page.reload();
+    await t(page, "kiosk-passOn").uncheck();
+    await t(page, "kiosk-config-form").getByRole("button", { name: "Save" }).click();
+    await expect(t(page, "kiosk-config-form").getByTestId("action-message")).toContainText("Saved");
+
+    const pass = k.getByTestId("kiosk-pass-form");
+    await pass.getByLabel("Your name").fill("Late Comer");
+    await pass.getByLabel("Email").fill("late@example.com");
+    await pass.getByRole("button", { name: "Claim my pass" }).click();
+    await expect(k.getByTestId("kiosk-error")).toContainText("aren't offered here right now");
+    // Back at the start, the tablet loads the new settings.
+    await k.getByRole("button", { name: "Start over" }).click();
+    await expect(k.getByTestId("kiosk-tile-checkin")).toBeVisible();
+    await expect(k.getByTestId("kiosk-tile-pass")).toHaveCount(0);
+    await tablet.close();
+  });
+
   test("the preview works without a tablet and saves nothing", async ({ page }) => {
     await signInMaya(page);
     await page.goto("/settings/kiosk");

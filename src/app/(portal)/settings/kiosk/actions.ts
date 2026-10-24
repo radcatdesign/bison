@@ -40,7 +40,8 @@ export async function saveKioskSettings(_prev: ActionState, form: FormData): Pro
         welcome: String(form.get("welcome") ?? ""),
         pass: { on: on("passOn"), label: String(form.get("passLabel") ?? "") || DEFAULT_CONFIG.pass.label },
         tour: { on: on("tourOn") },
-        join: { on: on("joinOn"), productIds: form.getAll("product").map(String).slice(0, MAX_JOIN_PRODUCTS) },
+        // The product list isn't on the page while joining can't show; keep what was picked.
+        join: { on: on("joinOn"), productIds: form.get("productsShown") ? form.getAll("product").map(String).slice(0, MAX_JOIN_PRODUCTS) : now.config.join.productIds },
         checkIn: { on: on("checkInOn") },
         waiver: { on: wantsWaiver },
         emailOptIn: on("emailOptIn"),

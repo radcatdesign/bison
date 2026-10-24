@@ -178,6 +178,7 @@ async function Body() {
               <p className={`notice ${s.inset}`}>{k.joinBlocked}</p>
             ) : (
               <fieldset className={s.products}>
+                <input type="hidden" name="productsShown" value="1" />
                 <legend className="label">
                   Show these, up to {MAX_JOIN_PRODUCTS}. {defaultPick ? "With none picked, it shows up to 4 that don't ship." : ""}
                 </legend>

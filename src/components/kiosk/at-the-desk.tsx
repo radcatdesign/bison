@@ -1,3 +1,4 @@
+import { Help } from "@/components/ui";
 import { formatAgo } from "@/lib/format";
 import { personAtDesk } from "@/lib/kiosk/repo";
 import { SIGNATURE_BOX } from "@/lib/kiosk/settings";
@@ -13,7 +14,10 @@ export async function AtTheDesk({ ctx, contactId, titleClass }: { ctx: PortalCon
       <h3 className={titleClass}>At the front desk</h3>
       <p>
         <span className="num">{p.visits30}</span> {p.visits30 === 1 ? "check-in" : "check-ins"} in the last 30 days
-        {p.lastVisit ? `, last ${formatAgo(p.lastVisit)}` : ""}.
+        {p.lastVisit ? `, last ${formatAgo(p.lastVisit)}` : ""}.{" "}
+        <Help title="Check-ins" idSuffix={`-${contactId}`}>
+          Times they checked in at a kiosk tablet in the last 30 days. Checking in again within 30 minutes counts as the same visit.
+        </Help>
       </p>
       {p.waiver ? (
         <figure className={s.signed}>

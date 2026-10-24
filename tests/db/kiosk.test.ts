@@ -14,6 +14,8 @@ import {
   kioskView,
   leaveKiosk,
   listDevices,
+  pairingAllowed,
+  pairingFailed,
   pairWithCode,
   PIN_TRIES,
   readKiosk,
@@ -151,6 +153,43 @@ describe("a paired tablet", () => {
     expect(await checkIn(t.scope, { lookup: phone }, app())).toMatchObject({ ok: false, status: 409 });
   });
 
+  it("only checks in people who joined or have been to the desk, and the same answer for everyone else", async () => {
+    const t = await pairedTablet(SUMMIT);
+    const lead = `web-lead-${Date.now()}@example.com`;
+    const member = `member-won-${Date.now()}@example.com`;
+    await staff(SUMMIT, (tx) => tx.insertInto("contacts").values([{ email: lead, name: "Web Lead" }, { email: member, name: "Joined Person", status: "won" }]).execute());
+    expect(await checkIn(t.scope, { lookup: lead }, app())).toEqual(await checkIn(t.scope, { lookup: "nobody-at-all@example.com" }, app()));
+    expect(await checkIn(t.scope, { lookup: lead }, app())).toMatchObject({ ok: false, status: 404 });
+    expect(await checkIn(t.scope, { lookup: member }, app())).toMatchObject({ ok: true, name: "Joined" });
+    const rows = await staff(SUMMIT, (tx) => tx.selectFrom("kiosk_check_ins as k").innerJoin("contacts as c", "c.id", "k.contact_id").select("c.email").where("c.email", "in", [lead, member]).execute());
+    expect(rows.map((r) => r.email)).toEqual([member]);
+  });
+
+  it("counts a double tap as one visit", async () => {
+    const t = await pairedTablet(SUMMIT);
+    const email = `double-${Date.now()}@example.com`;
+    await claimPass(t.scope, { name: "Dee Tap", email }, app());
+    const both = await Promise.all([checkIn(t.scope, { lookup: email }, app()), checkIn(t.scope, { lookup: email }, app()), checkIn(t.scope, { lookup: email }, app())]);
+    expect(both.every((r) => r.ok)).toBe(true);
+    const rows = await staff(SUMMIT, (tx) => tx.selectFrom("kiosk_check_ins as k").innerJoin("contacts as c", "c.id", "k.contact_id").select("k.id").where("c.email", "=", email).execute());
+    expect(rows).toHaveLength(1);
+  });
+
+  it("doesn't sign anyone up for email once staff turn the box off", async () => {
+    const t = await pairedTablet(SUMMIT);
+    const email = `no-email-${Date.now()}@example.com`;
+    await staff(SUMMIT, async (tx) => {
+      const s = await readKiosk(tx);
+      await saveKioskConfig(tx, { ...s.config, emailOptIn: false });
+    });
+    expect((await claimPass(t.scope, { name: "No Mail", email, optIn: true }, app())).ok).toBe(true);
+    expect(await staff(SUMMIT, (tx) => tx.selectFrom("subscribers").select("id").where("email", "=", email).executeTakeFirst())).toBeUndefined();
+    await staff(SUMMIT, async (tx) => {
+      const s = await readKiosk(tx);
+      await saveKioskConfig(tx, { ...s.config, emailOptIn: true });
+    });
+  });
+
   it("signs the waiver it showed, keeps the words that were signed, and asks again when they change", async () => {
     const t = await pairedTablet(SUMMIT);
     const email = `signer-${Date.now()}@example.com`;
@@ -193,6 +232,22 @@ describe("a paired tablet", () => {
     expect(await checkIn(t.scope, { lookup: email }, app())).toMatchObject({ ok: false, status: 404 });
     // A tablet scope pointing at the wrong club finds no tablet there.
     expect(await kioskView({ tenantId: SUMMIT, deviceId: t.scope.deviceId }, app())).toBeNull();
+  });
+});
+
+describe("guessing pairing codes", () => {
+  it("stops an address after 10 wrong codes in 10 minutes, counted in the database", async () => {
+    const address = `198.51.100.${Math.floor(Math.random() * 200)}`;
+    for (let i = 0; i < 10; i++) {
+      expect(await pairingAllowed(address, app())).toBe(true);
+      await pairingFailed(address, app());
+    }
+    expect(await pairingAllowed(address, app())).toBe(false);
+    expect(await pairingAllowed("198.51.100.254", app())).toBe(true);
+    // Nobody can read the attempts directly, and they hold no address as typed.
+    expect(pgCode(await rawAsApp("select * from kiosk_pair_attempts").catch((e) => e))).toBe("42501");
+    const stored = await asOwner((c) => c.query("select address from kiosk_pair_attempts"));
+    expect(stored.rows.every((r: { address: string }) => /^[0-9a-f]{64}$/.test(r.address) && !r.address.includes(address))).toBe(true);
   });
 });
 

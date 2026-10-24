@@ -4,6 +4,7 @@ import "server-only";
 // (from the portal). Tablet functions start from the tablet's cookie, find the
 // club with a SECURITY DEFINER resolver that returns ids only, then work under
 // that club's RLS like everything else.
+import { createHash } from "node:crypto";
 import { sql } from "kysely";
 import { can, loadAccess } from "@/lib/access/entitlements";
 import { audit } from "@/lib/audit";
@@ -16,7 +17,7 @@ import { publicProducts } from "@/lib/sales/products";
 import { getSalesSettings, readPayments } from "@/lib/sales/store";
 import { qrFor } from "./qr";
 import { checkPin, codeHash, hashPin, newDeviceToken, newPairCode, tokenHash } from "./secrets";
-import { firstName, type KioskConfig, lookupFrom, PAIR_CODE_MINUTES, PIN_PATTERN, readKioskConfig, signaturePath, TOUR_TIMES, waiverReady, type WaiverText, welcomeLine } from "./settings";
+import { firstName, type KioskConfig, lookupFrom, PAIR_CODE_MINUTES, PIN_PATTERN, readKioskConfig, signaturePath, signatureTooLong, TOUR_TIMES, waiverReady, type WaiverText, welcomeLine } from "./settings";
 
 export class KioskError extends Error {}
 
@@ -129,6 +130,19 @@ export async function deviceFor(token: string, database: Database = db()): Promi
   return rows[0] ? { tenantId: rows[0].tenant_id, deviceId: rows[0].device_id } : null;
 }
 
+/** A network address as the pairing limit stores it: an HMAC, never the address itself. */
+const addressHash = (address: string) => codeHash(`address:${address}`);
+
+/** False when this address, or everyone together, has typed too many wrong codes lately. */
+export async function pairingAllowed(address: string, database: Database = db()): Promise<boolean> {
+  const { rows } = await sql<{ ok: boolean }>`select kiosk_pair_allowed(${addressHash(address)}) as ok`.execute(database);
+  return rows[0]?.ok === true;
+}
+
+export async function pairingFailed(address: string, database: Database = db()): Promise<void> {
+  await sql`select kiosk_pair_failed(${addressHash(address)})`.execute(database);
+}
+
 /** Pairs this tablet with the club whose code was typed. Returns the token for the tablet's cookie. */
 export async function pairWithCode(code: string, database: Database = db()): Promise<{ token: string; scope: KioskScope } | null> {
   const { rows } = await sql<{ tenant_id: string; code_id: string }>`select * from resolve_kiosk_code(${codeHash(code)})`.execute(database);
@@ -166,6 +180,8 @@ export type KioskView = {
   waiver: { title: string; body: string; version: number } | null;
   emailOptIn: boolean;
   deviceName: string;
+  /** Changes whenever anything above does, so a tablet knows to reload. */
+  stamp: string;
 };
 
 /** The products the join screen offers: the ones staff picked, or memberships and passes that don't ship. */
@@ -196,7 +212,7 @@ async function buildView(tx: Tx, deviceName: string): Promise<KioskView | null> 
       join = options.length ? options : null;
     }
   }
-  return {
+  return stamped({
     club,
     accent: brand.colors.accent || info.accent,
     logo: brand.logo?.src ?? null,
@@ -209,7 +225,11 @@ async function buildView(tx: Tx, deviceName: string): Promise<KioskView | null> 
     waiver: c.waiver.on && waiverReady(setup.waiver) ? setup.waiver : null,
     emailOptIn: c.emailOptIn && can(access, "marketing.subscribers"),
     deviceName,
-  };
+  });
+}
+
+export function stamped(v: Omit<KioskView, "stamp">): KioskView {
+  return { ...v, stamp: createHash("sha256").update(JSON.stringify(v)).digest("base64url").slice(0, 16) };
 }
 
 export async function kioskView(k: KioskScope, database: Database = db()): Promise<KioskView | null> {
@@ -300,7 +320,7 @@ export async function claimPass(k: KioskScope, input: Record<string, unknown>, d
       if (!setup.config.pass.on) return { ok: false, status: 409, message: "Free passes aren't offered here right now. Ask at the desk." };
       const contactId = await upsertContact(tx, p);
       await tx.insertInto("submissions").values({ contact_id: contactId, form_key: "kiosk", form_type: "kiosk-pass", fields: JSON.stringify({ name: p.name, email: p.email, ...(p.phone ? { phone: p.phone } : {}), pass: setup.config.pass.label }), alert: "{}" }).execute();
-      const queued = await followUp(tx, p, input.optIn === true, "kiosk:pass");
+      const queued = await followUp(tx, p, input.optIn === true && setup.config.emailOptIn, "kiosk:pass");
       return { ok: true, message: "You're all set.", name: firstName(p.name), needsWaiver: await needsWaiver(tx, contactId, setup), queued };
     },
     database,
@@ -322,12 +342,14 @@ export async function bookTour(k: KioskScope, input: Record<string, unknown>, da
       // A new lead who books a tour reads as "Visit booked" in Leads.
       await tx.updateTable("contacts").set({ status: "qualified" }).where("id", "=", contactId).where("status", "=", "new").execute();
       await tx.insertInto("submissions").values({ contact_id: contactId, form_key: "kiosk", form_type: "kiosk-tour", fields: JSON.stringify({ name: p.name, email: p.email, ...(p.phone ? { phone: p.phone } : {}), when, ...(note ? { message: note } : {}) }), alert: "{}" }).execute();
-      const queued = await followUp(tx, p, input.optIn === true, "kiosk:tour");
+      const queued = await followUp(tx, p, input.optIn === true && setup.config.emailOptIn, "kiosk:tour");
       return { ok: true, message: "Your tour request is in.", name: firstName(p.name), queued };
     },
     database,
   );
 }
+
+const NOT_FOUND = "We couldn't find you. Try the other one, phone or email, or ask at the desk.";
 
 /** Checked in within this long counts as the same visit. */
 const SAME_VISIT_MS = 30 * 60_000;
@@ -340,12 +362,28 @@ export async function checkIn(k: KioskScope, input: Record<string, unknown>, dat
     async (tx) => {
       const setup = await readKiosk(tx);
       if (!setup.config.checkIn.on) return { ok: false, status: 409, message: "Check-in isn't on here right now. Ask at the desk." };
-      let q = tx.selectFrom("contacts").select(["id", "name"]).where("status", "<>", "spam");
-      q = lookup.kind === "email" ? q.where("email", "=", lookup.value) : q.where(sql<boolean>`right(regexp_replace(phone, '\\D', '', 'g'), 10) = ${lookup.value}`);
+      // Only people who've joined, or been to the desk before (a pass, a tour, a waiver or a check-in).
+      // Anyone else on the club's list gets the same answer as a stranger, so the tablet can't be used
+      // to find out who's on it.
+      let q = tx
+        .selectFrom("contacts as c")
+        .select(["c.id", "c.name"])
+        .where("c.status", "<>", "spam")
+        .where((eb) =>
+          eb.or([
+            eb("c.status", "=", "won"),
+            eb.exists(eb.selectFrom("kiosk_check_ins as k").select("k.id").whereRef("k.contact_id", "=", "c.id")),
+            eb.exists(eb.selectFrom("kiosk_waivers as w").select("w.id").whereRef("w.contact_id", "=", "c.id")),
+            eb.exists(eb.selectFrom("submissions as s").select("s.id").whereRef("s.contact_id", "=", "c.id").where("s.form_type", "in", ["kiosk-pass", "kiosk-tour"])),
+          ]),
+        );
+      q = lookup.kind === "email" ? q.where("c.email", "=", lookup.value) : q.where(sql<boolean>`right(regexp_replace(c.phone, '\\D', '', 'g'), 10) = ${lookup.value}`);
       const found = await q.limit(2).execute();
-      if (found.length === 0) return { ok: false, status: 404, message: "We couldn't find you. Try the other one, phone or email, or ask at the desk." };
+      if (found.length === 0) return { ok: false, status: 404, message: NOT_FOUND };
       if (found.length > 1) return { ok: false, status: 409, message: "More than one person uses that number. Try your email instead." };
       const contact = found[0];
+      // One at a time per person, so a double tap can't count two visits.
+      await tx.selectFrom("contacts").select("id").where("id", "=", contact.id).forUpdate().executeTakeFirst();
       const last = await tx.selectFrom("kiosk_check_ins").select("checked_in_at").where("contact_id", "=", contact.id).orderBy("checked_in_at", "desc").limit(1).executeTakeFirst();
       const again = last && Date.now() - last.checked_in_at.getTime() < SAME_VISIT_MS;
       if (!again) {
@@ -364,6 +402,7 @@ export async function signWaiver(k: KioskScope, input: Record<string, unknown>, 
   const p = readPerson(input);
   if (typeof p === "string") return { ok: false, status: 400, message: p };
   if (input.agree !== true) return { ok: false, status: 400, message: "Tick the box to say you've read it and agree." };
+  if (signatureTooLong(input.signature)) return { ok: false, status: 400, message: "That signature has too many lines for us to save. Clear it and sign once, a little smaller." };
   const signature = signaturePath(input.signature);
   if (!signature) return { ok: false, status: 400, message: "Sign in the box with your finger. A dot or a short line isn't enough." };
   const version = Number(input.version);
@@ -415,16 +454,8 @@ export async function leaveKiosk(k: KioskScope, pin: unknown, database: Database
   );
 }
 
-/** The tablet checking in now and then: still paired? */
-export async function stillPaired(k: KioskScope, database: Database = db()): Promise<boolean> {
-  return withTenant(
-    scopeFor(k),
-    async (tx) => {
-      const d = await tx.selectFrom("kiosk_devices").select("last_seen_at").where("id", "=", k.deviceId).where("revoked_at", "is", null).executeTakeFirst();
-      if (!d) return false;
-      if (Date.now() - d.last_seen_at.getTime() > 120_000) await tx.updateTable("kiosk_devices").set({ last_seen_at: new Date() }).where("id", "=", k.deviceId).execute();
-      return true;
-    },
-    database,
-  );
+/** The tablet checking in now and then: still paired, and what its screens should show now. */
+export async function ping(k: KioskScope, database: Database = db()): Promise<string | null> {
+  const view = await kioskView(k, database);
+  return view?.stamp ?? null;
 }

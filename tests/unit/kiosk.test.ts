@@ -5,7 +5,7 @@ import { MODES } from "@/config/modes";
 import { demoWaiver } from "@/lib/kiosk/demo";
 import { qrFor } from "@/lib/kiosk/qr";
 import { checkPin, cleanCode, codeHash, hashPin, isDeviceToken, newDeviceToken, newPairCode, tokenHash } from "@/lib/kiosk/secrets";
-import { DEFAULT_CONFIG, firstName, hasPlaceholder, lookupFrom, phoneKey, readKioskConfig, signaturePath, starterWaiver, waiverReady, welcomeLine } from "@/lib/kiosk/settings";
+import { DEFAULT_CONFIG, firstName, hasPlaceholder, lookupFrom, phoneKey, readKioskConfig, signaturePath, signatureTooLong, starterWaiver, waiverReady, welcomeLine } from "@/lib/kiosk/settings";
 
 describe("kiosk settings", () => {
   it("falls back to the defaults for anything missing or odd", () => {
@@ -63,6 +63,9 @@ describe("signatures", () => {
     expect(signaturePath("M0 0")).toBeNull();
     expect(signaturePath([[["1", 2]]])).toBeNull();
     expect(signaturePath([Array.from({ length: 3000 }, (_, i) => [i % 600, 50])])).toBeNull();
+    expect(signatureTooLong([Array.from({ length: 3000 }, (_, i) => [i % 600, 50])])).toBe(true);
+    expect(signatureTooLong(Array.from({ length: 61 }, () => [[1, 1]]))).toBe(true);
+    expect(signatureTooLong([[[1, 1]]])).toBe(false);
   });
 });
 

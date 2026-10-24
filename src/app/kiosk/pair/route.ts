@@ -1,12 +1,13 @@
 import { demoMode } from "@/lib/env";
 import { json, readJson, tabletCookie } from "@/lib/kiosk/http";
 import { cleanCode } from "@/lib/kiosk/secrets";
-import { pairWithCode } from "@/lib/kiosk/store";
+import { pairingAllowed, pairingFailed, pairWithCode } from "@/lib/kiosk/store";
 import { addressKey, allow, clientIp } from "@/lib/rate-limit";
 import { sameOrigin } from "@/lib/sales/shop-http";
 
 // Pairs this tablet with a club, from the 6-digit code staff made in Settings.
-// Codes last 10 minutes and work once; guessing is slowed per address and overall.
+// Codes last 10 minutes and work once. Wrong codes are counted in the database,
+// per address and overall, so guessing is slow across every server.
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return json({ ok: false, message: "Not allowed." }, 403);
   if (demoMode()) return json({ ok: false, message: "This is a demo, so tablets can't be paired. Open the kiosk preview from Settings, Kiosk." }, 404);
@@ -18,7 +19,9 @@ export async function POST(req: Request) {
   const code = body && body !== "too-big" ? cleanCode(body.code) : null;
   if (!code) return json({ ok: false, message: "Type the 6 digits from Settings, Kiosk." }, 400);
   try {
+    if (!(await pairingAllowed(who))) return json({ ok: false, message: "Too many wrong codes from here. Wait 10 minutes, then try again." }, 429);
     const paired = await pairWithCode(code);
+    if (!paired) await pairingFailed(who);
     if (!paired) return json({ ok: false, message: "That code didn't work. It may have run out, or been used. Make a new one in Settings, Kiosk." }, 404);
     return json({ ok: true }, 200, { "set-cookie": tabletCookie(paired.token) });
   } catch (err) {

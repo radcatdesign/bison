@@ -8,7 +8,7 @@ import { formatMoney } from "@/lib/sales/money";
 import { demoItems } from "@/lib/sales/shop-demo";
 import { qrFor } from "./qr";
 import { DEFAULT_CONFIG, starterWaiver, TOUR_TIMES, welcomeLine } from "./settings";
-import type { KioskView } from "./store";
+import { type KioskView, stamped } from "./store";
 
 /** The starter waiver with the club's details filled in, as a club would have it. */
 export function demoWaiver(club: string) {
@@ -33,7 +33,7 @@ export function demoKioskView(ctx: PortalContext): KioskView {
           return { id: p.slug, name: p.name, price: p.minCents === p.maxCents ? formatMoney(p.minCents) : `From ${formatMoney(p.minCents)}`, description: p.description.split("\n")[0] ?? "", url, qr: qrFor(url) };
         })
     : null;
-  return {
+  return stamped({
     club,
     accent: ctx.settings.accent,
     logo: null,
@@ -46,5 +46,5 @@ export function demoKioskView(ctx: PortalContext): KioskView {
     waiver: demoWaiver(club),
     emailOptIn: can(ctx.tenant, "marketing.subscribers"),
     deviceName: "Preview",
-  };
+  });
 }

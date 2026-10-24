@@ -129,6 +129,13 @@ export const firstName = (name: string) => name.trim().split(/\s+/)[0]?.slice(0,
 export const SIGNATURE_BOX = { width: 600, height: 200 } as const;
 const MAX_POINTS = 2500;
 
+/** More than the box can hold: lots of strokes, or a very long scribble. */
+export function signatureTooLong(strokes: unknown): boolean {
+  if (!Array.isArray(strokes)) return false;
+  if (strokes.length > 60) return true;
+  return strokes.reduce((n: number, st) => n + (Array.isArray(st) ? st.length : 0), 0) > MAX_POINTS;
+}
+
 /**
  * Turns strokes from the signing pad into an SVG path in a 600 by 200 box, with
  * whole numbers only. Null when it's too small to be a signature, or too big.

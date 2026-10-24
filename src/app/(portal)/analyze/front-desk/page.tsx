@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { Card, Metric, MetricStrip, PageHeader, SampleBanner } from "@/components/ui";
+import { Card, Help, Metric, MetricStrip, PageHeader, SampleBanner } from "@/components/ui";
 import { demoMode } from "@/lib/env";
 import { formatAgo, formatInt } from "@/lib/format";
 import { type DeskKind, frontDesk } from "@/lib/kiosk/repo";
@@ -49,7 +49,8 @@ async function Body() {
           ))}
         </MetricStrip>
         <p className={s.week}>
-          Last 7 days, including today: <span className="num">{formatInt(d.week.checkin)}</span> check-ins, <span className="num">{formatInt(d.week.pass)}</span> free passes, <span className="num">{formatInt(d.week.tour)}</span> tours and <span className="num">{formatInt(d.week.waiver)}</span> waivers.
+          Last 7 days, including today: <span className="num">{formatInt(d.week.checkin)}</span> check-ins, <span className="num">{formatInt(d.week.pass)}</span> free passes, <span className="num">{formatInt(d.week.tour)}</span> tours and <span className="num">{formatInt(d.week.waiver)}</span> waivers.{" "}
+          <Help title="Last 7 days">Today and the 6 days before it, from midnight in your club&apos;s time, counted the same way as today&apos;s numbers above.</Help>
         </p>
       </Card>
 

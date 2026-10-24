@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import { demoMode } from "@/lib/env";
 import { currentTablet, json, readJson, tabletCookie } from "@/lib/kiosk/http";
-import { bookTour, checkIn, claimPass, type KioskResult, leaveKiosk, signWaiver, stillPaired } from "@/lib/kiosk/store";
+import { bookTour, checkIn, claimPass, type KioskResult, leaveKiosk, ping, signWaiver } from "@/lib/kiosk/store";
 import { runEmailWork } from "@/lib/marketing/worker";
 import { allow } from "@/lib/rate-limit";
 import { sameOrigin } from "@/lib/sales/shop-http";
@@ -28,7 +28,11 @@ export async function POST(req: Request) {
   if (!allow(`${key}:m`, limit[0], 60_000) || !allow(`${key}:h`, limit[1], 3_600_000)) return json({ ok: false, message: "That's a lot at once. Wait a minute, then try again." }, 429);
 
   try {
-    if (action === "ping") return (await stillPaired(tablet.scope)) ? json({ ok: true }) : json({ ok: false }, 401, { "set-cookie": tabletCookie(null) });
+    // Still paired: say what the screens show now, and keep the cookie from running out.
+    if (action === "ping") {
+      const stamp = await ping(tablet.scope);
+      return stamp ? json({ ok: true, stamp }, 200, { "set-cookie": tabletCookie(tablet.token) }) : json({ ok: false }, 401, { "set-cookie": tabletCookie(null) });
+    }
     if (action === "leave") {
       const r = await leaveKiosk(tablet.scope, body.pin);
       return r.ok ? json({ ok: true, message: "" }, 200, { "set-cookie": tabletCookie(null) }) : json({ ok: false, message: r.message }, 403);
@@ -37,7 +41,7 @@ export async function POST(req: Request) {
       action === "pass" ? await claimPass(tablet.scope, body) : action === "tour" ? await bookTour(tablet.scope, body) : action === "checkin" ? await checkIn(tablet.scope, body) : await signWaiver(tablet.scope, body);
     // Day 0 of a follow-up goes right away, not whenever the job next runs.
     if (r.ok && r.queued) after(() => runEmailWork({ tenantId: tablet.scope.tenantId, budgetMs: 30_000 }).then(() => undefined));
-    if (!r.ok) return json({ ok: false, message: r.message }, r.status);
+    if (!r.ok) return json({ ok: false, status: r.status, message: r.message }, r.status);
     return json({ ok: true, message: r.message, name: r.name, visits: r.visits, needsWaiver: r.needsWaiver });
   } catch (err) {
     console.error(`kiosk ${action} failed`, err);

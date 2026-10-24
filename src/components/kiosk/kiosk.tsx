@@ -35,14 +35,25 @@ export function Kiosk({ view, preview = false, previewExit }: { view: KioskView;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const last = useRef(0);
+  // Each person at the tablet is a new session; an answer from an earlier one is dropped.
+  const session = useRef(0);
+  // Settings changed since this page loaded: reload at the next welcome screen.
+  const stale = useRef(false);
 
   const home = useCallback(() => {
+    session.current++;
+    if (stale.current && !preview) return window.location.reload();
     setScreen("home");
     setPerson(EMPTY);
     setDone(null);
     setJoin(null);
     setError(null);
-  }, []);
+  }, [preview]);
+
+  const screenRef = useRef<Screen>("home");
+  useEffect(() => {
+    screenRef.current = screen;
+  }, [screen]);
 
   const go = (next: Screen) => {
     setError(null);
@@ -71,13 +82,18 @@ export function Kiosk({ view, preview = false, previewExit }: { view: KioskView;
     if (preview) return;
     const timer = window.setInterval(() => {
       fetch("/kiosk/act", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "ping" }) })
-        .then((r) => {
-          if (r.status === 401) window.location.reload();
+        .then(async (r) => {
+          if (r.status === 401) return window.location.reload();
+          const data = (await r.json().catch(() => null)) as { stamp?: string } | null;
+          if (data?.stamp && data.stamp !== view.stamp) {
+            stale.current = true;
+            if (screenRef.current === "home") window.location.reload();
+          }
         })
         .catch(() => {});
     }, 60_000);
     return () => window.clearInterval(timer);
-  }, [preview]);
+  }, [preview, view.stamp]);
 
   async function send(action: string, body: Record<string, unknown>): Promise<Answer> {
     if (preview) return previewAnswer(action, body);
@@ -96,10 +112,14 @@ export function Kiosk({ view, preview = false, previewExit }: { view: KioskView;
 
   async function run(action: string, body: Record<string, unknown>, onOk: (a: Answer) => void) {
     if (busy) return;
+    const mine = session.current;
     setBusy(true);
     setError(null);
     const a = await send(action, body);
+    if (mine !== session.current) return;
     setBusy(false);
+    // A 409 means the club changed something on this screen since it loaded.
+    if (a.status === 409 && action !== "checkin") stale.current = true;
     if (!a.ok) return setError(a.message);
     last.current = Date.now();
     onOk(a);
