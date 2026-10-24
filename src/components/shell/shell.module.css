@@ -637,3 +637,62 @@
   margin-left: auto;
   color: var(--bo-ink-3);
 }
+
+/* The company's level, at the foot of the sidebar. */
+.levelChip {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  margin: 0 2px 6px;
+  padding: 9px 12px;
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-r-control);
+  background: var(--bo-surface);
+  color: var(--bo-ink);
+  text-decoration: none;
+  font-size: var(--bo-text-sm);
+}
+
+.levelChip:hover,
+.levelChip[aria-current="page"] {
+  border-color: var(--bo-accent-line);
+  background: var(--bo-accent-soft);
+}
+
+.levelIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--bo-accent-text);
+}
+
+.levelText {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.levelName {
+  font-weight: 650;
+  line-height: 1.1;
+}
+
+.levelBar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bo-sunken);
+  overflow: hidden;
+}
+
+.levelBar span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--bo-accent);
+}
+
+.levelXp {
+  font-size: var(--bo-text-xs);
+  color: var(--bo-ink-2);
+}

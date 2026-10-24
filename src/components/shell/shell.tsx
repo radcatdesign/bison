@@ -6,10 +6,12 @@ import { ROLES, seesMode } from "@/config/roles";
 import { signOut } from "@/app/sign-in/actions";
 import { can } from "@/lib/access/entitlements";
 import { accentInk } from "@/lib/color";
+import { sidebarXp } from "@/lib/progress/repo";
+import { levelFor, XP_PER_LEVEL } from "@/lib/progress/rules";
 import { editionOf } from "@/lib/edition";
 import { getPortalContext } from "@/lib/portal";
 import { EditionProvider } from "../edition";
-import { Dock, GeneralNav, ModeMemory, ModeSwitch, type NavMode, SideNav, ThemeSwitch } from "./nav";
+import { Dock, GeneralNav, LevelChip, ModeMemory, ModeSwitch, type NavMode, SideNav, ThemeSwitch } from "./nav";
 import { PullToRefresh } from "./pull-to-refresh";
 import { Mark } from "../mark";
 import s from "./shell.module.css";
@@ -29,6 +31,8 @@ export async function Shell({ children }: { children: ReactNode }) {
     pages: m.pages.filter((p) => !p.editions || p.editions.includes(edition.key)).map(({ href, label, group }) => ({ href, label: edition.pageLabels[href] ?? label, group: group ? { key: group, label: edition.groupLabels[group] ?? NAV_GROUPS[group] } : undefined })),
   }));
   const who = initials(ctx.member.name, ctx.member.email);
+  const lv = levelFor(await sidebarXp(ctx));
+  const level = { level: lv.level, into: lv.into, perLevel: XP_PER_LEVEL };
   const theme = { "--bo-accent": ctx.settings.accent, "--bo-accent-ink": accentInk(ctx.settings.accent) } as CSSProperties;
 
   return (
@@ -50,6 +54,7 @@ export async function Shell({ children }: { children: ReactNode }) {
         <SideNav modes={modes} />
 
         <div className={s.sidebarFoot}>
+          <LevelChip info={level} />
           <GeneralNav kiosk={edition.key === "fit"} />
           {ctx.settings.sampleData && (
             <Link href="/settings#data" className={s.sampleChip}>
@@ -110,7 +115,7 @@ export async function Shell({ children }: { children: ReactNode }) {
         </PullToRefresh>
       </main>
 
-      <Dock modes={modes} signOut={signOut} kiosk={edition.key === "fit"} />
+      <Dock modes={modes} signOut={signOut} kiosk={edition.key === "fit"} level={level} />
     </div>
   );
 }

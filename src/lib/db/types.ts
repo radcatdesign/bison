@@ -756,6 +756,21 @@ export interface CampaignGraphicsTable {
   added_at: Timestamp;
 }
 
+export interface XpAwardsTable {
+  tenant_id: TenantId;
+  kind: string;
+  ref: string;
+  points: number;
+  label: Generated<string>;
+  earned_at: Timestamp;
+}
+
+export interface AchievementsTable {
+  tenant_id: TenantId;
+  key: string;
+  earned_at: Timestamp;
+}
+
 export interface DB {
   tenants: TenantsTable;
   sites: SitesTable;
@@ -808,6 +823,8 @@ export interface DB {
   kiosk_waivers: KioskWaiversTable;
   campaigns: CampaignsTable;
   campaign_graphics: CampaignGraphicsTable;
+  xp_awards: XpAwardsTable;
+  achievements: AchievementsTable;
 }
 
 export type Tenant = Selectable<TenantsTable>;

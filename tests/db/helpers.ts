@@ -56,6 +56,8 @@ export const TENANT_TABLES = [
   "kiosk_waivers",
   "campaigns",
   "campaign_graphics",
+  "xp_awards",
+  "achievements",
 ] as const;
 
 let appDb: Database | null = null;

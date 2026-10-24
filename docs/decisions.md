@@ -124,6 +124,11 @@ Two lists. The first is what I decided while building Phase 0 that the brief did
 116. **Only an empty campaign can be deleted;** anything else is archived, which hides it from the active list and stops new filing, and can be undone.
 117. **A campaign's numbers are all-time:** form sends on its pages (not spam) and emails from its newsletters and series that went out. A page counts for as long as it's filed, including sends from before it was added.
 
+118. **XP is per company, in both editions.** Everyone on the team earns it together and sees the same level. A level is every 10 XP, starting at level 1.
+119. **XP comes from real records, once each, and is never taken away.** `syncProgress` (`src/lib/progress/store.ts`) looks at campaigns, filed pages and emails, graphics, published pages, sent newsletters, series turned on, campaign leads, wrapped-up campaigns, finished A/B tests, the first sale and (for clubs) the first kiosk tablet, and adds an `xp_awards` row for anything not counted yet, keyed by the record. Work done before XP existed counts too, and deleting something keeps the XP it earned. The app can add awards and achievements but can't change or delete them. Points: campaign 2, filing 1, graphic 1, publishing a page 3, sending a newsletter 5, turning on a series 3, first lead on a campaign 5, wrapping up a campaign 2, finishing a test 5, first sale 5, first kiosk tablet 3.
+120. **Achievements** are 14 milestones (13 for Bison Ops), each earned once and kept: first campaign, a campaign with a page, an email and a graphic, publishing a page in a campaign, first newsletter, first series, first campaign lead, 3 campaigns at once, archiving a campaign, finishing a test, a brand kit with logo and address, first sale, a kiosk tablet (clubs), and levels 5 and 10.
+121. **When it's counted:** right after campaign actions and publishing (the message says "+3 XP" and any new level), on the Progress page, and from the sidebar at most once a minute per company per server, so XP from anywhere shows up without a visit. Nothing about XP ever blocks or fails the work itself.
+
 ## Needed from you
 
 | # | Decision | My recommendation |
@@ -166,3 +171,4 @@ Two lists. The first is what I decided while building Phase 0 that the brief did
 | 36 | **A legal read of club copy.** Templates avoid health and results claims and use yellow placeholders for offers. | Have someone check intro-offer and challenge template wording against FTC rules on free trials and auto-renewing memberships before clubs publish. |
 | 37 | **A legal read of the kiosk waiver.** It's a finger signature with the exact words, the time and the tablet, and the starter text is only a starting point. | Have a lawyer in each state you serve confirm a tablet signature is enough, write the club's own waiver, and add guardian signing for people under 18 (not built). |
 | 38 | **Kiosk pricing.** Included with every club today. | Keep it in the base plan. It feeds Leads, Marketing and Membership sales, so it sells the modules. |
+| 39 | **What earns XP, and how much.** Placeholders, weighted toward campaigns. | Watch which achievements clubs and shops reach in their first month, then tune points so a busy first week reaches level 3 or 4. |

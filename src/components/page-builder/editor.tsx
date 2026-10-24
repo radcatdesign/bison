@@ -326,7 +326,9 @@ function EditorCore({ pageId, initial, storage, tenant, publicBase, canPublish, 
       savedJson.current = JSON.stringify(doc);
       setSaveState("saved");
       setMeta((m) => ({ ...m, status: "published", publicUrl: r.url ?? m.publicUrl }));
-      setNotice({ tone: "ok", text: "Published. It's live now.", url: r.url });
+      // Anything after "Published." is XP earned, like "+3 XP."
+      const xp = r.message.startsWith("Published.") ? r.message.slice("Published.".length) : "";
+      setNotice({ tone: "ok", text: `Published. It's live now.${xp}`, url: r.url });
     } else {
       setNotice({ tone: store.kind === "browser" ? "info" : "error", text: r.message });
     }

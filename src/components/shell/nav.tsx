@@ -21,6 +21,7 @@ import {
   FolderOpen,
   Inbox,
   TabletSmartphone,
+  Trophy,
   LayoutGrid,
   Lock,
   type LucideIcon,
@@ -214,10 +215,36 @@ export function SideNav({ modes }: { modes: NavMode[] }) {
   );
 }
 
-export function GeneralNav({ onNavigate, kiosk = false }: { onNavigate?: () => void; kiosk?: boolean }) {
+export type LevelInfo = { level: number; into: number; perLevel: number };
+
+/** The company's level and how far into it they are, linking to Progress. */
+export function LevelChip({ info }: { info: LevelInfo }) {
+  const pathname = usePathname();
+  return (
+    <Link href="/progress" className={s.levelChip} aria-current={pathname.startsWith("/progress") ? "page" : undefined} data-testid="level-chip">
+      <Trophy className={s.levelIcon} aria-hidden="true" />
+      <span className={s.levelText}>
+        <span className={s.levelName}>Level {info.level}</span>
+        <span className={s.levelBar} aria-hidden="true">
+          <span style={{ width: `${(info.into / info.perLevel) * 100}%` }} />
+        </span>
+      </span>
+      <span className={`num ${s.levelXp}`}>
+        {info.into}/{info.perLevel} XP
+      </span>
+    </Link>
+  );
+}
+
+export function GeneralNav({ onNavigate, kiosk = false, level }: { onNavigate?: () => void; kiosk?: boolean; level?: LevelInfo }) {
   const pathname = usePathname();
   return (
     <nav aria-label="General" className={s.navGroup}>
+      {level && onNavigate && (
+        <NavLink href="/progress" icon={Trophy} current={pathname.startsWith("/progress")} onClick={onNavigate}>
+          Progress, level {level.level}
+        </NavLink>
+      )}
       {kiosk && (
         // The kiosk runs full screen on its own, so it opens in a new tab.
         <a href="/kiosk/preview" target="_blank" rel="noopener" className={s.navLink} data-testid="nav-kiosk">
@@ -294,7 +321,7 @@ export function ThemeSwitch() {
 
 // ── Phone dock and menu ──────────────────────────────────────────────────────
 
-export function Dock({ modes, signOut, kiosk = false }: { modes: NavMode[]; signOut: () => Promise<void>; kiosk?: boolean }) {
+export function Dock({ modes, signOut, kiosk = false, level }: { modes: NavMode[]; signOut: () => Promise<void>; kiosk?: boolean; level?: LevelInfo }) {
   const pathname = usePathname();
   const mode = activeMode(pathname, modes);
   const page = activePage(pathname, mode);
@@ -332,7 +359,7 @@ export function Dock({ modes, signOut, kiosk = false }: { modes: NavMode[]; sign
             <NavList mode={mode} currentHref={page?.href} onNavigate={close} />
           </div>
         )}
-        <GeneralNav onNavigate={close} kiosk={kiosk} />
+        <GeneralNav onNavigate={close} kiosk={kiosk} level={level} />
         <div className={s.sheetFoot}>
           <ThemeSwitch />
           <form action={signOut}>

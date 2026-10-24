@@ -1,0 +1,238 @@
+.stack {
+  display: grid;
+  gap: var(--bo-s4);
+}
+
+.hero {
+  display: flex;
+  align-items: center;
+  gap: var(--bo-s5);
+  padding: 24px;
+  border-radius: var(--bo-r-panel);
+  background:
+    radial-gradient(70% 90% at 0% 0%, color-mix(in oklab, var(--bo-accent) 12%, transparent), transparent 70%),
+    var(--bo-surface);
+}
+
+.badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 24px;
+  background: var(--bo-accent);
+  color: var(--bo-accent-ink);
+  font-size: 2.25rem;
+  font-weight: 750;
+  box-shadow: 0 10px 30px -12px var(--bo-accent);
+}
+
+.heroText {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.heroLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 16px;
+}
+
+.levelName {
+  margin: 0;
+  font-size: var(--bo-text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.total {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--bo-ink-2);
+  font-size: var(--bo-text-md);
+}
+
+.bar {
+  height: 12px;
+  border-radius: 6px;
+  background: var(--bo-sunken);
+  overflow: hidden;
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: var(--bo-accent);
+  transition: width var(--bo-slow) var(--bo-ease);
+}
+
+.next {
+  margin: 0;
+  font-size: var(--bo-text-sm);
+  color: var(--bo-ink-2);
+}
+
+.achievements {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: var(--bo-s3);
+}
+
+.achievement {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-r-card);
+  background: var(--bo-sunken);
+  color: var(--bo-ink-3);
+}
+
+.achievement[data-earned] {
+  border-color: var(--bo-accent-line);
+  background: var(--bo-accent-soft);
+  color: var(--bo-ink);
+}
+
+.medal {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bo-surface);
+  color: var(--bo-ink-3);
+}
+
+.achievement[data-earned] .medal {
+  background: var(--bo-accent);
+  color: var(--bo-accent-ink);
+}
+
+.medal svg {
+  width: 20px;
+  height: 20px;
+}
+
+.achText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--bo-text-sm);
+}
+
+.achText strong {
+  font-size: var(--bo-text-md);
+  color: inherit;
+}
+
+.achievement:not([data-earned]) .achText strong {
+  color: var(--bo-ink-2);
+}
+
+.when {
+  font-size: var(--bo-text-xs);
+  color: var(--bo-ink-3);
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--bo-s4);
+  align-items: start;
+}
+
+.rules {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.rule {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+}
+
+.rule + .rule {
+  border-top: 1px solid var(--bo-line);
+}
+
+.points {
+  flex: none;
+  min-width: 40px;
+  padding: 3px 8px;
+  border-radius: var(--bo-r-pill);
+  background: var(--bo-accent-soft);
+  color: var(--bo-accent-text);
+  font-size: var(--bo-text-sm);
+  font-weight: 700;
+  text-align: center;
+}
+
+.ruleText {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  font-size: var(--bo-text-sm);
+  color: var(--bo-ink-2);
+}
+
+.ruleText strong {
+  color: var(--bo-ink);
+}
+
+.earned {
+  flex: none;
+  font-size: var(--bo-text-xs);
+  color: var(--bo-ink-3);
+}
+
+.empty {
+  margin: 0;
+  padding: 20px;
+  color: var(--bo-ink-2);
+}
+
+@media (max-width: 900px) {
+  .cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--bo-s3);
+    padding: 20px;
+  }
+
+  .heroText {
+    width: 100%;
+  }
+
+  .badge {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    font-size: 1.75rem;
+  }
+
+  .rule {
+    padding: 10px 16px;
+  }
+}

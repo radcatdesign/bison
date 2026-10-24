@@ -4,6 +4,16 @@ export type Release = { version: string; date: string; title: string; changes: s
 
 export const RELEASES: Release[] = [
   {
+    version: "0.9.0",
+    date: "2026-10-23",
+    title: "Progress",
+    changes: [
+      "Earn XP for running campaigns and working on your business, like publishing a page, sending a newsletter or getting a lead from a campaign. Every 10 XP is a new level.",
+      "Your level is at the bottom of the sidebar. Progress shows how to earn more, your achievements and your latest XP.",
+      "Work you did before this counts too, and XP is never taken away.",
+    ],
+  },
+  {
     version: "0.8.0",
     date: "2026-10-23",
     title: "Campaigns",
