@@ -84,7 +84,7 @@ const CATALOGS: Record<string, SampleProduct[]> = {
     { slug: "ceramic-mug", name: "Ceramic mug", category: "Gear", color: "#b08968", description: "12 oz, glazed in the shop's colors.", options: [], variants: [v({}, 2200, "MUG-12", 18, "small", { unitsPerBox: 2 })] },
   ],
   // Fit Funnels: a full gym, and a boutique cycling studio. Memberships, packs
-  // and training don't ship (a flat shipping charge of 0); only gear does.
+  // and training don't ship (no shipping charge); only gear does.
   gym: [
     {
       slug: "club-membership",
@@ -210,6 +210,44 @@ const COMPANIES: Record<string, string[]> = {
 /** Fit Funnels clubs get club data: memberships, packs and corporate accounts. */
 const isClub = (t: SampleTenant) => editionOfIndustry(t.industry) === "fit";
 
+/** Where each sample trade or corporate account stands, by its place in COMPANIES. */
+const TRADE_STATUSES: TradeStatus[] = ["applied", "applied", "approved", "approved", "approved", "approved", "approved", "declined", "paused", "approved"];
+
+/**
+ * The club's corporate accounts that buy: approved or paused. Companies still
+ * waiting, or turned down, have no quotes or purchases in club sample data.
+ */
+function clubBuyers(tenant: SampleTenant): string[] {
+  const companies = COMPANIES[tenant.industry] ?? COMPANIES.gym;
+  return companies.filter((_, i) => ["approved", "paused"].includes(TRADE_STATUSES[i % TRADE_STATUSES.length]));
+}
+
+type Employer = { kind: string; staff: number; wants: string; message?: string };
+
+/** What each sample employer said on its corporate application. */
+const EMPLOYERS: Record<string, Employer> = {
+  "Cascade Medical Group": { kind: "Clinic", staff: 120, wants: "Memberships for staff who want one", message: "Our wellness committee wants to add a club membership to our benefits in January. Could you send corporate pricing for about 40 people?" },
+  "High Desert Credit Union": { kind: "Credit union", staff: 45, wants: "Class packs to share across our two branches", message: "A few of our tellers already train with you. We'd like a corporate account so the rest of the team can join at the same rate." },
+  "Juniper Elementary": { kind: "School", staff: 60, wants: "Summer memberships for teachers" },
+  "Ridgeview Engineering": { kind: "Office", staff: 35, wants: "Small-group training at lunch" },
+  "Pine Street Dental": { kind: "Clinic", staff: 12, wants: "Memberships for staff who want one" },
+  "Deschutes Brewing Co": { kind: "Brewery", staff: 90, wants: "A staff wellness day each quarter" },
+  "Northside Fire District": { kind: "Public agency", staff: 70, wants: "Strength training for crews" },
+  "Basin Logistics": { kind: "Warehouse", staff: 150, wants: "Off-peak memberships for shift workers" },
+  "Sagebrush Software": { kind: "Office", staff: 25, wants: "Class packs to share around the office" },
+  "Lakeside Senior Living": { kind: "Care home", staff: 80, wants: "Memberships for staff who want one" },
+  "Ember Coffee Co": { kind: "Cafe", staff: 15, wants: "A team ride each quarter", message: "Our baristas keep asking about a team ride. Could we book one each quarter, and get class packs for the regulars?" },
+  "Stonefly Design": { kind: "Design studio", staff: 10, wants: "Class packs to share around the office", message: "We'd like to give everyone on our team of 10 a class pack as a perk this year." },
+  "Trailhead Outfitters": { kind: "Retail", staff: 30, wants: "Unlimited memberships for the shop team" },
+  "Alder Physical Therapy": { kind: "Clinic", staff: 18, wants: "First rides for new patients' families" },
+  "Bright Lane Realty": { kind: "Office", staff: 22, wants: "Class packs to share around the office" },
+  "Riverbend Law": { kind: "Law office", staff: 14, wants: "Unlimited memberships for partners and staff" },
+  "Kiln and Co": { kind: "Studio", staff: 6, wants: "A team ride for our holiday party" },
+  "Harbor Yoga Collective": { kind: "Studio", staff: 9, wants: "Class packs for our teachers" },
+  "Copperline Marketing": { kind: "Office", staff: 20, wants: "A team ride each quarter" },
+  "Oak Hill Montessori": { kind: "School", staff: 25, wants: "Class packs for teachers" },
+};
+
 type Person = { name: string; email: string; city: (typeof CITIES)[number]; street: string };
 
 function person(rand: ReturnType<typeof seeded>): Person {
@@ -321,7 +359,7 @@ export function sampleOrders(tenant: SampleTenant, now = new Date()): OrderDetai
 function clubOrders(tenant: SampleTenant, now: Date): OrderDetail[] {
   const rand = seeded(`${tenant.id}:${tenant.name}:orders`);
   const catalog = sampleCatalog(tenant);
-  const companies = COMPANIES[tenant.industry] ?? COMPANIES.general;
+  const buyers = clubBuyers(tenant);
   const total = rand.int(90, 160);
   const out: OrderDetail[] = [];
   for (let i = 0; i < total; i++) {
@@ -330,7 +368,7 @@ function clubOrders(tenant: SampleTenant, now: Date): OrderDetail[] {
     const paidAt = new Date(now.getTime() - ageDays * DAY - rand.int(0, 8) * 3_600_000);
     const items = pickClubItems(rand, catalog, 2);
     const subtotal = items.reduce((n, x) => n + x.lineCents, 0);
-    const corporate = rand.chance(0.14) ? rand.pick(companies) : null;
+    const corporate = rand.chance(0.14) ? rand.pick(buyers) : null;
     const corporateOff = corporate ? Math.round(subtotal * 0.15) : 0;
     const code = !corporate && rand.chance(0.18) ? rand.pick(["FIRSTMONTH", "SUMMER15", "FRIENDS"]) : "";
     const discount = corporateOff + (code ? Math.round(subtotal * 0.1) : 0);
@@ -452,7 +490,7 @@ export function sampleEstimates(tenant: SampleTenant, now = new Date()): Estimat
 
 type ClubQuote = { title: (company: string, first: string) => string; corporate: boolean; lines: (rand: ReturnType<typeof seeded>) => Omit<EstimateLine, "id" | "productId" | "variantId">[] };
 
-// Quotes a club sends: corporate memberships for local employers, team rides, PT bundles.
+// Quotes a club sends: corporate memberships for local employers, team events (team rides at the studio), PT bundles.
 const CLUB_QUOTES: Record<string, ClubQuote[]> = {
   gym: [
     { title: (c) => `Corporate memberships for ${c}`, corporate: true, lines: (r) => [{ name: "Club membership, Annual", detail: "Corporate pricing, one per employee", qty: r.int(8, 40), unitCents: 89000 }] },
@@ -505,7 +543,7 @@ const CLUB_NOTES: Record<string, { notes: string; change: string }> = {
 
 function clubEstimates(tenant: SampleTenant, now: Date): EstimateDetail[] {
   const rand = seeded(`${tenant.id}:${tenant.name}:estimates`);
-  const companies = COMPANIES[tenant.industry] ?? COMPANIES.gym;
+  const buyers = clubBuyers(tenant);
   const quotes = CLUB_QUOTES[tenant.industry] ?? CLUB_QUOTES.gym;
   const words = CLUB_NOTES[tenant.industry] ?? CLUB_NOTES.gym;
   const statuses: EstimateStatus[] = ["draft", "sent", "sent", "viewed", "viewed", "changes_requested", "approved", "invoiced", "invoiced", "paid", "paid", "paid", "declined", "void"];
@@ -514,7 +552,7 @@ function clubEstimates(tenant: SampleTenant, now: Date): EstimateDetail[] {
   for (let i = 0; i < count; i++) {
     const p = person(rand);
     const q = quotes[i % quotes.length];
-    const company = q.corporate ? rand.pick(companies) : "";
+    const company = q.corporate ? rand.pick(buyers) : "";
     const first = p.name.split(" ")[0];
     const status = i < statuses.length ? statuses[i] : rand.pick(statuses);
     const items: EstimateLine[] = q.lines(rand).map((x, n) => ({ id: `l${n}`, productId: null, variantId: null, ...x }));
@@ -600,13 +638,12 @@ export function sampleCarts(tenant: SampleTenant, now = new Date()): CartRow[] {
 // ---- Trade accounts ---------------------------------------------------------------------
 
 export function sampleTrade(tenant: SampleTenant, now = new Date()): TradeRow[] {
+  if (isClub(tenant)) return clubTrade(tenant, now);
   const rand = seeded(`${tenant.id}:${tenant.name}:trade`);
   const companies = COMPANIES[tenant.industry] ?? COMPANIES.general;
-  const statuses: TradeStatus[] = ["applied", "applied", "approved", "approved", "approved", "approved", "approved", "declined", "paused", "approved"];
-  const club = isClub(tenant);
   return companies.map((company, i) => {
     const p = person(rand);
-    const status = statuses[i % statuses.length];
+    const status = TRADE_STATUSES[i % TRADE_STATUSES.length];
     const spendCents = status === "approved" ? rand.pick([120000, 380000, 640000, 910000, 2450000]) + rand.int(0, 90000) : status === "paused" ? 150000 : 0;
     const appliedAt = new Date(now.getTime() - rand.int(2, 300) * DAY);
     const domain = company.toLowerCase().replace(/[^a-z]+/g, "");
@@ -618,13 +655,47 @@ export function sampleTrade(tenant: SampleTenant, now = new Date()): TradeRow[] 
       phone: `(555) 01${rand.int(10, 99)}-${rand.int(1000, 9999)}`,
       website: `https://${domain}.com`,
       status,
-      details: club
-        ? { type: rand.pick(["Clinic", "School", "Office", "Nonprofit"]), resale: `About ${rand.pick([12, 25, 40, 60, 120])} staff`, volume: rand.pick(["Memberships for staff who want one", "Class packs to share around the office", "A team ride each quarter"]), message: status === "applied" ? "We'd like to offer memberships as a staff benefit this year." : "" }
-        : { type: tenant.industry === "pools" ? rand.pick(["Pool builder", "Dealer", "Landscaper"]) : tenant.industry === "coffee" ? rand.pick(["Cafe", "Grocery", "Office"]) : rand.pick(["Agency", "Reseller"]), resale: rand.chance(0.7) ? `${p.city[1]}-${rand.int(100000, 999999)}` : "", volume: rand.pick(["About $1,000 a month", "$5,000 to $10,000 a year", "We're just starting out"]), message: status === "applied" ? "We'd like to stock your products for our spring season." : "" },
-      note: status === "declined" ? (club ? "Fewer than five staff, so regular pricing fits better." : "Retail only, no resale certificate.") : "",
+      details: { type: tenant.industry === "pools" ? rand.pick(["Pool builder", "Dealer", "Landscaper"]) : tenant.industry === "coffee" ? rand.pick(["Cafe", "Grocery", "Office"]) : rand.pick(["Agency", "Reseller"]), resale: rand.chance(0.7) ? `${p.city[1]}-${rand.int(100000, 999999)}` : "", volume: rand.pick(["About $1,000 a month", "$5,000 to $10,000 a year", "We're just starting out"]), message: status === "applied" ? "We'd like to stock your products for our spring season." : "" },
+      note: status === "declined" ? "Retail only, no resale certificate." : "",
       tierOverride: "",
       spendCents,
       orderCount: spendCents ? Math.max(1, Math.round(spendCents / 90000)) : 0,
+      appliedAt,
+      decidedAt: status === "applied" ? null : new Date(appliedAt.getTime() + rand.int(1, 4) * DAY),
+    };
+  });
+}
+
+/**
+ * A club's corporate accounts. Spend and purchase counts add up the sample
+ * purchases made on each account, so they never run past the purchases list.
+ */
+function clubTrade(tenant: SampleTenant, now: Date): TradeRow[] {
+  const rand = seeded(`${tenant.id}:${tenant.name}:trade`);
+  const companies = COMPANIES[tenant.industry] ?? COMPANIES.gym;
+  const orders = clubOrders(tenant, now);
+  return companies.map((company, i) => {
+    const p = person(rand);
+    const status = TRADE_STATUSES[i % TRADE_STATUSES.length];
+    const theirs = orders.filter((o) => o.tradeCompany === company);
+    const spendCents = theirs.reduce((n, o) => n + o.totalCents - o.refundedCents, 0);
+    const firstPaid = theirs.length ? Math.min(...theirs.map((o) => o.paidAt.getTime())) : now.getTime();
+    const appliedAt = new Date(Math.min(now.getTime() - rand.int(2, 300) * DAY, firstPaid - 5 * DAY));
+    const domain = company.toLowerCase().replace(/[^a-z]+/g, "");
+    const who = EMPLOYERS[company] ?? { kind: "Office", staff: 20, wants: "Memberships for staff who want one" };
+    return {
+      id: sampleUuid(`${tenant.id}:trade:${i}`),
+      company,
+      contactName: p.name,
+      email: `${p.name.split(" ")[0].toLowerCase()}@${domain}.com`,
+      phone: `(555) 01${rand.int(10, 99)}-${rand.int(1000, 9999)}`,
+      website: `https://${domain}.com`,
+      status,
+      details: { type: who.kind, resale: `About ${who.staff} staff`, volume: who.wants, message: status === "applied" ? (who.message ?? "We'd like to offer memberships as a staff benefit this year.") : "" },
+      note: status === "declined" ? "They asked for one shared membership for the whole team. Memberships are per person, so we suggested day passes for their staff event instead." : "",
+      tierOverride: "",
+      spendCents,
+      orderCount: theirs.length,
       appliedAt,
       decidedAt: status === "applied" ? null : new Date(appliedAt.getTime() + rand.int(1, 4) * DAY),
     };

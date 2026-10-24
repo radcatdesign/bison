@@ -96,7 +96,7 @@ describe("setup steps", () => {
   it("read in club words for Fit Funnels", () => {
     expect(tool("fit", "offer").name).toBe("Intro offer");
     expect(tool("fit", "series").name).toBe("Follow-ups");
-    expect(tool("fit", "subscribers").steps.find((s) => s.key === "subscribers.form")).toMatchObject({ title: "Put a signup form on a funnel page", cta: "Open Funnel pages" });
+    expect(tool("fit", "subscribers").steps.find((s) => s.key === "subscribers.form")).toMatchObject({ title: "Put a signup form on a funnel page", cta: "Open funnel pages" });
     expect(tool("fit", "tests").summary).toContain("funnel page");
     const words = text(buildSetup(none, "fit"));
     expect(words).not.toMatch(/landing page|welcome series|welcome offer|homeowner|wholesale|first-time buyers|yourcompany/i);

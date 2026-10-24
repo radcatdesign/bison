@@ -8,12 +8,13 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { addStepAction, createSeriesAction, deleteSeriesAction, deleteStepAction, saveStepAction, setSeriesStatusAction, startSeriesForListAction, testStepAction, updateSeriesAction } from "@/app/(portal)/marketing/series/actions";
 import { EmailBuilder, type EmailContent } from "@/components/email-builder/builder";
-import { useSay } from "@/components/edition";
+import { useEditionKey, useSay } from "@/components/edition";
 import { type EditionKey, itemOf } from "@/config/editions";
 import type { SequenceTrigger } from "@/lib/db/types";
 import { emailProblems } from "@/lib/email/ops";
 import { renderEmail } from "@/lib/email/render";
 import { type BrandKit, EMAIL_DOC_VERSION } from "@/lib/email/schema";
+import { sampleOfferCode } from "@/lib/marketing/settings";
 import { extraStarterSeries, starterSeries } from "@/lib/marketing/starter";
 import { useIsClient } from "@/lib/use-is-client";
 import { useDemoMarketing } from "./demo-setup";
@@ -73,7 +74,8 @@ function writeSeries(c: Pick<Common, "tenantId" | "site" | "edition">, change: (
 
 function triggerText(v: SeriesView, triggers: TriggerInfo, forms: { value: string; label: string }[]): string {
   if (v.trigger === "form") return `Starts when someone sends ${forms.find((f) => f.value === v.triggerDetail)?.label ?? (v.triggerDetail || "a form you pick")}`;
-  return `Starts when ${triggers[v.trigger].label.charAt(0).toLowerCase()}${triggers[v.trigger].label.slice(1)}`.replace("when you start it for a list", "you start it for a list");
+  if (v.trigger === "manual") return "You start it by hand, for a list you pick";
+  return `Starts when ${triggers[v.trigger].label.charAt(0).toLowerCase()}${triggers[v.trigger].label.slice(1)}`;
 }
 
 function StatusSwitch({ view, c }: { view: SeriesView; c: Common }) {
@@ -117,7 +119,8 @@ function StatusSwitch({ view, c }: { view: SeriesView; c: Common }) {
 }
 
 function StepThumb({ step, brand, baseUrl }: { step: StepView; brand: BrandKit; baseUrl: string }) {
-  const html = useMemo(() => renderEmail({ doc: step.doc, brand, subject: step.subject, baseUrl, builder: { selectedId: null, outlines: false } }).html, [step, brand, baseUrl]);
+  const edition = useEditionKey();
+  const html = useMemo(() => renderEmail({ doc: step.doc, brand, subject: step.subject, baseUrl, builder: { selectedId: null, outlines: false, sampleCode: sampleOfferCode(edition) } }).html, [step, brand, baseUrl, edition]);
   return (
     <span className={q.thumb}>
       <EmailFrame html={html} thumb={{ height: 150 }} title={`Preview of the day ${step.delayDays} email`} />

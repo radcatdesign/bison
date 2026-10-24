@@ -25,15 +25,18 @@ export function sampleOfferRepo(tenant: SampleTenant, now = new Date()): OfferRe
   const club = editionOfIndustry(tenant.industry) === "fit";
   const rows: CodeRow[] = people.map((p, i) => {
     const used = rand.chance(0.32) && i > 3;
+    const code = `${club ? "INTRO" : "WELCOME"}-${(rand.int(100000, 999999) * 7919).toString(36).toUpperCase().slice(0, 6)}`;
+    // Used some days after signing up, but never after today.
+    const usedAfter = used ? Math.min(rand.int(1, 20) * 86_400_000, Math.max(0, now.getTime() - p.subscribedAt.getTime()) * 0.8) : 0;
     return {
       id: `sample-code-${i}`,
-      code: `${club ? "INTRO" : "WELCOME"}-${(rand.int(100000, 999999) * 7919).toString(36).toUpperCase().slice(0, 6)}`,
+      code,
       email: p.email,
       kind: "percent",
       discount: 10,
       issuedAt: p.subscribedAt,
       expiresAt: new Date(p.subscribedAt.getTime() + 30 * 86_400_000),
-      redeemedAt: used ? new Date(p.subscribedAt.getTime() + rand.int(1, 20) * 86_400_000) : null,
+      redeemedAt: used ? new Date(p.subscribedAt.getTime() + usedAfter) : null,
       note: used ? (club ? "Joined online" : "Online order") : "",
     };
   });

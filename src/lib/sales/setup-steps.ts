@@ -81,14 +81,14 @@ export function buildSalesSetup(f: SalesFacts, edition: EditionKey = "bison"): S
           body: say("Set a product to Active and it shows in your shop. Drafts stay hidden until they're ready.", "Set a membership or pack to Active and it shows in your club's online store. Drafts stay hidden until they're ready."),
           done: f.products.active > 0,
           href: "/sales/products",
-          cta: say("Open Products", "Open Memberships"),
+          cta: say("Open Products", "Open memberships"),
         }),
         step({
           key: "products.weights",
           title: say("Give every product a weight", "Give your gear a weight"),
           body: say(
             noWeight ? `${noWeight} active ${noWeight === 1 ? "product has" : "products have"} no weight. Carriers rate by weight and box, so live rates come out wrong without it.` : "Carriers rate by weight and box. Add both, or a flat shipping charge for items that don't ship by carrier.",
-            noWeight ? `${noWeight} active ${noWeight === 1 ? "item has" : "items have"} no weight or flat shipping charge. Only gear ships: give gear a weight and a box, and give memberships, packs and training a flat shipping charge of 0.` : "Only gear ships. Give gear a weight and a box so carriers rate it right, and give memberships, packs and training a flat shipping charge of 0.",
+            noWeight ? `${noWeight} active ${noWeight === 1 ? "item has" : "items have"} no weight or flat shipping charge. Only gear ships: give gear a weight and a box, and give memberships, packs and training no shipping charge (0 in flat shipping).` : "Only gear ships. Give gear a weight and a box so carriers rate it right, and give memberships, packs and training no shipping charge (0 in flat shipping).",
           ),
           done: f.products.active > 0 && f.products.missingWeight === 0,
           href: "/sales/products",
@@ -123,7 +123,7 @@ export function buildSalesSetup(f: SalesFacts, edition: EditionKey = "bison"): S
         step({
           key: "shipping.rates",
           title: "Choose how shipping is charged",
-          body: say("Live rates from your carrier, a flat charge, or free. You can also ship free over an amount.", "Live rates from your carrier, a flat charge, or free. A flat charge applies to every purchase, so live rates or free fit best when most purchases are memberships and packs."),
+          body: say("Live rates from your carrier, a flat charge, or free. You can also ship free over an amount.", "Live rates from your carrier, a flat charge, or free. A flat charge is added to every purchase, even ones with no gear in them, so if most people buy memberships and packs, choose live rates or free."),
           done: f.shipping.saved,
           href: "/sales/checkout#shipping",
           cta: "Choose",
@@ -131,7 +131,7 @@ export function buildSalesSetup(f: SalesFacts, edition: EditionKey = "bison"): S
         step({
           key: "shipping.carrier",
           title: "Connect ShipStation or UPS",
-          body: say("For live rates at checkout. ShipStation rates every carrier you have in it; UPS rates UPS services with your own account's prices.", "For live gear rates at checkout. ShipStation rates every carrier you have in it; UPS rates UPS services with your own account's prices."),
+          body: say("For live rates at checkout. ShipStation rates every carrier you have in it; UPS rates UPS services with your own account's prices.", "For live gear rates at checkout. ShipStation rates every carrier you have in it; UPS gives you rates for UPS services at your own account's prices."),
           done: f.shipping.carrierConnected,
           href: "/settings/shipping",
           cta: "Connect a carrier",
@@ -178,7 +178,7 @@ export function buildSalesSetup(f: SalesFacts, edition: EditionKey = "bison"): S
           body: say("Share a product link or your shop page. When someone pays, the order shows up here and the team gets an email.", "Share a membership link or your club's online store. When someone pays, the purchase shows up here and your team gets an email."),
           done: f.checkout.orders > 0,
           href: "/sales/orders",
-          cta: say("Open Orders", "Open Purchases"),
+          cta: say("Open Orders", "Open purchases"),
         }),
       ],
     },
@@ -186,7 +186,7 @@ export function buildSalesSetup(f: SalesFacts, edition: EditionKey = "bison"): S
       key: "estimates",
       name: say("Estimates", "Quotes"),
       href: "/sales/estimates",
-      summary: say("Quotes your clients approve on their own page. Approved ones become invoices with a Pay link.", "Corporate memberships, PT bundles, team rides and events, approved on their own page. Approved quotes become invoices with a Pay link."),
+      summary: say("Quotes your clients approve on their own page. Approved ones become invoices with a Pay link.", "Corporate memberships, PT bundles and team events, approved on their own page. Approved quotes become invoices with a Pay link."),
       steps: [
         step({
           key: "estimates.terms",
@@ -245,7 +245,7 @@ export function buildSalesSetup(f: SalesFacts, edition: EditionKey = "bison"): S
           body: say("Share your application page with buyers. Once you approve them, they sign in by email and see their prices.", "Share your application page with local employers. Once you approve a company, it signs in by email and sees your corporate prices."),
           done: f.trade.approved > 0,
           href: "/sales/trade",
-          cta: say("Open Trade accounts", "Open Corporate accounts"),
+          cta: say("Open Trade accounts", "Open corporate accounts"),
         }),
       ],
     },

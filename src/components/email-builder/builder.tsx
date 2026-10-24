@@ -14,6 +14,7 @@ import m from "@/components/marketing/marketing.module.css";
 import { applyEmailOp, type EmailOp, emailProblems, starterEmailSection } from "@/lib/email/ops";
 import { mergeLine, renderEmail } from "@/lib/email/render";
 import { type BrandKit, EMAIL_SECTION_LABELS, EMAIL_SECTION_NOTES, EMAIL_SECTION_TYPES, type EmailDoc, type EmailSection, type EmailSectionType } from "@/lib/email/schema";
+import { sampleOfferCode } from "@/lib/marketing/settings";
 import s from "./builder.module.css";
 import { SectionEditor } from "./section-editor";
 
@@ -175,8 +176,8 @@ export function EmailBuilder(props: BuilderProps) {
   };
 
   const html = useMemo(
-    () => renderEmail({ doc: content.doc, brand, subject: content.subject, preheader: content.preheader, baseUrl, builder: { selectedId: tab === "preview" ? null : selectedId } }).html,
-    [content, brand, baseUrl, selectedId, tab],
+    () => renderEmail({ doc: content.doc, brand, subject: content.subject, preheader: content.preheader, baseUrl, builder: { selectedId: tab === "preview" ? null : selectedId, sampleCode: sampleOfferCode(edition) } }).html,
+    [content, brand, baseUrl, selectedId, tab, edition],
   );
 
   const problems = emailProblems(content.doc, content.subject, content.preheader);

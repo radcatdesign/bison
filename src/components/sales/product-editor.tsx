@@ -316,7 +316,7 @@ export function ProductEditor({ product, boxes, shopBase, canEdit, demo, currenc
           <span className={m.hint}>
             {say(
               `Carriers rate each box by weight. "Ships alone" gives every unit its own box, for bulky items. A flat shipping charge skips the carrier for that item, for freight or local delivery; use 0 for items that don't ship.`,
-              "Only gear ships. Give gear a weight and a box, and carriers rate each box by weight. Memberships, packs and training don't ship, so give them a flat shipping charge of 0.",
+              "Only gear ships. Give gear a weight and a box, and carriers rate each box by weight. Memberships, packs and training don't ship, so give them no shipping charge (0 in flat shipping).",
             )}{" "}
             Boxes are set in{" "}
             <Link href="/sales/checkout#shipping" className="link">

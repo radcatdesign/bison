@@ -77,6 +77,8 @@ export function offerTerms(o: { kind: "percent" | "amount"; value: number; fine?
 
 /** What a new company's codes start with. */
 export const offerPrefixFor = (edition: EditionKey | undefined): string => (edition === "fit" ? "INTRO" : "WELCOME");
+/** The made-up code email previews show in an offer box: WELCOME-7KQ2F, or INTRO-7KQ2F for clubs. */
+export const sampleOfferCode = (edition: EditionKey | undefined): string => `${offerPrefixFor(edition)}-7KQ2F`;
 
 // ---- Search pack ---------------------------------------------------------------
 

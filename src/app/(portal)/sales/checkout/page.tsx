@@ -25,7 +25,7 @@ async function Body() {
   if (blocked) return blocked;
   const demo = demoMode();
   const data = demo
-    ? { settings: defaultSalesSettings(demoTeam(ctx).filter((m) => m.role === "owner").map((m) => m.email)), team: demoTeam(ctx).map((m) => ({ email: m.email, name: m.name })), tax: false, ss: false, ups: false }
+    ? { settings: defaultSalesSettings(demoTeam(ctx).filter((m) => m.role === "owner").map((m) => m.email), ctx.tenant.edition), team: demoTeam(ctx).map((m) => ({ email: m.email, name: m.name })), tax: false, ss: false, ups: false }
     : await withTenant(scopeOf(ctx), async (tx) => ({
         settings: await getSalesSettings(tx),
         team: (await tx.selectFrom("members").select(["email", "name"]).where("status", "=", "active").orderBy("name").execute()).map((m) => ({ email: m.email.toLowerCase(), name: m.name })),

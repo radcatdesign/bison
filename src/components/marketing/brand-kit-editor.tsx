@@ -7,6 +7,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { saveBrandKitAction } from "@/app/(portal)/marketing/actions";
 import { useEditionKey, useSay } from "@/components/edition";
 import { renderEmail } from "@/lib/email/render";
+import { sampleOfferCode } from "@/lib/marketing/settings";
 import { useIsClient } from "@/lib/use-is-client";
 import { BRAND_COLOR_KEYS, BRAND_COLOR_LABELS, type BrandKit, brandKitSchema, describeIssues, EMAIL_DOC_VERSION, EMAIL_FONTS, type EmailDoc, type EmailFont } from "@/lib/email/schema";
 import { useDemoMarketing } from "./demo-setup";
@@ -54,7 +55,8 @@ function BrandKitEditor({ initial, defaults, storage, tenantId, canEdit, baseUrl
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const say = useSay();
-  const sample = useEditionKey() === "fit" ? CLUB_SAMPLE : SAMPLE;
+  const edition = useEditionKey();
+  const sample = edition === "fit" ? CLUB_SAMPLE : SAMPLE;
 
   const dirty = JSON.stringify(kit) !== savedJson;
   const set = <K extends keyof BrandKit>(key: K, value: BrandKit[K]) => setKit((k) => ({ ...k, [key]: value }));
@@ -62,8 +64,8 @@ function BrandKitEditor({ initial, defaults, storage, tenantId, canEdit, baseUrl
 
   const html = useMemo(() => {
     const parsed = brandKitSchema.safeParse(kit);
-    return renderEmail({ doc: sample, brand: parsed.success ? parsed.data : initial, subject: "Brand kit preview", preheader: "", baseUrl, builder: { selectedId: null, outlines: false } }).html;
-  }, [kit, initial, baseUrl, sample]);
+    return renderEmail({ doc: sample, brand: parsed.success ? parsed.data : initial, subject: "Brand kit preview", preheader: "", baseUrl, builder: { selectedId: null, outlines: false, sampleCode: sampleOfferCode(edition) } }).html;
+  }, [kit, initial, baseUrl, sample, edition]);
 
   const save = () =>
     startSaving(async () => {

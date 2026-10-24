@@ -20,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: sayOf(await getPortalContext())("Estimates", "Quotes") };
 }
 
-const NOTE: [string, string] = ["Quotes your clients open on their own page, approve by typing their name, and pay by invoice.", "Corporate memberships, PT bundles, team rides and events. People open their quote on its own page, approve it by typing their name, and pay by invoice."];
+const NOTE: [string, string] = ["Quotes your clients open on their own page, approve by typing their name, and pay by invoice.", "Corporate memberships, PT bundles and team events. People open their quote on its own page, approve it by typing their name, and pay by invoice."];
 
 const FILTERS = [
   ["open", "Open"],
@@ -69,7 +69,7 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
           {rows.length === 0 ? (
             <div className={m.empty}>
               <strong>{status === "open" ? say("No open estimates.", "No open quotes.") : "Nothing here."}</strong>
-              <span>{status === "open" ? say("Start one, add lines from your catalog or by hand, and send it. Quote requests from the shop land here as drafts too.", "Start one for a local employer, a PT bundle or a team ride. Add memberships and packs from your list or type your own lines, then send it. Quote requests from your online store land here as drafts too.") : "Try another filter."}</span>
+              <span>{status === "open" ? say("Start one, add lines from your catalog or by hand, and send it. Quote requests from the shop land here as drafts too.", "Start one for a local employer, a PT bundle or a team event. Add memberships and packs from your list or type your own lines, then send it. Quote requests from your online store land here as drafts too.") : "Try another filter."}</span>
             </div>
           ) : (
             <div style={{ overflowX: "auto" }}>

@@ -22,7 +22,7 @@ import { loadSalesSetup } from "@/lib/sales/setup";
 export const metadata: Metadata = { title: "Sales" };
 
 const tools = (say: Say) => [
-  { href: "/sales/estimates", name: say("Estimates", "Quotes"), body: say("Quotes clients approve on their own page, then pay by invoice.", "Corporate memberships, PT bundles and team rides, approved on their own page and paid by invoice."), icon: ClipboardList },
+  { href: "/sales/estimates", name: say("Estimates", "Quotes"), body: say("Quotes clients approve on their own page, then pay by invoice.", "Corporate memberships, PT bundles and team events, approved on their own page and paid by invoice."), icon: ClipboardList },
   { href: "/sales/orders", name: say("Orders", "Purchases"), body: say("Every paid order, with refunds and where it is in fulfillment.", "Every paid membership, pack and training package, with refunds, and where gear is in fulfillment."), icon: Package },
   { href: "/sales/products", name: say("Products", "Memberships"), body: say("Your catalog, with options, prices, photos and weights.", "Memberships, class packs, personal training and gear, with options and prices."), icon: Boxes },
   { href: "/sales/discounts", name: say("Discount codes", "Promo codes"), body: "Private codes with limits, spelled out before you save.", icon: Tag },

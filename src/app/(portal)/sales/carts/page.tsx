@@ -83,7 +83,7 @@ function RecoveryCard({ r, hours, say, marketingName }: { r: Recovery; hours: nu
         </p>
         {!r.marketing ? (
           <>
-            <p>{say("With Marketing, an email series can go to each person who leaves a cart, with what was in it and a link back to checkout. It stops the moment they buy.", `With ${marketingName}, a follow-up can go to each person who doesn't finish joining, with what they picked and a link back to checkout. It stops the moment they buy.`)}</p>
+            <p>{say("With Marketing, an email series can go to each person who leaves a cart, with what was in it and a link back to checkout. It stops the moment they buy.", `With ${marketingName}, a follow-up can go to each person who started joining and didn't finish, with what they picked and a link back to checkout. It stops once they finish joining.`)}</p>
             <Link href="/marketing" className="btn" data-testid="cart-recovery-marketing">
               See {marketingName}
               <ArrowRight aria-hidden="true" />
@@ -93,8 +93,8 @@ function RecoveryCard({ r, hours, say, marketingName }: { r: Recovery; hours: nu
           <>
             <p data-testid="cart-recovery-status">
               {r.series.on
-                ? say(`"${r.series.name}" is on. Each person who leaves a cart gets it, and it stops when they buy.`, `"${r.series.name}" is on. Each person who doesn't finish joining gets it, and it stops when they buy.`)
-                : say(`"${r.series.name}" starts when someone leaves a cart, but it's turned off. Turn it on to send it.`, `"${r.series.name}" starts when someone doesn't finish joining, but it's turned off. Turn it on to send it.`)}
+                ? say(`"${r.series.name}" is on. Each person who leaves a cart gets it, and it stops when they buy.`, `"${r.series.name}" is on. Each person who starts joining and doesn't finish gets it, and it stops once they finish joining.`)
+                : say(`"${r.series.name}" starts when someone leaves a cart, but it's turned off. Turn it on to send it.`, `"${r.series.name}" starts when someone starts joining and doesn't finish, but it's turned off. Turn it on to send it.`)}
             </p>
             <Link href={`/marketing/series/${r.series.id}`} className="btn" data-testid="cart-recovery-open">
               {say("Open the series", "Open the follow-up")}
@@ -103,7 +103,7 @@ function RecoveryCard({ r, hours, say, marketingName }: { r: Recovery; hours: nu
           </>
         ) : (
           <>
-            <p>{say(`Make an email series that starts when "Someone leaves a cart". Each person who leaves one gets it, and it stops when they buy. It's optional; nothing goes out until you turn it on.`, "Make a follow-up in Email series that starts when someone leaves a cart. Each person who doesn't finish joining gets it, and it stops when they buy. It's optional; nothing goes out until you turn it on.")}</p>
+            <p>{say(`Make an email series that starts when "Someone leaves a cart". Each person who leaves one gets it, and it stops when they buy. It's optional; nothing goes out until you turn it on.`, `Make a follow-up in Email series that starts when "Someone leaves a join unfinished". Each person who starts joining and doesn't finish gets it, and it stops once they finish joining. It's optional; nothing goes out until you turn it on.`)}</p>
             <Link href="/marketing/series" className="btn" data-testid="cart-recovery-new">
               Go to Email series
               <ArrowRight aria-hidden="true" />
@@ -126,7 +126,7 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
   const filter: Filter = FILTERS.some(([k]) => k === sp.status) ? (sp.status as Filter) : "all";
   const demo = demoMode();
   const repo = salesRepo(ctx);
-  const [all, settings, recovery] = await Promise.all([repo.carts(), demo ? Promise.resolve(defaultSalesSettings()) : withTenant(scopeOf(ctx), (tx) => getSalesSettings(tx)), recoveryFor(ctx, demo)]);
+  const [all, settings, recovery] = await Promise.all([repo.carts(), demo ? Promise.resolve(defaultSalesSettings([], ctx.tenant.edition)) : withTenant(scopeOf(ctx), (tx) => getSalesSettings(tx)), recoveryFor(ctx, demo)]);
   const now = new Date();
   const since = now.getTime() - 30 * DAY;
   const currency = settings.store.currency;
@@ -169,7 +169,7 @@ async function Body({ searchParams }: { searchParams: Promise<Search> }) {
                 <thead>
                   <tr>
                     <th>{say("Shopper", "Person")}</th>
-                    <th className={m.hideSm}>In the cart</th>
+                    <th className={m.hideSm}>{say("In the cart", "What they picked")}</th>
                     <th className={s.right}>
                       <span className={x.thHelp}>
                         Value

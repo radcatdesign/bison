@@ -155,7 +155,7 @@ export function TestsHome({ tests, pages, hasLivePage, canEdit, sampleResults }:
             <p className="notice">
               {hasLivePage ? "Every live page already has a test. End or delete one to test something new on that page." : "A test compares a live page with versions of it, so publish a page first."}{" "}
               <Link href="/marketing/pages" className="link">
-                {say("Open Pages", "Open Funnel pages")}
+                {say("Open Pages", "Open funnel pages")}
               </Link>
             </p>
           ) : (

@@ -50,7 +50,7 @@ test("Fit Funnels: switch on the sign-in and look around a made-up gym", async (
   await expect(page.getByText("Two made-up clubs, four made-up people, nothing saved.")).toBeVisible();
   await t("sign-in-dev_maya").click();
   await page.waitForURL(/\/(analyze|marketing|sales)/);
-  await expect(t("tenant-name")).toHaveText("Summit Strength Club");
+  await expect(page.getByText("Summit Strength Club").filter({ visible: true }).first()).toBeVisible();
   await expect(page).toHaveTitle(/· Fit Funnels$/);
   await expect(t("sample-banner")).toContainText("This is a demo");
   await page.goto("/analyze/contacts");

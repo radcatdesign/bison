@@ -111,7 +111,7 @@ async function Body() {
         </div>
         <div className={`card ${h.nowCard}`}>
           <span className={h.label}>Email series</span>
-          <strong>{demo ? say("Welcome series", "New lead follow-up") : seriesOn ? `${seriesOn} on` : "None on yet"}</strong>
+          <strong>{demo ? say("Welcome series", "New lead follow-up") : seriesOn ? `${seriesOn} on` : "None turned on yet"}</strong>
           <Link href="/marketing/series" className="link">
             {seriesOn ? "See them" : say("Turn on the welcome series", "Turn on the new lead follow-up")}
           </Link>

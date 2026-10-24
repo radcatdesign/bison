@@ -10,6 +10,7 @@ import { parseProduct } from "@/lib/sales/catalog";
 import { checkDiscount, checkWelcomeCode, discountSentence, parseDiscount, ruleFromInput } from "@/lib/sales/discounts";
 import { estimateEmail, orderAlertEmail, type Sender, tradeLinkEmail } from "@/lib/sales/emails";
 import { sendProblems } from "@/lib/sales/estimate-input";
+import { defaultSalesSettings, readSalesSettings } from "@/lib/sales/settings";
 import { buildSalesSetup, type SalesFacts } from "@/lib/sales/setup-steps";
 import { demoCheckoutNote, demoItems, demoShop } from "@/lib/sales/shop-demo";
 import { sampleCarts, sampleCatalog, sampleEstimates, sampleOrders, sampleSalesSummary, sampleTrade } from "@/lib/sample/sales";
@@ -165,8 +166,8 @@ describe("Sales setup steps", () => {
   it("walk a club through Stripe, memberships and packs, checkout and a corporate quote", () => {
     expect(step(fit, "payments.connect").body).toContain("from Fit Funnels");
     expect(step(fit, "products.add")).toMatchObject({ title: "Add your memberships and packs", cta: "Add memberships" });
-    expect(step(fit, "products.weights").body).toBe("2 active items have no weight or flat shipping charge. Only gear ships: give gear a weight and a box, and give memberships, packs and training a flat shipping charge of 0.");
-    expect(step(fit, "checkout.first").cta).toBe("Open Purchases");
+    expect(step(fit, "products.weights").body).toBe("2 active items have no weight or flat shipping charge. Only gear ships: give gear a weight and a box, and give memberships, packs and training no shipping charge (0 in flat shipping).");
+    expect(step(fit, "checkout.first").cta).toBe("Open purchases");
     expect(step(fit, "estimates.first")).toMatchObject({ title: "Send a corporate quote", cta: "New quote" });
     expect(step(fit, "discounts.first").title).toBe("Make a promo code");
     expect(step(fit, "trade.approve").title).toBe("Approve your first corporate account");
@@ -230,5 +231,55 @@ describe("Sales words for a club", () => {
     expect(orderAlertEmail(sender("bison"), order).subject).toBe("New order #1042, $89.00");
     expect(orderAlertEmail(sender("bison"), order).text).toContain("No address given");
     expect(text([fitAlert, estimateEmail(sender("fit"), est)])).not.toContain(EM_DASH);
+  });
+});
+
+describe("club corporate accounts in sample data", () => {
+  const trade = sampleTrade(summit, now);
+  const byName = (n: string) => trade.find((t) => t.company === n)!;
+
+  it("labels each employer for what it is, with its own size and message", () => {
+    expect(byName("Cascade Medical Group").details.type).toBe("Clinic");
+    expect(byName("High Desert Credit Union").details.type).toBe("Credit union");
+    expect(byName("Juniper Elementary").details.type).toBe("School");
+    const waiting = trade.filter((t) => t.status === "applied");
+    expect(waiting).toHaveLength(2);
+    expect(new Set(waiting.map((t) => t.details.resale)).size).toBe(2);
+    expect(new Set(waiting.map((t) => t.details.message)).size).toBe(2);
+  });
+
+  it("gives companies still waiting or turned down no quotes or purchases", () => {
+    for (const t of [summit, pulse]) {
+      const out = sampleTrade(t, now)
+        .filter((a) => a.status === "applied" || a.status === "declined")
+        .map((a) => a.company);
+      expect(sampleOrders(t, now).filter((o) => o.tradeCompany && out.includes(o.tradeCompany))).toEqual([]);
+      expect(sampleEstimates(t, now).filter((e) => out.includes(e.client.company))).toEqual([]);
+    }
+  });
+
+  it("adds up each account's spend from its own purchases", () => {
+    const orders = sampleOrders(summit, now);
+    const all = orders.reduce((n, o) => n + o.totalCents - o.refundedCents, 0);
+    for (const a of trade) {
+      const theirs = orders.filter((o) => o.tradeCompany === a.company);
+      expect(a.spendCents).toBe(theirs.reduce((n, o) => n + o.totalCents - o.refundedCents, 0));
+      expect(a.orderCount).toBe(theirs.length);
+      expect(a.spendCents).toBeLessThanOrEqual(all);
+    }
+    expect(trade.some((a) => a.spendCents > 0)).toBe(true);
+  });
+
+  it("never mentions team rides at the gym", () => {
+    expect(text([sampleTrade(summit, now), sampleEstimates(summit, now)])).not.toMatch(/\bride/i);
+  });
+});
+
+describe("corporate tiers", () => {
+  it("start with corporate names for clubs, and stay Trade, Pro and Partner for Bison Ops", () => {
+    expect(defaultSalesSettings([], "fit").trade.tiers.map((t) => t.name)).toEqual(["Team", "Business", "Partner"]);
+    expect(defaultSalesSettings().trade.tiers.map((t) => t.name)).toEqual(["Trade", "Pro", "Partner"]);
+    expect(readSalesSettings(undefined, [], "fit").trade.tiers[0]).toMatchObject({ name: "Team", percentOff: 10 });
+    expect(readSalesSettings({ trade: { tiers: [{ key: "a", name: "Staff", minSpendCents: 0, percentOff: 5 }] } }, [], "fit").trade.tiers.map((t) => t.name)).toEqual(["Staff"]);
   });
 });

@@ -260,7 +260,7 @@ function StoreForm({ store, team, canEdit, taxActive, demo }: Props) {
           </label>
           <input id="ab-hours" className="input num" inputMode="numeric" value={v.abandonedAfterHours} style={{ maxWidth: 120 }} onChange={(e) => set("abandonedAfterHours", Math.min(168, Math.max(1, Number(e.target.value) || 1)))} />
           <span className={m.hint}>
-            {say(`Only carts where we have an email count. With Marketing, an email series set to "Someone leaves a cart" starts for them, and stops if they buy.`, "Only joins where we have an email count. With Marketing, a follow-up set to start when someone leaves a cart goes to them, and stops if they buy.")}
+            {say(`Only carts where we have an email count. With Marketing, an email series set to "Someone leaves a cart" starts for them, and stops if they buy.`, "Only joins where we have an email count. With Marketing, a follow-up set to start when someone leaves a join unfinished goes to them, and stops once they finish joining.")}
           </span>
         </div>
       </fieldset>
@@ -311,7 +311,7 @@ function ShippingForm({ shipping, canEdit, carriers, demo }: Props) {
     >
       <fieldset className={m.group} disabled={!canEdit}>
         <legend>{say("Where orders ship from", "Where gear ships from")}</legend>
-        {club && <p className={m.hint}>Only gear ships. Memberships, class packs and personal training don&apos;t, so give them a flat shipping charge of 0 on their page.</p>}
+        {club && <p className={m.hint}>Only gear ships. Memberships, class packs and personal training don&apos;t, so give them no shipping charge (0 in flat shipping) on their page.</p>}
         <div className={m.twoUp}>
           <div className={m.field}>
             <label htmlFor="sf-company" className={m.fieldLabel}>Company</label>

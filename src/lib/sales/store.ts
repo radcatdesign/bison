@@ -24,7 +24,7 @@ export async function readEdition(tx: Tx): Promise<EditionKey> {
 
 export async function getSalesSettings(tx: Tx): Promise<SalesSettings> {
   const row = await tx.selectFrom("sales_settings").select(["store", "shipping", "trade"]).executeTakeFirst();
-  const settings = readSalesSettings(row, []);
+  const settings = readSalesSettings(row, [], await readEdition(tx));
   if (!settings.store.alertEmails.length) settings.store.alertEmails = await teamEmails(tx);
   return settings;
 }

@@ -37,7 +37,7 @@ function filterOrders(list: OrderDetail[], f: OrderFilter = {}): OrderRow[] {
       if (term && !`${o.email} ${o.name} #${o.number}`.toLowerCase().includes(term.replace(/^#/, "#"))) return false;
       return true;
     }),
-  );
+  ).slice(0, Math.min(f.limit ?? 500, 2000));
 }
 
 export function salesRepo(ctx: PortalContext): SalesRepo {

@@ -12,6 +12,7 @@ import { editionOfIndustry, sayFor } from "@/config/editions";
 import { renderEmail } from "@/lib/email/render";
 import { type BrandKit, type EmailDoc, emptyEmailDoc } from "@/lib/email/schema";
 import { emailTemplatesFor } from "@/lib/email/templates";
+import { sampleOfferCode } from "@/lib/marketing/settings";
 import { sampleSendStats, sampleSentNewsletter } from "@/lib/sample/marketing";
 import { useDemoMarketing } from "./demo-setup";
 import { type DemoNewsletter, demoId, writeDemo } from "./demo-store";
@@ -217,7 +218,8 @@ export function NewslettersHome(props: Props) {
 }
 
 function TemplateThumb({ doc, brand, baseUrl }: { doc: EmailDoc; brand: BrandKit; baseUrl: string }) {
-  const html = useMemo(() => renderEmail({ doc, brand, subject: "", baseUrl, builder: { selectedId: null, outlines: false } }).html, [doc, brand, baseUrl]);
+  const edition = useEditionKey();
+  const html = useMemo(() => renderEmail({ doc, brand, subject: "", baseUrl, builder: { selectedId: null, outlines: false, sampleCode: sampleOfferCode(edition) } }).html, [doc, brand, baseUrl, edition]);
   return (
     <span className={h.thumb}>
       <EmailFrame html={html} thumb={{ height: 220 }} title="Template preview" />

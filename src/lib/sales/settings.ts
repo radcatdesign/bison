@@ -3,6 +3,7 @@
 // trade program (tiers by 12-month spend). Pure: shared by the server, the
 // demo and tests. Stored as JSON documents in sales_settings.
 import { z } from "zod";
+import type { EditionKey } from "@/config/editions";
 import { describeIssues } from "@/lib/email/schema";
 
 const email = z.string().trim().toLowerCase().email("Use a full email address.").max(254);
@@ -175,6 +176,18 @@ export const tradeSettingsSchema = z.object({
 });
 export type TradeSettings = z.infer<typeof tradeSettingsSchema>;
 
+/** Fit Funnels clubs start with corporate tier names; the spend steps and discounts match. */
+export const CLUB_TIERS: Tier[] = [
+  { key: "team", name: "Team", minSpendCents: 0, percentOff: 10 },
+  { key: "business", name: "Business", minSpendCents: 500_000, percentOff: 15 },
+  { key: "partner", name: "Partner", minSpendCents: 2_000_000, percentOff: 20 },
+];
+
+/** The trade program a company starts with before it saves its own. */
+export function defaultTradeSettings(edition: EditionKey = "bison"): TradeSettings {
+  return tradeSettingsSchema.parse(edition === "fit" ? { tiers: CLUB_TIERS } : {});
+}
+
 /** The tier an account reaches with this much 12-month spend. Tiers are matched highest first. */
 export function tierFor(tiers: Tier[], spendCents: number, override = ""): Tier {
   const sorted = [...tiers].sort((a, b) => b.minSpendCents - a.minSpendCents);
@@ -195,11 +208,11 @@ export function nextTier(tiers: Tier[], spendCents: number): { tier: Tier; moreC
 
 export type SalesSettings = { store: StoreSettings; shipping: ShippingSettings; trade: TradeSettings };
 
-export function defaultSalesSettings(alertEmails: string[] = []): SalesSettings {
+export function defaultSalesSettings(alertEmails: string[] = [], edition: EditionKey = "bison"): SalesSettings {
   return {
     store: storeSettingsSchema.parse({ alertEmails }),
     shipping: shippingSettingsSchema.parse({ boxes: DEFAULT_BOXES }),
-    trade: tradeSettingsSchema.parse({}),
+    trade: defaultTradeSettings(edition),
   };
 }
 
@@ -209,8 +222,8 @@ function readPart<T>(schema: z.ZodType<T>, stored: unknown, fallback: T): T {
   return parsed.success ? parsed.data : fallback;
 }
 
-export function readSalesSettings(row: { store?: unknown; shipping?: unknown; trade?: unknown } | undefined, alertEmails: string[] = []): SalesSettings {
-  const d = defaultSalesSettings(alertEmails);
+export function readSalesSettings(row: { store?: unknown; shipping?: unknown; trade?: unknown } | undefined, alertEmails: string[] = [], edition: EditionKey = "bison"): SalesSettings {
+  const d = defaultSalesSettings(alertEmails, edition);
   return {
     store: readPart(storeSettingsSchema, row?.store, d.store),
     shipping: readPart(shippingSettingsSchema, row?.shipping, d.shipping),

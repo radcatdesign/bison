@@ -60,7 +60,7 @@ async function Body() {
             <p className="muted">
               {demo ? "In the demo, pages can't go live, so nothing is listed here. " : "No published pages yet. "}
               <Link href="/marketing/pages" className="link">
-                {say("Open Pages", "Open Funnel pages")}
+                {say("Open Pages", "Open funnel pages")}
               </Link>
             </p>
           ) : (

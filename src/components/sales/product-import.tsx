@@ -83,7 +83,7 @@ export function ProductImport({ canEdit, demo }: { canEdit: boolean; demo: boole
               <span className={m.hint}>The same feed you give Google Merchant Center. It has to be on a public https address.</span>
             </div>
           )}
-          <p className={m.hint}>{say("Importing again updates what you imported before and keeps the weights, boxes and shipping you set here.", "Importing again updates what you imported before and keeps the weights, boxes and shipping you set here. Memberships and packs don't ship, so give them a flat shipping charge of 0 after you import.")}</p>
+          <p className={m.hint}>{say("Importing again updates what you imported before and keeps the weights, boxes and shipping you set here.", "Importing again updates what you imported before and keeps the weights, boxes and shipping you set here. Memberships and packs don't ship, so give them no shipping charge (0 in flat shipping) after you import.")}</p>
           {result && (
             <div className={`notice ${result.ok ? "notice-ok" : "notice-error"}`} role={result.ok ? "status" : "alert"} data-testid="product-import-result">
               {result.message}

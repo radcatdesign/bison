@@ -19,7 +19,7 @@ export type BuilderExtras = { catalog: CatalogPick[]; trade: TradePick[]; curren
 
 export async function builderExtras(ctx: PortalContext, opts: { estimateId: string | null; sample: boolean; trade: TradeRow[] }): Promise<BuilderExtras> {
   const demo = demoMode();
-  let settings: SalesSettings = defaultSalesSettings();
+  let settings: SalesSettings = defaultSalesSettings([], ctx.tenant.edition);
   let catalog: CatalogPick[];
   let payable = false;
   let clientUrl: string | null = null;

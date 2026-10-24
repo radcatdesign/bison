@@ -156,7 +156,7 @@ export function buildSetup(f: SetupFacts, edition: EditionKey = "bison"): ToolSe
           body: say('Open any page, edit its form and turn on "Add to email list". New signups land here and get your welcome series.', 'Open any funnel page, edit its form and turn on "Add to email list". New signups land here and get your new lead follow-up.'),
           done: f.signup.formOnPage,
           href: "/marketing/pages",
-          cta: say("Open Pages", "Open Funnel pages"),
+          cta: say("Open Pages", "Open funnel pages"),
         },
       ],
     },
@@ -260,10 +260,10 @@ export function buildSetup(f: SetupFacts, edition: EditionKey = "bison"): ToolSe
       steps: [
         {
           key: "search.describe",
-          title: "Describe your business",
+          title: say("Describe your business", "Describe your club"),
           body: say(
             "A plain paragraph on what you do and who for. Search engines and AI assistants quote it when people ask about businesses like yours.",
-            "A plain paragraph on your club: what you offer, who it's for and where. Search engines and AI assistants quote it when people ask about gyms and studios nearby.",
+            "A plain paragraph on your club: what you offer, who it's for and where. It gives search engines and AI assistants your own words to use when people ask about gyms and studios nearby.",
           ),
           done: f.search.described,
           href: "/marketing/search#business",
@@ -283,7 +283,7 @@ export function buildSetup(f: SetupFacts, edition: EditionKey = "bison"): ToolSe
           body: say("Published pages get titles, social cards and structured data on their own, and go in your sitemap and llms.txt.", "Published funnel pages get titles, social cards and structured data on their own, and go in your sitemap and llms.txt."),
           done: f.search.publishedPage,
           href: "/marketing/pages",
-          cta: say("Open Pages", "Open Funnel pages"),
+          cta: say("Open Pages", "Open funnel pages"),
         },
         {
           key: "search.submit",
@@ -309,7 +309,7 @@ export function buildSetup(f: SetupFacts, edition: EditionKey = "bison"): ToolSe
           body: say("A test compares the live page with versions of it, so the page has to be live first. Pick one that already gets visitors.", "A test compares the live page with versions of it, so the page has to be live first. Pick one that already gets visitors, like your free pass page."),
           done: f.tests.publishedPage,
           href: "/marketing/pages",
-          cta: say("Open Pages", "Open Funnel pages"),
+          cta: say("Open Pages", "Open funnel pages"),
         },
         {
           key: "tests.version",

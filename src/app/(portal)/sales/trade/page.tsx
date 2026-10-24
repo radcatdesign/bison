@@ -29,7 +29,7 @@ async function Body() {
   if (blocked) return blocked;
   const demo = demoMode();
   const repo = salesRepo(ctx);
-  const [rows, store] = await Promise.all([repo.trade(), demo ? Promise.resolve(defaultSalesSettings()) : withTenant(scopeOf(ctx), (tx) => getSalesSettings(tx))]);
+  const [rows, store] = await Promise.all([repo.trade(), demo ? Promise.resolve(defaultSalesSettings([], ctx.tenant.edition)) : withTenant(scopeOf(ctx), (tx) => getSalesSettings(tx))]);
   return (
     <>
       {demo && <SampleBanner demo />}
