@@ -54,6 +54,8 @@ Not built yet: the shop on the company's own domain (Needed 31), Apple Pay and G
 
 ## Marketing (module, Phase 3, built)
 
+`marketing.campaigns`: Campaigns, folders for landing pages, newsletters, email series and graphics, with uploads, chips on each list, archive and all-time numbers.
+
 Every tool has a step-by-step setup that ticks off from what's really saved or verified (`src/lib/marketing/setup-steps.ts`): a Setup page (`/marketing/setup`) for all of them in order, and the same steps at the top of each tool until done. The overview shows sending status, the month's email count and the next setup step.
 
 - **Email sending** (`/settings/email`, owners and admins): add a domain (a subdomain is suggested), copy three DNS records with steps for common DNS hosts, automatic checks every 20 seconds while open, From name and address, Reply-To, and a test to yourself. One Resend account for all companies; nobody pastes a key.

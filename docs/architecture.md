@@ -121,6 +121,8 @@ Built so far (all with RLS):
 | `estimates`, `estimate_events` | Quotes and their history | `number` (from 101), `status`, `client`, `items`, `discount`, totals, `valid_until`, `link_version`, `approved_name`, `change_request`, `stripe_invoice_id`, `invoice_url`; `kind`, `actor`, `detail` (insert and read only) |
 | `trade_accounts` | Wholesale buyers | `company`, `email` (unique per tenant), `status` (applied, approved, declined, paused), `tier_override`, `note`, `details`, `session_version` |
 | `contact_shares` | Expiring links to one contact's page | `contact_id`, `expires_at`, `revoked_at`, `created_by` |
+| `campaigns` | Folders for pages, emails and graphics | `name` (unique per company, any case), `notes`, `color`, `starts_on`, `ends_on`, `archived_at`; `pages`, `newsletters` and `sequences` have a `campaign_id` |
+| `campaign_graphics` | A graphic in a campaign (one campaign per file) | `campaign_id`, `file_id`, `name`, `added_by` |
 | `kiosk_settings` | One row per club: the front desk kiosk | `pin_hash` (scrypt), `config` (json, checked by `src/lib/kiosk/settings.ts`), `waiver_title`, `waiver_body`, `waiver_version` |
 | `kiosk_devices` | Paired tablets (no delete grant; unpairing sets `revoked_at`) | `name`, `token_hash` (sha256 of the cookie), `paired_by`, `last_seen_at`, `pin_failures`, `pin_locked_until` |
 | `kiosk_pair_codes` | 6-digit pairing codes, 10 minutes, once | `code_hash` (HMAC, unique while unused across clubs), `name`, `expires_at`, `used_at`, `device_id` |
@@ -222,6 +224,10 @@ A page is a small JSON document (`src/lib/pages/schema.ts`): a theme, search det
 - **Ending**: locks the page row, then the test (the same order as publishing, starting and taking the page offline, so they can't deadlock), snapshots each version's totals, marks the kept version, and for B or C checks placeholders again and publishes its document with the page's search details (also into the draft unless the draft has unpublished changes) with a `page_revisions` row. Running tests per company are capped by `runningPageTests` in the catalog, checked under an advisory lock.
 - **Job** (`runPageTestWork`): `due_page_test_tenants()` (SECURITY DEFINER, ids only) finds companies with a test set to end on its own, old visit rows, or old salts. The daily cron passes `autoEnd`, so tests with a held winner after 7 days end keeping it once a day; every run deletes salts older than yesterday and visit rows 30 days after a test ends.
 - **Sample mode** lays made-up results over real tests (`src/lib/sample/page-tests.ts`), seeded per test; tests themselves always save. The demo shows two made-up tests and every action refuses.
+
+## Campaigns
+
+Marketing, Campaigns, in both editions (migration 0013, `src/lib/campaigns`). A campaign is a folder: pages, newsletters and series point at it with a nullable `campaign_id` (same-company foreign key, set to null if the campaign goes), and graphics are `files` rows of kind `graphic` linked by `campaign_graphics`. Uploads go through `/api/marketing/files?kind=graphic&campaign=<id>`, which saves the file and files it in one transaction. The detail screen lists what's filed with links, adds anything from a picker (moving it if it was elsewhere), uploads graphics, and shows form sends and emails sent. Lists of pages and newsletters show a chip for their campaign. `fileInUse` checks every document that can show an upload before a graphic is deleted. In the demo, two made-up campaigns per edition (`src/lib/sample/campaigns.ts`) are read only.
 
 ## Marketing email
 

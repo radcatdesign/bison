@@ -37,9 +37,15 @@ async function Body() {
         title="Front desk"
         note="What's happened at your kiosk tablets today: check-ins, free passes, tours and waivers."
         actions={
-          <Link href="/settings/kiosk" className="btn">
-            Kiosk settings
-          </Link>
+          <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link href="/settings/kiosk" className="btn">
+              Kiosk settings
+            </Link>
+            <a href="/kiosk/preview" target="_blank" rel="noopener" className="btn btn-primary" data-testid="desk-open-kiosk">
+              Open the kiosk
+              <span className="visually-hidden"> (opens in a new tab)</span>
+            </a>
+          </span>
         }
       />
       <Card title="Today" flush testId="desk-today">

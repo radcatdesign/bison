@@ -182,15 +182,21 @@ test.describe("Front desk kiosk", () => {
   test("the preview works without a tablet and saves nothing", async ({ page }) => {
     await signInMaya(page);
     await page.goto("/settings/kiosk");
-    await t(page, "kiosk-preview-link").click();
-    await expect(page.getByTestId("kiosk-preview")).toContainText("Nothing here is saved");
-    await page.getByTestId("kiosk-tile-tour").click();
-    const tour = page.getByTestId("kiosk-tour-form");
+    // It opens in its own tab, from Settings, Front desk and the sidebar.
+    const [tab] = await Promise.all([page.context().waitForEvent("page"), t(page, "kiosk-preview-link").click()]);
+    await expect(tab.getByTestId("kiosk-preview")).toContainText("Nothing here is saved");
+    await tab.getByTestId("kiosk-tile-tour").click();
+    const tour = tab.getByTestId("kiosk-tour-form");
     await tour.getByLabel("Your name").fill("Preview Person");
     await tour.getByLabel("Email").fill("preview@example.com");
     await tour.getByRole("button", { name: "Evening" }).click();
     await tour.getByRole("button", { name: "Request a tour" }).click();
-    await expect(page.getByTestId("kiosk-done")).toContainText("Thanks, Preview.");
+    await expect(tab.getByTestId("kiosk-done")).toContainText("Thanks, Preview.");
+    await Promise.all([tab.waitForEvent("close"), tab.getByTestId("kiosk-preview-close").click({ noWaitAfter: true }).catch(() => {})]);
+
+    await page.goto("/analyze/front-desk");
+    await expect(t(page, "desk-open-kiosk")).toHaveAttribute("target", "_blank");
+    if ((page.viewportSize()?.width ?? 0) >= 760) await expect(t(page, "nav-kiosk")).toHaveAttribute("href", "/kiosk/preview");
   });
 
   test("Bison Ops companies don't get a kiosk", async ({ page }) => {

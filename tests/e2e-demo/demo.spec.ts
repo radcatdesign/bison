@@ -349,11 +349,28 @@ test("a club can try the front desk kiosk in the demo, and nothing is saved", as
   await expect(page.getByTestId("desk-latest").filter({ visible: true })).toBeVisible();
   await page.goto("/settings/kiosk");
   await expect(page.getByTestId("pair-make").filter({ visible: true })).toBeDisabled();
-  await page.getByTestId("kiosk-preview-link").filter({ visible: true }).click();
-  await expect(page.getByTestId("kiosk-preview")).toBeVisible();
+  const [tab] = await Promise.all([page.context().waitForEvent("page"), page.getByTestId("kiosk-preview-link").filter({ visible: true }).click()]);
+  await expect(tab.getByTestId("kiosk-preview")).toBeVisible();
   // The demo waiver is filled in, so it's on.
-  await page.getByTestId("kiosk-tile-waiver").click();
-  await expect(page.getByTestId("kiosk-sign-form")).toContainText("Summit Strength Club LLC");
+  await tab.getByTestId("kiosk-tile-waiver").click();
+  await expect(tab.getByTestId("kiosk-sign-form")).toContainText("Summit Strength Club LLC");
   await page.goto("/kiosk");
   await expect(page.getByText("Tablets can't be paired in the demo")).toBeVisible();
+});
+
+test("campaigns show made-up folders in each edition, and nothing is saved", async ({ page }) => {
+  await pick(page, "dev_ada");
+  await page.goto("/marketing/campaigns");
+  await page.getByTestId("campaign-card").filter({ visible: true }).filter({ hasText: "Spring launch" }).click();
+  await expect(page.getByTestId("campaign-graphic").filter({ visible: true })).toHaveCount(3);
+  await expect(page.getByTestId("campaign-form-sends").filter({ visible: true })).toContainText("64");
+  await page.goto("/sign-in?edition=fit");
+  await page.getByTestId("sign-in-dev_maya").click();
+  await page.waitForURL(/\/(analyze|marketing|sales)/);
+  await page.goto("/marketing/campaigns");
+  await expect(page.getByTestId("campaign-card").filter({ visible: true })).toContainText("New Year challenge");
+  await page.getByTestId("campaign-new").filter({ visible: true }).locator("summary").click();
+  await page.getByTestId("campaign-name").filter({ visible: true }).fill("Summer shred");
+  await page.getByTestId("campaign-new-form").filter({ visible: true }).getByRole("button", { name: "Make the campaign" }).click();
+  await expect(page.getByTestId("campaign-new-form").filter({ visible: true }).getByTestId("action-message")).toContainText("demo");
 });

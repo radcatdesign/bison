@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import { PagesHeader, PagesHome } from "@/components/page-builder/pages-home";
 import { Locked, RoleBlocked } from "@/components/ui";
 import { may } from "@/config/roles";
+import { campaignNames } from "@/lib/campaigns/store";
+import { withTenant } from "@/lib/db";
 import { demoMode } from "@/lib/env";
 import { gateMode } from "@/lib/gate";
 import { listPages } from "@/lib/pages/repo";
@@ -26,10 +28,11 @@ async function PagesBody({ searchParams }: { searchParams: Promise<{ error?: str
   const demo = demoMode();
   const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: ctx.settings.timezone });
   const tests = demo ? [] : await listTests(scopeOf(ctx));
+  const filed = demo ? new Map() : await withTenant(scopeOf(ctx), (tx) => campaignNames(tx, "page"));
   const testOf = (pageId: string) => tests.find((t) => t.pageId === pageId && t.status === "running") ?? null;
   const pages = demo
     ? []
-    : (await listPages(scopeOf(ctx))).map((p) => ({ id: p.id, title: p.title, slug: p.slug, status: p.status, edited: `Edited ${fmt.format(p.updatedAt)}`, doc: p.doc, testId: testOf(p.id)?.id ?? null }));
+    : (await listPages(scopeOf(ctx))).map((p) => ({ id: p.id, title: p.title, slug: p.slug, status: p.status, edited: `Edited ${fmt.format(p.updatedAt)}`, doc: p.doc, testId: testOf(p.id)?.id ?? null, campaign: filed.get(p.id) ?? null }));
   const seed = demo ? seedPageFor(ctx.tenant.industry) : null;
 
   return (

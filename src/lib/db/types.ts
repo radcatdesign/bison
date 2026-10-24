@@ -159,6 +159,7 @@ export interface EventsTable {
 export interface PagesTable {
   id: Generated<string>;
   tenant_id: TenantId;
+  campaign_id: Generated<string | null>;
   slug: string;
   title: string;
   doc: Json<unknown>;
@@ -218,7 +219,7 @@ export interface MarketingSettingsTable {
 export interface FilesTable {
   id: Generated<string>;
   tenant_id: TenantId;
-  kind: "logo" | "email-image" | "product-image";
+  kind: "logo" | "email-image" | "product-image" | "graphic";
   content_type: "image/png" | "image/jpeg" | "image/gif";
   bytes: Buffer;
   width: number;
@@ -269,6 +270,7 @@ export interface UnsubscribesTable {
 export interface NewslettersTable {
   id: Generated<string>;
   tenant_id: TenantId;
+  campaign_id: Generated<string | null>;
   subject: Generated<string>;
   preheader: Generated<string>;
   doc: Json<unknown>;
@@ -300,6 +302,7 @@ export interface NewsletterTemplatesTable {
 export interface SequencesTable {
   id: Generated<string>;
   tenant_id: TenantId;
+  campaign_id: Generated<string | null>;
   name: string;
   trigger: SequenceTrigger;
   trigger_detail: Generated<string>;
@@ -728,6 +731,31 @@ export interface KioskWaiversTable {
   signed_at: Timestamp;
 }
 
+export type CampaignColor = "blue" | "green" | "orange" | "pink" | "purple" | "gray";
+
+export interface CampaignsTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  name: string;
+  notes: Generated<string>;
+  color: Generated<CampaignColor>;
+  starts_on: ColumnType<string | null, string | null | undefined, string | null>;
+  ends_on: ColumnType<string | null, string | null | undefined, string | null>;
+  archived_at: TimestampNullable;
+  created_by: Generated<string>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface CampaignGraphicsTable {
+  tenant_id: TenantId;
+  campaign_id: string;
+  file_id: string;
+  name: Generated<string>;
+  added_by: Generated<string>;
+  added_at: Timestamp;
+}
+
 export interface DB {
   tenants: TenantsTable;
   sites: SitesTable;
@@ -778,6 +806,8 @@ export interface DB {
   kiosk_pair_codes: KioskPairCodesTable;
   kiosk_check_ins: KioskCheckInsTable;
   kiosk_waivers: KioskWaiversTable;
+  campaigns: CampaignsTable;
+  campaign_graphics: CampaignGraphicsTable;
 }
 
 export type Tenant = Selectable<TenantsTable>;

@@ -7,6 +7,7 @@ import { SetupFor } from "@/components/marketing/setup-for";
 import { PageHeader } from "@/components/ui";
 import { may } from "@/config/roles";
 import { withTenant } from "@/lib/db";
+import { campaignNames } from "@/lib/campaigns/store";
 import { appUrl, demoMode } from "@/lib/env";
 import { listNewsletters, listTemplates } from "@/lib/marketing/newsletters";
 import { subscriberCount } from "@/lib/marketing/people";
@@ -36,6 +37,7 @@ async function Body({ searchParams }: { searchParams: Promise<{ error?: string }
   let brand = defaultMarketingSettings(settingsTenantOf(ctx)).brand;
   let subscribed = sampleSubscribers(ctx.tenant).filter((x) => x.status === "subscribed").length;
   if (!demo) {
+    const filed = await withTenant(scopeOf(ctx), (tx) => campaignNames(tx, "newsletter"));
     const [list, templates, loaded] = await Promise.all([
       listNewsletters(scopeOf(ctx)),
       listTemplates(scopeOf(ctx)),
@@ -59,6 +61,7 @@ async function Body({ searchParams }: { searchParams: Promise<{ error?: string }
       audience: n.audienceName || (n.audience === "all" ? "Everyone subscribed" : "A list"),
       stats: n.status === "sent" || n.status === "sending" ? n.stats : null,
       error: n.status === "failed" ? n.error : null,
+      campaign: filed.get(n.id) ?? null,
     }));
   }
 

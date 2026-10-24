@@ -629,3 +629,11 @@
     font-size: var(--bo-text-lg);
   }
 }
+
+/* The small arrow on a link that opens in a new tab. */
+.navExternal {
+  width: 13px;
+  height: 13px;
+  margin-left: auto;
+  color: var(--bo-ink-3);
+}

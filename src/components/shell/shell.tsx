@@ -50,7 +50,7 @@ export async function Shell({ children }: { children: ReactNode }) {
         <SideNav modes={modes} />
 
         <div className={s.sidebarFoot}>
-          <GeneralNav />
+          <GeneralNav kiosk={edition.key === "fit"} />
           {ctx.settings.sampleData && (
             <Link href="/settings#data" className={s.sampleChip}>
               <span className="dot" aria-hidden="true" />
@@ -110,7 +110,7 @@ export async function Shell({ children }: { children: ReactNode }) {
         </PullToRefresh>
       </main>
 
-      <Dock modes={modes} signOut={signOut} />
+      <Dock modes={modes} signOut={signOut} kiosk={edition.key === "fit"} />
     </div>
   );
 }

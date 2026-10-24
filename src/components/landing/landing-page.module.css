@@ -125,10 +125,9 @@
   padding: 9px 16px;
   border: 1px solid var(--lp-line);
   border-radius: var(--lp-r-btn);
-  background: color-mix(in oklab, var(--lp-surface) 70%, transparent);
+  background: color-mix(in oklab, var(--lp-surface) 88%, transparent);
   font-size: 15px;
   font-weight: 580;
-  backdrop-filter: blur(8px);
   transition: border-color 0.15s ease;
 }
 
@@ -362,7 +361,8 @@
 .heroArt span {
   position: absolute;
   border-radius: 50%;
-  filter: blur(60px);
+  /* Soft from the gradient alone. A big blur filter here is costly to paint,
+     and the builder shows several pages at once in scaled frames. */
 }
 
 .hero[data-art="glow"] .heroArt span:nth-child(1) {
@@ -459,8 +459,7 @@
 
 .heroCards span:nth-child(2) {
   inset: 26% 0 0 22%;
-  backdrop-filter: blur(10px);
-  background: linear-gradient(160deg, color-mix(in oklab, var(--lp-accent) 16%, transparent), color-mix(in oklab, var(--lp-surface) 70%, transparent));
+  background: linear-gradient(160deg, color-mix(in oklab, var(--lp-accent) 16%, var(--lp-surface)), color-mix(in oklab, var(--lp-surface) 92%, transparent));
 }
 
 .heroCards i {

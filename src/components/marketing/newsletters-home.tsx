@@ -2,6 +2,8 @@
 
 // Newsletters: start one from a template (or one you saved), and see every
 // newsletter with where it stands and how it did.
+import { CampaignChip } from "@/components/campaigns/chip";
+import type { CampaignColor } from "@/lib/db/types";
 import { FilePlus2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,6 +30,8 @@ export type NewsletterCard = {
   audience: string;
   stats: { recipients: number; sent: number; delivered: number; bounced: number; unsubscribed: number } | null;
   error: string | null;
+  /** The campaign it's filed in. */
+  campaign?: { id: string; name: string; color: CampaignColor } | null;
 };
 
 type Props = {
@@ -192,6 +196,7 @@ export function NewslettersHome(props: Props) {
                       {n.status !== "draft" && n.audience ? ` · ${n.audience}` : ""}
                     </span>
                     {n.error && <span className={h.rowError}>{n.error}</span>}
+                    {n.campaign && <CampaignChip campaign={n.campaign} link={false} />}
                   </span>
                   {n.stats && (
                     <span className={h.rowStats}>
