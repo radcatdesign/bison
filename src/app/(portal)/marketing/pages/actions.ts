@@ -13,6 +13,8 @@ import { emptyPageDoc, PageDocError, parsePageDoc, titleFromBrief } from "@/lib/
 import { getPortalContext, type PortalContext, scopeOf } from "@/lib/portal";
 import { buildFromTemplate, findTemplate } from "@/lib/pages/page-templates";
 import { publicPageUrl } from "@/lib/pages/urls";
+import { earn } from "@/lib/progress/repo";
+import { gainedLine } from "@/lib/progress/store";
 
 export type PageActionResult = { ok: boolean; message: string; url?: string; savedAt?: string };
 
@@ -79,7 +81,8 @@ export async function publishPageAction(id: string, doc: unknown): Promise<PageA
     // Save what's on screen first, so what goes live is exactly what they see.
     await saveDraft(scopeOf(ctx), id, parsePageDoc(doc));
     const { slug } = await publishPage(scopeOf(ctx), id, ctx.member.email);
-    return { ok: true, message: "Published", url: publicPageUrl(ctx.tenant.slug, slug) };
+    const line = gainedLine(await earn(ctx));
+    return { ok: true, message: line ? `Published.${line}` : "Published", url: publicPageUrl(ctx.tenant.slug, slug) };
   } catch (err) {
     return failure(err, "Couldn't publish. Try again in a minute.");
   }

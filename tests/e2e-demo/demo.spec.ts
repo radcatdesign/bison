@@ -374,3 +374,10 @@ test("campaigns show made-up folders in each edition, and nothing is saved", asy
   await page.getByTestId("campaign-new-form").filter({ visible: true }).getByRole("button", { name: "Make the campaign" }).click();
   await expect(page.getByTestId("campaign-new-form").filter({ visible: true }).getByTestId("action-message")).toContainText("demo");
 });
+
+test("progress shows a made-up level and achievements in the demo", async ({ page }) => {
+  await pick(page, "dev_ada");
+  await page.goto("/progress");
+  await expect(page.getByTestId("progress-level").filter({ visible: true })).toContainText("Level 4");
+  await expect(page.getByTestId("achievement-hit-send").filter({ visible: true })).toContainText("Earned");
+});

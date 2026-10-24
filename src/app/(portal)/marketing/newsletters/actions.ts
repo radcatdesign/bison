@@ -29,6 +29,8 @@ import { sendTestEmail } from "@/lib/marketing/test-send";
 import { runEmailWork } from "@/lib/marketing/worker";
 import { getPortalContext, type PortalContext, scopeOf } from "@/lib/portal";
 import { formatWhen, zonedLocalToDate } from "@/lib/time";
+import { earn } from "@/lib/progress/repo";
+import { gainedLine } from "@/lib/progress/store";
 
 export type NewsletterResult = { ok: boolean; message: string; savedAt?: string };
 
@@ -101,7 +103,7 @@ export async function scheduleNewsletterAction(id: string, input: { when: string
     if (r.now) after(() => runEmailWork({ tenantId: ctx.tenant.id, budgetMs: 250_000 }).then(() => undefined));
     refresh();
     const people = `${r.recipients.toLocaleString("en-US")} ${r.recipients === 1 ? "person" : "people"}`;
-    return { ok: true, message: r.now ? `Sending to ${people} now.` : `Scheduled for ${formatWhen(r.at, ctx.settings.timezone)}, to ${people}.` };
+    return { ok: true, message: r.now ? `Sending to ${people} now.${gainedLine(await earn(ctx))}` : `Scheduled for ${formatWhen(r.at, ctx.settings.timezone)}, to ${people}.` };
   } catch (err) {
     return failed(err, "Couldn't schedule it. Try again in a minute.");
   }

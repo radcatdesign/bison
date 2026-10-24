@@ -123,6 +123,8 @@ Built so far (all with RLS):
 | `contact_shares` | Expiring links to one contact's page | `contact_id`, `expires_at`, `revoked_at`, `created_by` |
 | `campaigns` | Folders for pages, emails and graphics | `name` (unique per company, any case), `notes`, `color`, `starts_on`, `ends_on`, `archived_at`; `pages`, `newsletters` and `sequences` have a `campaign_id` |
 | `campaign_graphics` | A graphic in a campaign (one campaign per file) | `campaign_id`, `file_id`, `name`, `added_by` |
+| `xp_awards` | XP earned, one row per thing done (insert and read only) | `kind`, `ref` (the record, so it counts once), `points`, `label`, `earned_at` |
+| `achievements` | Achievements earned (insert and read only) | `key`, `earned_at` |
 | `kiosk_settings` | One row per club: the front desk kiosk | `pin_hash` (scrypt), `config` (json, checked by `src/lib/kiosk/settings.ts`), `waiver_title`, `waiver_body`, `waiver_version` |
 | `kiosk_devices` | Paired tablets (no delete grant; unpairing sets `revoked_at`) | `name`, `token_hash` (sha256 of the cookie), `paired_by`, `last_seen_at`, `pin_failures`, `pin_locked_until` |
 | `kiosk_pair_codes` | 6-digit pairing codes, 10 minutes, once | `code_hash` (HMAC, unique while unused across clubs), `name`, `expires_at`, `used_at`, `device_id` |
@@ -228,6 +230,10 @@ A page is a small JSON document (`src/lib/pages/schema.ts`): a theme, search det
 ## Campaigns
 
 Marketing, Campaigns, in both editions (migration 0013, `src/lib/campaigns`). A campaign is a folder: pages, newsletters and series point at it with a nullable `campaign_id` (same-company foreign key, set to null if the campaign goes), and graphics are `files` rows of kind `graphic` linked by `campaign_graphics`. Uploads go through `/api/marketing/files?kind=graphic&campaign=<id>`, which saves the file and files it in one transaction. The detail screen lists what's filed with links, adds anything from a picker (moving it if it was elsewhere), uploads graphics, and shows form sends and emails sent. Lists of pages and newsletters show a chip for their campaign. `fileInUse` checks every document that can show an upload before a graphic is deleted. In the demo, two made-up campaigns per edition (`src/lib/sample/campaigns.ts`) are read only.
+
+## Progress: XP, levels and achievements
+
+Migration 0014, `src/lib/progress`. Rules and the level math are pure (`rules.ts`); `syncProgress` turns the company's records into `xp_awards` rows with `insert ... select ... on conflict do nothing`, one query per rule, then adds any achievements met. Campaign actions and publishing call it and add "+N XP" to their message; the Progress page (`/progress`, in the general nav with the level) calls it before reading; the shell's level chip calls it at most once a minute per company per server instance. The demo shows made-up progress (`src/lib/sample/progress.ts`).
 
 ## Marketing email
 

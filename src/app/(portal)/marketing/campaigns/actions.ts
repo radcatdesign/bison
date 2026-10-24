@@ -13,6 +13,8 @@ import { withTenant } from "@/lib/db";
 import { DEMO_MESSAGE } from "@/lib/demo";
 import { demoMode } from "@/lib/env";
 import { getPortalContext, type PortalContext, scopeOf } from "@/lib/portal";
+import { earn } from "@/lib/progress/repo";
+import { gainedLine } from "@/lib/progress/store";
 
 async function guard(): Promise<{ ctx: PortalContext; error: null } | { ctx: PortalContext; error: string }> {
   const ctx = await getPortalContext();
@@ -30,8 +32,9 @@ async function run(fn: (ctx: PortalContext) => Promise<string>): Promise<ActionS
   if (error) return { ok: false, message: error };
   try {
     const message = await fn(ctx);
+    const gained = await earn(ctx);
     refresh();
-    return { ok: true, message };
+    return { ok: true, message: message + gainedLine(gained) };
   } catch (err) {
     if (err instanceof CampaignError) return { ok: false, message: err.message };
     console.error("campaign action failed", err);
@@ -45,6 +48,7 @@ export async function newCampaign(_prev: ActionState, form: FormData): Promise<A
   let id: string;
   try {
     id = await withTenant(scopeOf(ctx), (tx) => createCampaign(tx, input(form), ctx.member.email || ctx.member.name));
+    await earn(ctx);
   } catch (err) {
     if (err instanceof CampaignError) return { ok: false, message: err.message };
     console.error("campaign create failed", err);
