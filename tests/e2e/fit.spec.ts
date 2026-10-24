@@ -1,6 +1,6 @@
 // Fit Funnels end to end, at 390 px and 1440 px: the sign-in switch, a club's
 // own name, mark, color and words, and its tools working the same as Bison Ops.
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import { resetDb } from "./global-setup";
 
 const t = (page: Page, id: string) => page.getByTestId(id).filter({ visible: true });
@@ -12,18 +12,26 @@ async function signIn(page: Page, userId: "dev_maya" | "dev_theo" | "dev_jo" | "
   await page.waitForURL(/\/(analyze|marketing|sales)/);
 }
 
+/** Opens every closed category, one at a time, since each click changes which are closed. */
+async function openAll(scope: Locator) {
+  const closed = scope.locator('button[aria-expanded="false"]');
+  while ((await closed.count()) > 0) await closed.first().click();
+}
+
 /** Nav links: the sidebar on desktop, the menu sheet on phones. */
 async function navLabels(page: Page): Promise<string[]> {
   if (isPhone(page)) {
     await page.getByRole("button", { name: "Menu" }).click();
     const sheet = page.getByRole("dialog", { name: "Menu" });
     await sheet.getByRole("link").first().waitFor();
+    await openAll(sheet);
     const labels = await sheet.getByRole("link").allTextContents();
     await page.getByRole("button", { name: "Close menu" }).click();
     return labels.map((l) => l.trim());
   }
   const nav = page.getByRole("navigation", { name: /pages$/ }).filter({ visible: true });
   await nav.getByRole("link").first().waitFor();
+  await openAll(nav);
   return (await nav.getByRole("link").allTextContents()).map((l) => l.trim());
 }
 
@@ -133,5 +141,28 @@ test.describe("Fit Funnels", () => {
     await expect(page.locator('[data-mark="bison"]').filter({ visible: true }).first()).toBeVisible();
     await page.goto("/sales");
     expect(await navLabels(page)).toEqual(expect.arrayContaining(["Estimates", "Orders", "Products", "Discount codes", "Trade accounts", "Carts"]));
+  });
+});
+
+test.describe("the nav", () => {
+  test("groups pages into categories that open, and keeps the current one open", async ({ page }) => {
+    await resetDb();
+    await page.goto("/sign-in");
+    await page.getByTestId("sign-in-dev_ada").click();
+    await page.waitForURL(/\/(analyze|marketing|sales)/);
+    await page.goto("/marketing");
+    if (isPhone(page)) await page.getByRole("button", { name: "Menu" }).click();
+    const nav = isPhone(page) ? page.getByRole("dialog", { name: "Menu" }) : page.getByRole("navigation", { name: "Marketing pages" });
+    const email = nav.getByTestId("nav-group-email");
+    await expect(email).toHaveAttribute("aria-expanded", "false");
+    await expect(nav.getByRole("link", { name: "Newsletters" })).toHaveCount(0);
+    await email.click();
+    await expect(email).toHaveAttribute("aria-expanded", "true");
+    await nav.getByRole("link", { name: "Newsletters" }).click();
+    await page.waitForURL(/\/marketing\/newsletters$/);
+    if (isPhone(page)) await page.getByRole("button", { name: "Menu" }).click();
+    const again = isPhone(page) ? page.getByRole("dialog", { name: "Menu" }) : page.getByRole("navigation", { name: "Marketing pages" });
+    await expect(again.getByTestId("nav-group-email")).toHaveAttribute("aria-expanded", "true");
+    await expect(again.getByRole("link", { name: "Newsletters" })).toHaveAttribute("aria-current", "page");
   });
 });

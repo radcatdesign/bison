@@ -6,6 +6,7 @@
 // with `say("Bison Ops words", "Fit Funnels words")`, so each sentence reads
 // right in both. Labels used in many places (nav, modules) live here.
 import { CATALOG, type ItemKey } from "./catalog";
+import type { NavGroupKey } from "./modes";
 
 export type EditionKey = "bison" | "fit";
 export const EDITION_KEYS = ["bison", "fit"] as const satisfies readonly EditionKey[];
@@ -27,6 +28,8 @@ export type Edition = {
   previewLabel: string;
   /** Nav labels that differ from the page's usual name, by href. */
   pageLabels: Partial<Record<string, string>>;
+  /** Nav category names that differ. */
+  groupLabels: Partial<Record<NavGroupKey, string>>;
   /** Module and add-on names and pitches that differ. */
   items: Partial<Record<ItemKey, { name?: string; pitch?: string }>>;
 };
@@ -43,6 +46,7 @@ export const EDITIONS: Record<EditionKey, Edition> = {
     industries: ["pools", "coffee", "general"],
     previewLabel: "Visitors",
     pageLabels: {},
+    groupLabels: {},
     items: {},
   },
   fit: {
@@ -66,6 +70,7 @@ export const EDITIONS: Record<EditionKey, Edition> = {
       "/sales/trade": "Corporate accounts",
       "/sales/carts": "Unfinished joins",
     },
+    groupLabels: { web: "Funnels and tests", catalog: "Memberships and checkout" },
     items: {
       base: { pitch: "Visitors, pages, heatmaps and the live view, plus one inbox for every trial, tour and class request from your site. Included with every club." },
       "module:sales": { name: "Membership sales", pitch: "Sell memberships, class packs and personal training on your site, send corporate quotes people approve online, and run corporate accounts. Payments go straight to your own Stripe account." },

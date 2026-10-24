@@ -549,3 +549,83 @@
   width: 220px;
   height: 28px;
 }
+
+/* ---- Nav categories: a button that opens to its pages ---- */
+
+.navCategory {
+  display: grid;
+  gap: 1px;
+}
+
+.navCategoryButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--bo-r-control);
+  background: none;
+  color: var(--bo-ink-2);
+  font: inherit;
+  font-weight: 560;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--bo-fast) var(--bo-ease),
+    color var(--bo-fast) var(--bo-ease);
+}
+
+.navCategoryButton:hover {
+  background: var(--bo-raised);
+  color: var(--bo-ink);
+}
+
+.navCategoryButton:focus-visible {
+  outline: none;
+  box-shadow: var(--bo-focus);
+}
+
+.navChevron {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: var(--bo-ink-3);
+  transition: transform var(--bo-fast) var(--bo-ease);
+}
+
+.navCategory[data-open] .navChevron {
+  transform: rotate(90deg);
+}
+
+.navCount {
+  margin-left: auto;
+  color: var(--bo-ink-3);
+  font-size: var(--bo-text-xs);
+  font-weight: 520;
+}
+
+.navSub {
+  display: grid;
+  gap: 1px;
+  margin-left: 17px;
+  padding-left: 8px;
+  border-left: 1px solid var(--bo-line);
+}
+
+.navSub[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navChevron {
+    transition: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .sheet .navCategoryButton {
+    height: 44px;
+    font-size: var(--bo-text-lg);
+  }
+}

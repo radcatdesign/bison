@@ -1,7 +1,7 @@
 import { LogOut } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
-import { MODES } from "@/config/modes";
+import { MODES, NAV_GROUPS } from "@/config/modes";
 import { ROLES, seesMode } from "@/config/roles";
 import { signOut } from "@/app/sign-in/actions";
 import { can } from "@/lib/access/entitlements";
@@ -26,7 +26,7 @@ export async function Shell({ children }: { children: ReactNode }) {
     key: m.key,
     label: m.label,
     locked: !can(ctx.tenant, m.feature),
-    pages: m.pages.map(({ href, label }) => ({ href, label: edition.pageLabels[href] ?? label })),
+    pages: m.pages.map(({ href, label, group }) => ({ href, label: edition.pageLabels[href] ?? label, group: group ? { key: group, label: edition.groupLabels[group] ?? NAV_GROUPS[group] } : undefined })),
   }));
   const who = initials(ctx.member.name, ctx.member.email);
   const theme = { "--bo-accent": ctx.settings.accent, "--bo-accent-ink": accentInk(ctx.settings.accent) } as CSSProperties;

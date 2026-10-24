@@ -1,5 +1,5 @@
-// The marks. Bison Ops has the bison; Fit Funnels has three bars narrowing like
-// a funnel. Both are drawn in the current text color, so they follow light and
+// The marks. Bison Ops has the bison; Fit Funnels has an F of three curved bars,
+// shorter as they go down. Both are drawn in the current text color, so they follow light and
 // dark mode on their own. The original artwork is in public/brand/.
 import type { EditionKey } from "@/config/editions";
 
@@ -25,19 +25,19 @@ export function Bison({ width = 40, className }: { width?: number; className?: s
   );
 }
 
-/** The Fit Funnels bars (viewBox 0 0 32 32): wide, middle, narrow. */
-export const FUNNEL_BARS = [
-  { x: 3, y: 5, w: 26, h: 6 },
-  { x: 8, y: 13, w: 16, h: 6 },
-  { x: 12.5, y: 21, w: 7, h: 6 },
+/** The Fit Funnels F (viewBox 0 0 36 28): three bars, shorter as they go down, each ending in a curve. */
+export const FIT_F = [
+  "M0 0H36A9.6 7.4 0 0 1 26.4 7.4H0Z",
+  "M0 10.3H24A7.6 7.4 0 0 1 16.4 17.7H0Z",
+  "M0 20.6H12.4A7.4 7.4 0 0 1 5 28H0Z",
 ] as const;
 
 /** The Fit Funnels mark on its own, `width` wide. */
 export function Funnel({ width = 32, className }: { width?: number; className?: string }) {
   return (
-    <svg width={width} height={width} viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" className={className} style={{ flex: "none", display: "block" }}>
-      {FUNNEL_BARS.map((b) => (
-        <rect key={b.y} x={b.x} y={b.y} width={b.w} height={b.h} rx={b.h / 2} />
+    <svg width={width} height={(width * 28) / 36} viewBox="0 0 36 28" fill="currentColor" aria-hidden="true" className={className} style={{ flex: "none", display: "block" }}>
+      {FIT_F.map((d) => (
+        <path key={d} d={d} />
       ))}
     </svg>
   );
@@ -65,7 +65,7 @@ export function Mark({ size = 28, edition = "bison" }: { size?: number; edition?
         color: "var(--bo-canvas)",
       }}
     >
-      {edition === "fit" ? <Funnel width={Math.round(size * 0.66)} /> : <Bison width={Math.round(size * 0.74)} />}
+      {edition === "fit" ? <Funnel width={Math.round(size * 0.6)} /> : <Bison width={Math.round(size * 0.74)} />}
     </span>
   );
 }

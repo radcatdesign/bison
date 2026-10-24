@@ -4,6 +4,15 @@ export type Release = { version: string; date: string; title: string; changes: s
 
 export const RELEASES: Release[] = [
   {
+    version: "0.6.1",
+    date: "2026-10-23",
+    title: "Easier nav",
+    changes: [
+      "Pages in the side menu now sit in categories, like Email or Pages and tests. Open one to see its pages. The category you're in stays open.",
+      "Fit Funnels has a new mark: an F made of three curved bars.",
+    ],
+  },
+  {
     version: "0.6.0",
     date: "2026-10-23",
     title: "Fit Funnels",

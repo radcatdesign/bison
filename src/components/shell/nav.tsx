@@ -2,6 +2,7 @@
 
 import {
   AppWindow,
+  ChevronRight,
   BadgePercent,
   Boxes,
   ClipboardList,
@@ -41,7 +42,98 @@ import { BRAND, THEME_STORAGE_KEY } from "@/config/brand";
 import { MODE_COOKIE, type ModeKey } from "@/config/modes";
 import s from "./shell.module.css";
 
-export type NavMode = { key: ModeKey; label: string; locked: boolean; pages: { href: string; label: string }[] };
+export type NavPage = { href: string; label: string; group?: { key: string; label: string } };
+export type NavMode = { key: ModeKey; label: string; locked: boolean; pages: NavPage[] };
+
+/** A mode's pages as the nav shows them: loose pages, and categories that open to show theirs. Order follows the config. */
+type NavItem = { kind: "page"; page: NavPage } | { kind: "group"; key: string; label: string; pages: NavPage[] };
+function navItems(pages: NavPage[]): NavItem[] {
+  const out: NavItem[] = [];
+  for (const p of pages) {
+    if (!p.group) {
+      out.push({ kind: "page", page: p });
+      continue;
+    }
+    const g = out.find((i): i is Extract<NavItem, { kind: "group" }> => i.kind === "group" && i.key === p.group!.key);
+    if (g) g.pages.push(p);
+    else out.push({ kind: "group", key: p.group.key, label: p.group.label, pages: [p] });
+  }
+  return out;
+}
+
+const OPEN_KEY = "bo-nav-open";
+const openListeners = new Set<() => void>();
+function readOpen(): string {
+  try {
+    return localStorage.getItem(OPEN_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+function toggleOpen(key: string, open: boolean) {
+  const set = new Set(readOpen().split(",").filter(Boolean));
+  if (open) set.add(key);
+  else set.delete(key);
+  try {
+    localStorage.setItem(OPEN_KEY, [...set].join(","));
+  } catch {
+    // Storage can be off; the group still opens for this visit.
+  }
+  openListeners.forEach((l) => l());
+}
+/** Which categories the person opened, remembered in this browser. */
+function useOpenGroups(): Set<string> {
+  const raw = useSyncExternalStore(
+    (cb) => {
+      openListeners.add(cb);
+      return () => openListeners.delete(cb);
+    },
+    readOpen,
+    () => "",
+  );
+  return new Set(raw.split(",").filter(Boolean));
+}
+
+/** One category: a button that opens and closes it, and its pages, indented. The one holding the current page is always open. */
+function NavCategory({ modeKey, item, currentHref, onNavigate }: { modeKey: string; item: Extract<NavItem, { kind: "group" }>; currentHref?: string; onNavigate?: () => void }) {
+  const opened = useOpenGroups();
+  const id = `${modeKey}:${item.key}`;
+  const holdsCurrent = item.pages.some((p) => p.href === currentHref);
+  const open = holdsCurrent || opened.has(id);
+  const listId = `nav-${modeKey}-${item.key}`;
+  return (
+    <div className={s.navCategory} data-open={open || undefined}>
+      <button type="button" className={s.navCategoryButton} aria-expanded={open} aria-controls={listId} onClick={() => !holdsCurrent && toggleOpen(id, !open)} data-testid={`nav-group-${item.key}`}>
+        <ChevronRight className={s.navChevron} aria-hidden="true" />
+        <span>{item.label}</span>
+        {!open && <span className={s.navCount}>{item.pages.length}</span>}
+      </button>
+      <div id={listId} className={s.navSub} hidden={!open}>
+        {item.pages.map((p) => (
+          <NavLink key={p.href} href={p.href} icon={PAGE_ICONS[p.href] ?? LayoutGrid} current={currentHref === p.href} onClick={onNavigate}>
+            {p.label}
+          </NavLink>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NavList({ mode, currentHref, onNavigate }: { mode: NavMode; currentHref?: string; onNavigate?: () => void }) {
+  return (
+    <>
+      {navItems(mode.pages).map((item) =>
+        item.kind === "page" ? (
+          <NavLink key={item.page.href} href={item.page.href} icon={PAGE_ICONS[item.page.href] ?? LayoutGrid} current={currentHref === item.page.href} onClick={onNavigate}>
+            {item.page.label}
+          </NavLink>
+        ) : (
+          <NavCategory key={item.key} modeKey={mode.key} item={item} currentHref={currentHref} onNavigate={onNavigate} />
+        ),
+      )}
+    </>
+  );
+}
 
 const MODE_ICONS: Record<ModeKey, LucideIcon> = { analyze: ChartLine, marketing: Megaphone, sales: ShoppingBag };
 const PAGE_ICONS: Record<string, LucideIcon> = {
@@ -112,11 +204,7 @@ export function SideNav({ modes }: { modes: NavMode[] }) {
   return (
     <nav aria-label={`${mode.label} pages`} className={s.navGroup}>
       <span className={s.navHeading}>{mode.label}</span>
-      {mode.pages.map((p) => (
-        <NavLink key={p.href} href={p.href} icon={PAGE_ICONS[p.href] ?? LayoutGrid} current={page?.href === p.href}>
-          {p.label}
-        </NavLink>
-      ))}
+      <NavList mode={mode} currentHref={page?.href} />
     </nav>
   );
 }
@@ -227,11 +315,7 @@ export function Dock({ modes, signOut }: { modes: NavMode[]; signOut: () => Prom
         </div>
         {mode && (
           <div className={s.navGroup}>
-            {mode.pages.map((p) => (
-              <NavLink key={p.href} href={p.href} icon={PAGE_ICONS[p.href] ?? LayoutGrid} current={page?.href === p.href} onClick={close}>
-                {p.label}
-              </NavLink>
-            ))}
+            <NavList mode={mode} currentHref={page?.href} onNavigate={close} />
           </div>
         )}
         <GeneralNav onNavigate={close} />
