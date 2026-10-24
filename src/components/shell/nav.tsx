@@ -18,6 +18,7 @@ import {
   ScanSearch,
   Users,
   ChartLine,
+  FolderOpen,
   Inbox,
   TabletSmartphone,
   LayoutGrid,
@@ -32,6 +33,7 @@ import {
   Settings,
   ShoppingBag,
   Sparkles,
+  SquareArrowOutUpRight,
   SquareSplitHorizontal,
   Sun,
   X,
@@ -142,6 +144,7 @@ const PAGE_ICONS: Record<string, LucideIcon> = {
   "/analyze/pages": PanelsTopLeft,
   "/analyze/contacts": Inbox,
   "/analyze/front-desk": TabletSmartphone,
+  "/marketing/campaigns": FolderOpen,
   "/marketing": Megaphone,
   "/marketing/setup": ListChecks,
   "/marketing/newsletters": Mail,
@@ -211,10 +214,19 @@ export function SideNav({ modes }: { modes: NavMode[] }) {
   );
 }
 
-export function GeneralNav({ onNavigate }: { onNavigate?: () => void }) {
+export function GeneralNav({ onNavigate, kiosk = false }: { onNavigate?: () => void; kiosk?: boolean }) {
   const pathname = usePathname();
   return (
     <nav aria-label="General" className={s.navGroup}>
+      {kiosk && (
+        // The kiosk runs full screen on its own, so it opens in a new tab.
+        <a href="/kiosk/preview" target="_blank" rel="noopener" className={s.navLink} data-testid="nav-kiosk">
+          <TabletSmartphone className={s.navIcon} aria-hidden="true" />
+          Open the kiosk
+          <SquareArrowOutUpRight className={s.navExternal} aria-hidden="true" />
+          <span className="visually-hidden"> (opens in a new tab)</span>
+        </a>
+      )}
       <NavLink href="/updates" icon={Sparkles} current={pathname.startsWith("/updates")} onClick={onNavigate}>
         Updates
       </NavLink>
@@ -282,7 +294,7 @@ export function ThemeSwitch() {
 
 // ── Phone dock and menu ──────────────────────────────────────────────────────
 
-export function Dock({ modes, signOut }: { modes: NavMode[]; signOut: () => Promise<void> }) {
+export function Dock({ modes, signOut, kiosk = false }: { modes: NavMode[]; signOut: () => Promise<void>; kiosk?: boolean }) {
   const pathname = usePathname();
   const mode = activeMode(pathname, modes);
   const page = activePage(pathname, mode);
@@ -320,7 +332,7 @@ export function Dock({ modes, signOut }: { modes: NavMode[]; signOut: () => Prom
             <NavList mode={mode} currentHref={page?.href} onNavigate={close} />
           </div>
         )}
-        <GeneralNav onNavigate={close} />
+        <GeneralNav onNavigate={close} kiosk={kiosk} />
         <div className={s.sheetFoot}>
           <ThemeSwitch />
           <form action={signOut}>

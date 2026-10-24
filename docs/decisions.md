@@ -119,6 +119,11 @@ Two lists. The first is what I decided while building Phase 0 that the brief did
 112. **The kiosk always saves, even with sample data on.** People at the desk are real. The Front desk screen shows made-up numbers while sample data is on, like every other screen.
 113. **A preview for staff** at `/kiosk/preview` shows the club's kiosk with every button working and nothing sent. In the demo it's the only way in, with a filled-in waiver and the made-up memberships.
 
+114. **Campaigns are folders, in both editions.** A campaign (Marketing, Campaigns) holds landing pages, newsletters, email series and graphics. Each of those sits in one campaign at most, and filing it somewhere else moves it. Filing only sets `campaign_id`; it never changes or deletes what's filed, and each thing stays in its own list too, with a chip saying where it's filed. Campaigns are content, so they save with sample data on.
+115. **Graphics are uploads that belong to a campaign.** They're re-encoded like every image (`kind = 'graphic'`, up to 2,400 px wide and 2 MB), served at `/f/<id>` so the link works in emails, pages and anywhere else, and can be renamed, moved to another campaign, copied or downloaded. Deleting one is refused while any page, email, template, test version, brand kit or product still shows it.
+116. **Only an empty campaign can be deleted;** anything else is archived, which hides it from the active list and stops new filing, and can be undone.
+117. **A campaign's numbers are all-time:** form sends on its pages (not spam) and emails from its newsletters and series that went out. A page counts for as long as it's filed, including sends from before it was added.
+
 ## Needed from you
 
 | # | Decision | My recommendation |

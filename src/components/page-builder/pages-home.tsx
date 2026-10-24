@@ -2,6 +2,8 @@
 
 // Marketing > Pages: describe a new page for the agent, or open one you've made.
 // Fit Funnels calls them funnel pages and shows its own club templates.
+import { CampaignChip } from "@/components/campaigns/chip";
+import type { CampaignColor } from "@/lib/db/types";
 import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -18,7 +20,7 @@ import { buildFromTemplate, type PageTemplate } from "@/lib/pages/page-templates
 import { createDemoPage, demoPages } from "./store";
 import { TemplateGallery } from "./template-gallery";
 
-export type PageCard = { id: string; title: string; slug: string; status: PageStatus; edited: string; doc: PageDoc; /** A running A/B test on the page. */ testId?: string | null };
+export type PageCard = { id: string; title: string; slug: string; status: PageStatus; edited: string; doc: PageDoc; /** A running A/B test on the page. */ testId?: string | null; /** The campaign it's filed in. */ campaign?: { id: string; name: string; color: CampaignColor } | null };
 
 type Props = {
   storage: "server" | "browser";
@@ -181,6 +183,7 @@ export function PagesHome({ storage, pages: serverPages, tenant, seed, canEdit, 
                     <span className="mono">/{p.slug}</span>
                   </span>
                   <span className={s.edited}>{p.edited}</span>
+                  {p.campaign && <CampaignChip campaign={p.campaign} link={false} />}
                 </div>
               </Link>
             </li>

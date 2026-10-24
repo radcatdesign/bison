@@ -4,6 +4,18 @@ export type Release = { version: string; date: string; title: string; changes: s
 
 export const RELEASES: Release[] = [
   {
+    version: "0.8.0",
+    date: "2026-10-23",
+    title: "Campaigns",
+    changes: [
+      "Campaigns keep a launch, a sale or a challenge together: its landing pages, newsletters, email series and graphics in one folder, with dates, a color and notes.",
+      "Upload graphics into a campaign, then copy the link or download them. They're resized to fit, and can't be deleted while an email or page still shows them.",
+      "Pages and newsletters show which campaign they're in. Each campaign shows its form sends and emails sent so far.",
+      "Archive a campaign when it's over. Everything stays filed in it.",
+      "Clubs can open the front desk kiosk in a new tab from the sidebar or Front desk, and the preview closes its own tab.",
+    ],
+  },
+  {
     version: "0.7.0",
     date: "2026-10-23",
     title: "Front desk kiosk",

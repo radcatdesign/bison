@@ -102,9 +102,10 @@ async function Body() {
         title="Preview"
         note="See the kiosk the way people at your desk will. Every button works, and nothing is saved or sent."
         aside={
-          <Link href="/kiosk/preview" className="btn" data-testid="kiosk-preview-link">
+          <Link href="/kiosk/preview" target="_blank" rel="noopener" className="btn" data-testid="kiosk-preview-link">
             <ExternalLink aria-hidden="true" />
             Preview the kiosk
+            <span className="visually-hidden"> (opens in a new tab)</span>
           </Link>
         }
       >

@@ -100,6 +100,10 @@ A one-time code for each new subscriber's first order: a percent or amount off, 
 
 Describe your business in a plain paragraph and add your phone, email and hours. Bison Ops turns that and your published pages into a sitemap, `llms.txt` for AI assistants, titles, social cards and structured data. Then paste your sitemap address into Google Search Console and Bing Webmaster Tools and mark that step done; it's the only step nobody can check for you. You can also keep AI crawlers out, and copy lines for your own website's robots.txt.
 
+## Campaigns
+
+Marketing, Campaigns keeps everything for one push together, like a launch, a sale or a challenge. Make a campaign with a name, dates and a color, then add your landing pages, newsletters and email series to it, and upload its graphics (social posts, ads, flyers, lobby screens). Everything stays in its own list too, marked with the campaign's name. Copy a graphic's link to use it anywhere. Archive a campaign when it's over; an empty one can be deleted.
+
 ## Building a landing page
 
 Pages are in Marketing. Describe the page you want in plain words: who it's for, what you're offering, and what people should do. For example: "A spring sale page for glow aggregate, 15% off through May, with a quote form and a few common questions." The agent builds it section by section while you watch.

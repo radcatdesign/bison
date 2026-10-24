@@ -19,6 +19,14 @@ type Done = { title: string; body: string; waiver?: boolean };
 const EMPTY: Person = { name: "", email: "", phone: "" };
 const DONE_SECONDS = 10;
 
+/** The preview opens in its own tab: close it, or go back to Settings when the browser won't let a tab close. */
+function closePreview(e: { preventDefault(): void } | null, fallback: string) {
+  e?.preventDefault();
+  window.close();
+  // Still here: the browser didn't let this tab close.
+  window.setTimeout(() => window.location.assign(fallback), 150);
+}
+
 /** In preview, answers come from here and nothing leaves the browser. */
 function previewAnswer(action: string, body: Record<string, unknown>): Answer {
   const first = typeof body.name === "string" ? body.name.trim().split(/\s+/)[0] : "";
@@ -142,8 +150,8 @@ export function Kiosk({ view, preview = false, previewExit }: { view: KioskView;
         <div className={s.previewBar} data-testid="kiosk-preview">
           <span>Preview. Nothing here is saved or sent.</span>
           {previewExit && (
-            <a href={previewExit} className={s.previewLink}>
-              Back to Settings
+            <a href={previewExit} className={s.previewLink} onClick={(e) => closePreview(e, previewExit)} data-testid="kiosk-preview-close">
+              Close preview
             </a>
           )}
         </div>
@@ -243,7 +251,7 @@ export function Kiosk({ view, preview = false, previewExit }: { view: KioskView;
           </div>
         )}
 
-        {screen === "staff" && <StaffExit busy={busy} error={error} onSubmit={(pin) => run("leave", { pin }, () => (preview ? window.location.assign(previewExit ?? "/settings/kiosk") : window.location.reload()))} />}
+        {screen === "staff" && <StaffExit busy={busy} error={error} onSubmit={(pin) => run("leave", { pin }, () => (preview ? closePreview(null, previewExit ?? "/settings/kiosk") : window.location.reload()))} />}
       </main>
 
       <footer className={s.foot}>

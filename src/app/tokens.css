@@ -205,3 +205,33 @@
   --bo-accent-line: color-mix(in oklab, var(--bo-accent) 45%, var(--bo-line));
   --bo-focus: 0 0 0 3px color-mix(in oklab, var(--bo-accent) 40%, transparent);
 }
+
+/* Campaign folder colors: a dot and a soft tint so folders are easy to tell apart. */
+:root {
+  --bo-folder-blue: #2f6fdf;
+  --bo-folder-green: #128a5c;
+  --bo-folder-orange: #d9611c;
+  --bo-folder-pink: #d6407f;
+  --bo-folder-purple: #7a4fd6;
+  --bo-folder-gray: #6b727d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bo-folder-blue: #6ea0f5;
+    --bo-folder-green: #3fc98f;
+    --bo-folder-orange: #f08a4c;
+    --bo-folder-pink: #f07aab;
+    --bo-folder-purple: #a98af0;
+    --bo-folder-gray: #9aa1ab;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bo-folder-blue: #6ea0f5;
+  --bo-folder-green: #3fc98f;
+  --bo-folder-orange: #f08a4c;
+  --bo-folder-pink: #f07aab;
+  --bo-folder-purple: #a98af0;
+  --bo-folder-gray: #9aa1ab;
+}

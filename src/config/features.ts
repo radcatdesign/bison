@@ -31,6 +31,7 @@ export const FEATURES = {
   "marketing.seo": ["module:marketing"],
   "marketing.pages": ["module:marketing"],
   "marketing.tests": ["module:marketing"],
+  "marketing.campaigns": ["module:marketing"],
 
   // AI Assistant
   "assistant.widget": ["module:assistant"],
