@@ -222,3 +222,11 @@ export function tradeApplicationEmail(s: Sender, t: { company: string; name: str
   const { html, text } = render(s.brand, title, [{ kind: "p", text: say("Someone applied for a trade account. Approve them and they'll get trade prices.", "Someone applied for a corporate account. Approve them and they'll get corporate prices.") }, { kind: "table", rows }, { kind: "button", label: "Review the application", href: t.url }]);
   return { subject: title, html, text };
 }
+
+/** A plain note from the company to one person, like an agent's follow-up: paragraphs and an optional button. */
+export function plainEmail(s: Sender, subject: string, body: string, button?: { label: string; href: string }) {
+  const paras = body.split(/\n{2,}/).map((t) => t.trim()).filter(Boolean);
+  const blocks: Block[] = paras.map((text) => ({ kind: "p", text }));
+  if (button) blocks.push({ kind: "button", label: button.label, href: button.href });
+  return { subject, ...render(s.brand, subject, blocks) };
+}

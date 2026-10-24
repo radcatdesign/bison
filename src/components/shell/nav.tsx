@@ -19,6 +19,7 @@ import {
   Users,
   ChartLine,
   FolderOpen,
+  Bot,
   Inbox,
   TabletSmartphone,
   Trophy,
@@ -240,6 +241,9 @@ export function GeneralNav({ onNavigate, kiosk = false, level }: { onNavigate?: 
   const pathname = usePathname();
   return (
     <nav aria-label="General" className={s.navGroup}>
+      <NavLink href="/agents" icon={Bot} current={pathname.startsWith("/agents")} onClick={onNavigate}>
+        Agents
+      </NavLink>
       {level && onNavigate && (
         <NavLink href="/progress" icon={Trophy} current={pathname.startsWith("/progress")} onClick={onNavigate}>
           Progress, level {level.level}

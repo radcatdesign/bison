@@ -13,7 +13,7 @@ export function levelFor(xp: number): Level {
   return { level: Math.floor(total / XP_PER_LEVEL) + 1, xp: total, into, toNext: XP_PER_LEVEL - into };
 }
 
-export type XpKind = "campaign" | "filed" | "graphic" | "page-published" | "newsletter-sent" | "series-on" | "campaign-lead" | "campaign-wrapped" | "test-ended" | "first-sale" | "kiosk-paired";
+export type XpKind = "campaign" | "filed" | "graphic" | "page-published" | "newsletter-sent" | "series-on" | "campaign-lead" | "campaign-wrapped" | "test-ended" | "first-sale" | "kiosk-paired" | "agent-done";
 
 export type XpRule = { kind: XpKind; points: number; title: string; how: string; editions?: EditionKey[] };
 
@@ -32,6 +32,7 @@ export function xpRules(edition: EditionKey): XpRule[] {
     { kind: "test-ended", points: 5, title: "Finish an A/B test", how: "Each test you end and keep a version from." },
     { kind: "first-sale", points: 5, title: say("Make your first sale", "Sell your first membership"), how: say("Your first paid order through your shop or an estimate.", "Your first paid purchase through your club's store or a quote.") },
     { kind: "kiosk-paired", points: 3, title: "Set up the front desk", how: "Pair your first kiosk tablet.", editions: ["fit"] },
+    { kind: "agent-done", points: 1, title: "Approve an agent's work", how: "Each piece of work you send or approve from Agents." },
   ].filter((r) => !r.editions || r.editions.includes(edition)) as XpRule[];
 }
 

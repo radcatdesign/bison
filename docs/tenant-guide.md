@@ -104,6 +104,10 @@ Describe your business in a plain paragraph and add your phone, email and hours.
 
 Marketing, Campaigns keeps everything for one push together, like a launch, a sale or a challenge. Make a campaign with a name, dates and a color, then add your landing pages, newsletters and email series to it, and upload its graphics (social posts, ads, flyers, lobby screens). Everything stays in its own list too, marked with the campaign's name. Copy a graphic's link to use it anywhere. Archive a campaign when it's over; an empty one can be deleted.
 
+## Agents
+
+Agents find the work that's waiting and draft it for you: replies to new leads, nudges for people who didn't finish buying or joining, follow-ups on quiet estimates or quotes, a campaign plan when nothing's running, a newsletter when it's been a while, pages with spots to fill in, and a weekly read of your numbers. Open Agents, read each draft, change anything you like, then send or approve it. Nothing goes to a customer until you do. Clubs see their team at work in a little 8-bit gym that fills up when marketing is going well.
+
 ## Progress
 
 Your team earns XP for running campaigns and working on your business: making and filling campaigns, publishing pages, sending newsletters, turning on series, getting leads, finishing tests and more. Every 10 XP is a new level. Your level is at the bottom of the sidebar (on a phone, in Menu); Progress shows how to earn more, your achievements and the latest XP. XP is never taken away.

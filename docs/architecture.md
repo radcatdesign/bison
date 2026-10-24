@@ -125,6 +125,7 @@ Built so far (all with RLS):
 | `campaign_graphics` | A graphic in a campaign (one campaign per file) | `campaign_id`, `file_id`, `name`, `added_by` |
 | `xp_awards` | XP earned, one row per thing done (insert and read only) | `kind`, `ref` (the record, so it counts once), `points`, `label`, `earned_at` |
 | `achievements` | Achievements earned (insert and read only) | `key`, `earned_at` |
+| `agent_tasks` | Work drafted by agents, one per kind and record (no delete grant) | `agent`, `kind`, `ref`, `title`, `summary`, `draft` (json), `status` (open, done, dismissed, failed), `result`, `decided_by` |
 | `kiosk_settings` | One row per club: the front desk kiosk | `pin_hash` (scrypt), `config` (json, checked by `src/lib/kiosk/settings.ts`), `waiver_title`, `waiver_body`, `waiver_version` |
 | `kiosk_devices` | Paired tablets (no delete grant; unpairing sets `revoked_at`) | `name`, `token_hash` (sha256 of the cookie), `paired_by`, `last_seen_at`, `pin_failures`, `pin_locked_until` |
 | `kiosk_pair_codes` | 6-digit pairing codes, 10 minutes, once | `code_hash` (HMAC, unique while unused across clubs), `name`, `expires_at`, `used_at`, `device_id` |
@@ -234,6 +235,10 @@ Marketing, Campaigns, in both editions (migration 0013, `src/lib/campaigns`). A 
 ## Progress: XP, levels and achievements
 
 Migration 0014, `src/lib/progress`. Rules and the level math are pure (`rules.ts`); `syncProgress` turns the company's records into `xp_awards` rows with `insert ... select ... on conflict do nothing`, one query per rule, then adds any achievements met. Campaign actions and publishing call it and add "+N XP" to their message; the Progress page (`/progress`, in the general nav with the level) calls it before reading; the shell's level chip calls it at most once a minute per company per server instance. The demo shows made-up progress (`src/lib/sample/progress.ts`).
+
+## Agents
+
+Migration 0015, `src/lib/agents`. `roster.ts` (pure) names the four agents per edition and maps each kind of work to its agent, plan feature, role action and button; it also turns a week of numbers into the gym's crowd. `drafts.ts` (pure) writes the drafts. `store.ts` has `runAgents` (one pass per kind: insert new drafts with `on conflict do nothing`, close drafts no longer needed), `weekNumbers`, and approving: emails go in three steps (claim and check the draft in one transaction, send with `sendOne` outside it, record the result in another), other kinds make their newsletter draft or campaign in one transaction. Actions (`/agents/actions.ts`) check the kind's feature and role, refuse in the demo and with sample data, and add XP. The Agents page shows the gym (Fit Funnels, `src/components/agents/virtual-gym.tsx`, canvas pixel art from `gym-scene.ts`) or the team as cards (Bison Ops), the week's numbers, the work waiting with a filter per agent, and what was done lately.
 
 ## Marketing email
 
