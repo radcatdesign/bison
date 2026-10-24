@@ -771,6 +771,26 @@ export interface AchievementsTable {
   earned_at: Timestamp;
 }
 
+export type AgentKey = "frontdesk" | "memberships" | "marketing" | "coach";
+export type AgentTaskStatus = "open" | "done" | "dismissed" | "failed";
+
+export interface AgentTasksTable {
+  id: Generated<string>;
+  tenant_id: TenantId;
+  agent: AgentKey;
+  kind: string;
+  ref: string;
+  title: string;
+  summary: Generated<string>;
+  draft: Json<unknown>;
+  status: Generated<AgentTaskStatus>;
+  result: Generated<string>;
+  decided_by: Generated<string>;
+  decided_at: TimestampNullable;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
 export interface DB {
   tenants: TenantsTable;
   sites: SitesTable;
@@ -825,6 +845,7 @@ export interface DB {
   campaign_graphics: CampaignGraphicsTable;
   xp_awards: XpAwardsTable;
   achievements: AchievementsTable;
+  agent_tasks: AgentTasksTable;
 }
 
 export type Tenant = Selectable<TenantsTable>;

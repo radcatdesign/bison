@@ -4,6 +4,17 @@ export type Release = { version: string; date: string; title: string; changes: s
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.0",
+    date: "2026-10-24",
+    title: "Agents",
+    changes: [
+      "A team of agents finds the work that's waiting and drafts it: replies to new leads, nudges for unfinished buys, follow-ups on quiet estimates, a campaign plan, a newsletter and a weekly read.",
+      "Read each draft, change anything, then send or approve it. Nothing goes to a customer until you do. Each approval earns 1 XP.",
+      "Fit Funnels clubs get a Front desk, Memberships, Marketing and Coach, working in an 8-bit gym that fills up when your marketing is going well.",
+      "Without email set up, open a draft in your own email and mark it sent.",
+    ],
+  },
+  {
     version: "0.9.0",
     date: "2026-10-23",
     title: "Progress",

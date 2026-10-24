@@ -1,0 +1,301 @@
+/* Agents: the team's work, and the week that decides how busy the gym is. */
+
+.stack {
+  display: grid;
+  gap: var(--bo-s4);
+}
+
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--bo-s4);
+  align-items: start;
+}
+
+.crowd {
+  display: grid;
+  gap: 12px;
+}
+
+.mood {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--bo-text-xl);
+  font-weight: 700;
+}
+
+.weekList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.weekList li {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--bo-r-control);
+  background: var(--bo-sunken);
+}
+
+.weekLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--bo-text-xs);
+  color: var(--bo-ink-2);
+}
+
+.weekValue {
+  font-size: var(--bo-text-lg);
+  font-weight: 650;
+}
+
+.weekBefore {
+  font-size: var(--bo-text-xs);
+  color: var(--bo-ink-3);
+}
+
+/* Bison Ops: the team as cards instead of a gym. */
+.team {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--bo-s3);
+}
+
+.member {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  height: 100%;
+  padding: 16px;
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-r-card);
+  background: var(--bo-surface);
+  color: var(--bo-ink);
+  text-decoration: none;
+}
+
+.member[aria-current="true"] {
+  border-color: var(--bo-accent);
+  box-shadow: var(--bo-focus);
+}
+
+.memberHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--bo-accent-soft);
+  color: var(--bo-accent-text);
+}
+
+.avatar svg {
+  width: 18px;
+  height: 18px;
+}
+
+.memberName {
+  font-weight: 650;
+}
+
+.memberRole {
+  font-size: var(--bo-text-xs);
+  color: var(--bo-ink-3);
+}
+
+.memberAbout {
+  margin: 0;
+  font-size: var(--bo-text-sm);
+  color: var(--bo-ink-2);
+}
+
+/* ---- Work ---- */
+
+.tasks {
+  display: grid;
+  gap: var(--bo-s3);
+}
+
+.task {
+  display: grid;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-r-card);
+  background: var(--bo-surface);
+  box-shadow: var(--bo-shadow-sm);
+}
+
+.task[data-done] {
+  opacity: 0.7;
+}
+
+.taskHead {
+  display: grid;
+  gap: 4px;
+}
+
+.taskWho {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: var(--bo-text-xs);
+}
+
+.taskAgent {
+  padding: 2px 8px;
+  border-radius: var(--bo-r-pill);
+  background: var(--bo-accent-soft);
+  color: var(--bo-accent-text);
+  font-weight: 650;
+}
+
+.taskWhen {
+  color: var(--bo-ink-3);
+}
+
+.taskTitle {
+  margin: 0;
+  font-size: var(--bo-text-lg);
+  font-weight: 650;
+}
+
+.taskSummary {
+  margin: 0;
+  font-size: var(--bo-text-sm);
+  color: var(--bo-ink-2);
+}
+
+.taskBody {
+  display: grid;
+  gap: 12px;
+}
+
+.email {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--bo-r-control);
+  background: var(--bo-sunken);
+}
+
+.emailTo {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: var(--bo-text-sm);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.textarea {
+  min-height: 160px;
+  padding: 10px 12px;
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.note {
+  margin: 0;
+  font-size: var(--bo-text-xs);
+  color: var(--bo-ink-3);
+  overflow-wrap: anywhere;
+}
+
+.steps,
+.read ul,
+.read ol {
+  margin: 0;
+  padding-left: 20px;
+  font-size: var(--bo-text-sm);
+  line-height: 1.6;
+}
+
+.read {
+  display: grid;
+  gap: 8px;
+}
+
+.read p {
+  margin: 4px 0 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filters {
+  margin-bottom: var(--bo-s3);
+}
+
+.empty {
+  margin: 0;
+  padding: 24px 20px;
+  color: var(--bo-ink-2);
+  text-align: center;
+}
+
+.history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.history li {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 20px;
+  font-size: var(--bo-text-sm);
+}
+
+.history li + li {
+  border-top: 1px solid var(--bo-line);
+}
+
+.historyMain {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.historyMain span {
+  color: var(--bo-ink-2);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 960px) {
+  .top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .task {
+    padding: 16px;
+  }
+}

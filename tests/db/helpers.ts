@@ -58,6 +58,7 @@ export const TENANT_TABLES = [
   "campaign_graphics",
   "xp_awards",
   "achievements",
+  "agent_tasks",
 ] as const;
 
 let appDb: Database | null = null;
