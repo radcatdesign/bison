@@ -51,6 +51,7 @@ async function Body({ searchParams }: { searchParams: Promise<{ agent?: string }
       approveLabel: spec.approve,
       email: spec.email,
       canDecide: can(ctx.tenant, spec.feature) && (!spec.action || may(ctx.member.role, spec.action)),
+      blocked: !can(ctx.tenant, spec.feature) ? say("This needs a module you don't have yet. Unlock it in Settings, Plan.", "This needs a module your club doesn't have yet. Unlock it in Settings, Plan.") : spec.action && !may(ctx.member.role, spec.action) ? "Your role can see this but not approve it. Ask an owner or admin." : null,
       canSend,
     };
   });

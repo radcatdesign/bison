@@ -19,6 +19,8 @@ export type TaskView = {
   approveLabel: string;
   email: boolean;
   canDecide: boolean;
+  /** Why it can't be approved here, when it can't. */
+  blocked: string | null;
   /** Email can go from here (a verified domain or a fallback sender). */
   canSend: boolean;
 };
@@ -158,7 +160,7 @@ export function TaskCard({ task, sample }: { task: TaskView; sample: boolean }) 
           </div>
         )}
         {task.email && !task.canSend && !finished && <p className={s.note}>Email isn&apos;t set up to send from here yet, so open it in your own email, then mark it sent. Set up sending in Settings, Email sending.</p>}
-        {!task.canDecide && !sample && <p className={s.note}>Your role can see this but not approve it.</p>}
+        {!task.canDecide && task.blocked && <p className={s.note}>{task.blocked}</p>}
       </form>
     </article>
   );

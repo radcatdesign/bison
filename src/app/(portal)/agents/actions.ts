@@ -2,8 +2,8 @@
 
 // Approving and dismissing the agents' work. Each action re-reads the session,
 // checks the plan and the person's role for that kind of work, and never takes
-// the company from the form. Emails send outside any transaction.
-import { refresh } from "next/cache";
+// the company from the form. Emails send outside any transaction. The card
+// shows what happened in place; the list catches up on the next visit.
 import { may } from "@/config/roles";
 import { can } from "@/lib/access/entitlements";
 import { rerunSoon } from "@/lib/agents/repo";
@@ -56,13 +56,11 @@ export async function approveAgentTask(_prev: AgentResult, form: FormData): Prom
       if (!r.ok) return r;
       rerunSoon(ctx.tenant.id);
       const line = gainedLine(await earn(ctx));
-      refresh();
       return { ok: true, message: r.message + line };
     }
     const r = await withTenant(scopeOf(ctx), (tx) => approveTask(tx, id, edits, actor, ctx.tenant.edition));
     rerunSoon(ctx.tenant.id);
     const line = gainedLine(await earn(ctx));
-    refresh();
     return { ok: true, message: r.message + line, href: r.href };
   } catch (err) {
     return fail(err);
@@ -74,7 +72,6 @@ export async function dismissAgentTask(_prev: AgentResult, form: FormData): Prom
   if (g.error !== null) return { ok: false, message: g.error };
   try {
     await withTenant(scopeOf(g.ctx), (tx) => dismissTask(tx, String(form.get("id") ?? ""), g.ctx.member.name || g.ctx.member.email));
-    refresh();
     return { ok: true, message: "Dismissed." };
   } catch (err) {
     return fail(err);

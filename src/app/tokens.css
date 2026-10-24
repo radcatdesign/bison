@@ -235,3 +235,44 @@
   --bo-folder-purple: #a98af0;
   --bo-folder-gray: #9aa1ab;
 }
+
+/* The virtual gym on Fit Funnels: an 8-bit room that is dark and orange in
+   both themes, so these are set once. The canvas reads them at runtime. */
+:root {
+  --bo-pixel-void: #070609;
+  --bo-pixel-ink: #050406;
+  --bo-pixel-wall: #1e1b22;
+  --bo-pixel-wall-2: #26222b;
+  --bo-pixel-wall-3: #141217;
+  --bo-pixel-floor: #131116;
+  --bo-pixel-floor-2: #1a181e;
+  --bo-pixel-floor-3: #0d0c0f;
+  --bo-pixel-orange: #ff7a1a;
+  --bo-pixel-orange-2: #c2540f;
+  --bo-pixel-orange-3: #5a260b;
+  --bo-pixel-neon: #ffd6a8;
+  --bo-pixel-steel: #5b5c66;
+  --bo-pixel-steel-2: #9a9ca8;
+  --bo-pixel-iron: #2c2b33;
+  --bo-pixel-glass: #1b2733;
+  --bo-pixel-glass-2: #33485a;
+  --bo-pixel-screen: #1e0e05;
+  --bo-pixel-paper: #efe6d8;
+  --bo-pixel-plant: #4c9a52;
+  --bo-pixel-plant-2: #2d6a36;
+  --bo-pixel-skin-1: #f3c9a6;
+  --bo-pixel-skin-2: #c68b5f;
+  --bo-pixel-skin-3: #7b4a2d;
+  --bo-pixel-hair-1: #2a1c15;
+  --bo-pixel-hair-2: #8b3f1c;
+  --bo-pixel-hair-3: #e0b863;
+  --bo-pixel-hair-4: #b9b8c2;
+  --bo-pixel-shirt-1: #e8e4dc;
+  --bo-pixel-shirt-2: #3fa7a0;
+  --bo-pixel-shirt-3: #8a63d2;
+  --bo-pixel-shirt-4: #d9474f;
+  --bo-pixel-shirt-5: #4f86d9;
+  --bo-pixel-shorts-1: #18171c;
+  --bo-pixel-shorts-2: #3a3f52;
+  --bo-pixel-shorts-3: #5b4a3d;
+}

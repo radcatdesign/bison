@@ -381,3 +381,14 @@ test("progress shows a made-up level and achievements in the demo", async ({ pag
   await expect(page.getByTestId("progress-level").filter({ visible: true })).toContainText("Level 4");
   await expect(page.getByTestId("achievement-hit-send").filter({ visible: true })).toContainText("Earned");
 });
+
+test("agents show made-up work in the demo, in a club's gym, and nothing sends", async ({ page }) => {
+  await page.goto("/sign-in?edition=fit");
+  await page.getByTestId("sign-in-dev_maya").click();
+  await page.waitForURL(/\/(analyze|marketing|sales)/);
+  await page.goto("/agents");
+  await expect(page.getByTestId("virtual-gym").filter({ visible: true })).toBeVisible();
+  const task = page.getByTestId("agent-task").filter({ visible: true }).first();
+  await task.getByTestId("agent-approve").click();
+  await expect(task.getByTestId("agent-result")).toContainText("demo");
+});

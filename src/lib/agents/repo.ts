@@ -21,7 +21,9 @@ export async function agentsView(ctx: PortalContext): Promise<AgentsView> {
   }
   return withTenant(scopeOf(ctx), async (tx) => {
     const now = Date.now();
-    if (now - (lastRun.get(ctx.tenant.id) ?? 0) > RUN_EVERY_MS) {
+    // A company with no work on record yet always gets a fresh look.
+    const none = !(await tx.selectFrom("agent_tasks").select("id").limit(1).executeTakeFirst());
+    if (none || now - (lastRun.get(ctx.tenant.id) ?? 0) > RUN_EVERY_MS) {
       lastRun.set(ctx.tenant.id, now);
       if (lastRun.size > 5000) lastRun.clear();
       await runAgents(tx, ctx.tenant.edition);
