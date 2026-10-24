@@ -4,6 +4,20 @@ export type Release = { version: string; date: string; title: string; changes: s
 
 export const RELEASES: Release[] = [
   {
+    version: "0.7.0",
+    date: "2026-10-23",
+    title: "Front desk kiosk",
+    changes: [
+      "Fit Funnels clubs can turn any tablet into a front desk kiosk. Set a staff PIN and pair the tablet with a code from Settings, Kiosk.",
+      "Members and guests check in with their phone number or email. The screen shows their first name only.",
+      "Walk-ins claim a free pass or book a tour, and land in Leads. Ticking the email box adds them to your list and starts your follow-up.",
+      "Join today shows a code people scan to pay for a membership on their own phone, so no card goes into a shared tablet.",
+      "Your waiver, signed with a finger. We keep the exact words each person signed, and ask again when you change it.",
+      "Analyze, Front desk shows today's check-ins, passes, tours and waivers, and each lead shows their visits and signed waiver.",
+      "Leaving the kiosk takes the staff PIN, and a lost tablet can be unpaired from Settings.",
+    ],
+  },
+  {
     version: "0.6.1",
     date: "2026-10-23",
     title: "Easier nav",

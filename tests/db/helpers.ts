@@ -49,6 +49,11 @@ export const TENANT_TABLES = [
   "orders",
   "discount_redemptions",
   "contact_shares",
+  "kiosk_settings",
+  "kiosk_devices",
+  "kiosk_pair_codes",
+  "kiosk_check_ins",
+  "kiosk_waivers",
 ] as const;
 
 let appDb: Database | null = null;

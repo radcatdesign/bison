@@ -26,7 +26,7 @@ export async function Shell({ children }: { children: ReactNode }) {
     key: m.key,
     label: m.label,
     locked: !can(ctx.tenant, m.feature),
-    pages: m.pages.map(({ href, label, group }) => ({ href, label: edition.pageLabels[href] ?? label, group: group ? { key: group, label: edition.groupLabels[group] ?? NAV_GROUPS[group] } : undefined })),
+    pages: m.pages.filter((p) => !p.editions || p.editions.includes(edition.key)).map(({ href, label, group }) => ({ href, label: edition.pageLabels[href] ?? label, group: group ? { key: group, label: edition.groupLabels[group] ?? NAV_GROUPS[group] } : undefined })),
   }));
   const who = initials(ctx.member.name, ctx.member.email);
   const theme = { "--bo-accent": ctx.settings.accent, "--bo-accent-ink": accentInk(ctx.settings.accent) } as CSSProperties;

@@ -339,3 +339,21 @@ test("sales: made-up estimates, orders and trade accounts, and a shop to try", a
   await page.getByTestId("checkout-continue").click();
   await expect(page.getByTestId("checkout-error")).toHaveText("This is a demo, so checkout stops here. In your own shop, this is where Stripe takes the payment.");
 });
+
+test("a club can try the front desk kiosk in the demo, and nothing is saved", async ({ page }) => {
+  await page.goto("/sign-in?edition=fit");
+  await page.getByTestId("sign-in-dev_maya").click();
+  await page.waitForURL(/\/(analyze|marketing|sales)/);
+  await page.goto("/analyze/front-desk");
+  await expect(page.getByTestId("sample-banner").filter({ visible: true })).toContainText("This is a demo");
+  await expect(page.getByTestId("desk-latest").filter({ visible: true })).toBeVisible();
+  await page.goto("/settings/kiosk");
+  await expect(page.getByTestId("pair-make").filter({ visible: true })).toBeDisabled();
+  await page.getByTestId("kiosk-preview-link").filter({ visible: true }).click();
+  await expect(page.getByTestId("kiosk-preview")).toBeVisible();
+  // The demo waiver is filled in, so it's on.
+  await page.getByTestId("kiosk-tile-waiver").click();
+  await expect(page.getByTestId("kiosk-sign-form")).toContainText("Summit Strength Club LLC");
+  await page.goto("/kiosk");
+  await expect(page.getByText("Tablets can't be paired in the demo")).toBeVisible();
+});
