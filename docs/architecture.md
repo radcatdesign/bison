@@ -126,6 +126,7 @@ Built so far (all with RLS):
 | `xp_awards` | XP earned, one row per thing done (insert and read only) | `kind`, `ref` (the record, so it counts once), `points`, `label`, `earned_at` |
 | `achievements` | Achievements earned (insert and read only) | `key`, `earned_at` |
 | `agent_tasks` | Work drafted by agents, one per kind and record (no delete grant) | `agent`, `kind`, `ref`, `title`, `summary`, `draft` (json), `status` (open, done, dismissed, failed), `result`, `decided_by` |
+| `club_boosts` | Club boosts switched on (Fit Funnels) | `key` (PK with tenant), `on_now`, `settings` (json, checked by `src/lib/boosts/catalog.ts`), `first_on_at`, `changed_by` |
 | `kiosk_settings` | One row per club: the front desk kiosk | `pin_hash` (scrypt), `config` (json, checked by `src/lib/kiosk/settings.ts`), `waiver_title`, `waiver_body`, `waiver_version` |
 | `kiosk_devices` | Paired tablets (no delete grant; unpairing sets `revoked_at`) | `name`, `token_hash` (sha256 of the cookie), `paired_by`, `last_seen_at`, `pin_failures`, `pin_locked_until` |
 | `kiosk_pair_codes` | 6-digit pairing codes, 10 minutes, once | `code_hash` (HMAC, unique while unused across clubs), `name`, `expires_at`, `used_at`, `device_id` |
@@ -239,6 +240,16 @@ Migration 0014, `src/lib/progress`. Rules and the level math are pure (`rules.ts
 ## Agents
 
 Migration 0015, `src/lib/agents`. `roster.ts` (pure) names the four agents per edition and maps each kind of work to its agent, plan feature, role action and button; it also turns a week of numbers into the gym's crowd. `drafts.ts` (pure) writes the drafts. `store.ts` has `runAgents` (one pass per kind: insert new drafts with `on conflict do nothing`, close drafts no longer needed), `weekNumbers`, and approving: emails go in three steps (claim and check the draft in one transaction, send with `sendOne` outside it, record the result in another), other kinds make their newsletter draft or campaign in one transaction. Actions (`/agents/actions.ts`) check the kind's feature and role, refuse in the demo and with sample data, and add XP. The Agents page shows the gym (Fit Funnels, `src/components/agents/virtual-gym.tsx`, canvas pixel art from `gym-scene.ts`) or the team as cards (Bison Ops), the week's numbers, the work waiting with a filter per agent, and what was done lately.
+
+## Boosts
+
+Migration 0016, `src/lib/boosts`, Fit Funnels only. `catalog.ts` (pure) lists the 8 boosts with their category, copy and settings (cleaned by `readBoostSettings`; anything odd falls back to the default), plus `streakWeeks`, `milestoneAt` and the lead alert's words. `store.ts` reads and sets `club_boosts` (one row per club and boost; no row means off; `first_on_at` is kept for XP; every change is audited). Boosts change behavior in three places:
+
+- **Agents.** `runAgents` calls `boostWork` for clubs: we miss you (ref `contact:last-visit-date`, so once per absence; closed when they check in after it), free pass follow-through (closed once they check in), milestones (ref `contact:visits`) and review requests (ref the contact, so once ever). A boost that's off closes its open drafts.
+- **The kiosk.** `KioskView` carries `friend`, `waiverFirst`, `milestones` and `streaks`, so a change reloads tablets through the stamp. `checkIn` returns `milestone` and `streak`. `bringFriend` looks the member up with the same rule as check-in (joined or been to the desk, same answer as a stranger otherwise), then saves the friend as a `kiosk-referral` submission.
+- **Lead alerts.** Kiosk pass, tour and friend results and funnel page form results carry a `lead`; the route sends `sendLeadAlert` with `after()`, which checks the boost and emails the Sales alert list through the Sales sender. It never throws and never holds up the answer.
+
+The Boosts page (`/boosts`) reads `boostsView` (30-day numbers per boost, and why a boost that's on can't work yet, like no email sending or no waiver), or made-up numbers with sample data and in the demo. The switch saves on change; settings save on change; the review link has its own button.
 
 ## Marketing email
 

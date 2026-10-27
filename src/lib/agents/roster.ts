@@ -27,7 +27,7 @@ export function agentsFor(edition: EditionKey): AgentSpec[] {
       ];
 }
 
-export type TaskKind = "lead-reply" | "kiosk-quiet" | "cart-nudge" | "estimate-nudge" | "fill-placeholders" | "newsletter-draft" | "campaign-plan" | "weekly-read";
+export type TaskKind = "lead-reply" | "kiosk-quiet" | "cart-nudge" | "estimate-nudge" | "fill-placeholders" | "newsletter-draft" | "campaign-plan" | "weekly-read" | "miss-you" | "pass-follow-up" | "milestone" | "review-ask";
 
 /** What each kind of work needs: the plan feature, the role action to approve it, and the button. */
 export const KINDS: Record<TaskKind, { agent: AgentKey; feature: FeatureKey; action: Action | null; approve: string; email: boolean }> = {
@@ -39,6 +39,11 @@ export const KINDS: Record<TaskKind, { agent: AgentKey; feature: FeatureKey; act
   "newsletter-draft": { agent: "marketing", feature: "marketing.newsletters", action: "marketing.edit", approve: "Make the draft", email: false },
   "campaign-plan": { agent: "marketing", feature: "marketing.campaigns", action: "marketing.edit", approve: "Make the campaign", email: false },
   "weekly-read": { agent: "coach", feature: "analytics", action: null, approve: "Got it", email: false },
+  // From boosts a club switches on.
+  "miss-you": { agent: "frontdesk", feature: "kiosk", action: "contacts.edit", approve: "Send it", email: true },
+  "pass-follow-up": { agent: "frontdesk", feature: "kiosk", action: "contacts.edit", approve: "Send it", email: true },
+  milestone: { agent: "frontdesk", feature: "kiosk", action: "contacts.edit", approve: "Send it", email: true },
+  "review-ask": { agent: "frontdesk", feature: "kiosk", action: "contacts.edit", approve: "Send it", email: true },
 };
 
 export const isTaskKind = (v: unknown): v is TaskKind => typeof v === "string" && v in KINDS;

@@ -34,6 +34,9 @@ const EVENTS: Record<EditionKey, [XpKind, string, number, number][]> = {
     ["filed", "Six-week challenge", 1, 3],
     ["filed", "Free trial pass", 1, 3],
     ["campaign", "New Year challenge", 2, 4],
+    ["boost-on", "Bring a friend", 2, 5],
+    ["boost-on", "We miss you", 2, 5],
+    ["boost-on", "Milestone shout-outs", 2, 5],
     ["kiosk-paired", "Front desk", 3, 6],
     ["series-on", "Challenge sign-up follow-up", 3, 7],
     ["campaign-wrapped", "Summer corporate push", 2, 9],
@@ -63,6 +66,7 @@ const EARNED: Record<EditionKey, [AchievementKey, number][]> = {
     ["first-lead", 1],
     ["wrap-party", 9],
     ["front-desk", 6],
+    ["power-up", 5],
   ],
 };
 

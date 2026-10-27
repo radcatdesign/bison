@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { sendLeadAlert } from "@/lib/boosts/alerts";
 import { demoMode } from "@/lib/env";
 import { runEmailWork } from "@/lib/marketing/worker";
 import { submitPageForm } from "@/lib/pages/submit";
@@ -47,6 +48,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ tenant:
     const result = await submitPageForm(tenant, slug, (body ?? {}) as Record<string, unknown>);
     // Day 0 of a series goes right away, not whenever the job next runs.
     if (result.ok && result.queued && result.tenantId) after(() => runEmailWork({ tenantId: result.tenantId, budgetMs: 30_000 }).then(() => undefined));
+    // Instant lead alerts, when the club has that boost on. The page's form never waits for it.
+    if (result.ok && result.lead && result.tenantId) {
+      const { tenantId: t, lead } = { tenantId: result.tenantId, lead: result.lead };
+      after(() => sendLeadAlert(t, lead).then(() => undefined));
+    }
     // A form send counts toward the page's A/B test, for the version they saw. Spam and the team's own sends don't.
     const who = visitorFrom(req.headers);
     const { tenantId, pageId } = result.ok ? result : { tenantId: undefined, pageId: undefined };

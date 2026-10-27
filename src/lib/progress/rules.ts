@@ -13,7 +13,7 @@ export function levelFor(xp: number): Level {
   return { level: Math.floor(total / XP_PER_LEVEL) + 1, xp: total, into, toNext: XP_PER_LEVEL - into };
 }
 
-export type XpKind = "campaign" | "filed" | "graphic" | "page-published" | "newsletter-sent" | "series-on" | "campaign-lead" | "campaign-wrapped" | "test-ended" | "first-sale" | "kiosk-paired" | "agent-done";
+export type XpKind = "campaign" | "filed" | "graphic" | "page-published" | "newsletter-sent" | "series-on" | "campaign-lead" | "campaign-wrapped" | "test-ended" | "first-sale" | "kiosk-paired" | "agent-done" | "boost-on";
 
 export type XpRule = { kind: XpKind; points: number; title: string; how: string; editions?: EditionKey[] };
 
@@ -32,6 +32,7 @@ export function xpRules(edition: EditionKey): XpRule[] {
     { kind: "test-ended", points: 5, title: "Finish an A/B test", how: "Each test you end and keep a version from." },
     { kind: "first-sale", points: 5, title: say("Make your first sale", "Sell your first membership"), how: say("Your first paid order through your shop or an estimate.", "Your first paid purchase through your club's store or a quote.") },
     { kind: "kiosk-paired", points: 3, title: "Set up the front desk", how: "Pair your first kiosk tablet.", editions: ["fit"] },
+    { kind: "boost-on", points: 2, title: "Turn on a boost", how: "Each boost you turn on in Boosts, the first time only.", editions: ["fit"] },
     { kind: "agent-done", points: 1, title: "Approve an agent's work", how: "Each piece of work you send or approve from Agents." },
   ].filter((r) => !r.editions || r.editions.includes(edition)) as XpRule[];
 }
@@ -49,6 +50,7 @@ export type AchievementKey =
   | "brand-ready"
   | "first-sale"
   | "front-desk"
+  | "power-up"
   | "level-5"
   | "level-10";
 
@@ -70,6 +72,7 @@ export function achievementsFor(edition: EditionKey): Achievement[] {
     { key: "brand-ready", name: "Looking sharp", note: "Add your logo and postal address to the brand kit." },
     { key: "first-sale", name: say("Open for business", "Doors open"), note: say("Take your first paid order.", "Sell your first membership or pack.") },
     { key: "front-desk", name: "Front and center", note: "Pair a kiosk tablet at your front desk.", editions: ["fit"] },
+    { key: "power-up", name: "Powered up", note: "Have 3 boosts on at once.", editions: ["fit"] },
     { key: "level-5", name: "Picking up speed", note: "Reach level 5." },
     { key: "level-10", name: "Hitting your stride", note: "Reach level 10." },
   ];

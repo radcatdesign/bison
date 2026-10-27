@@ -5,6 +5,7 @@ import "server-only";
 // work done before this existed counts too. Awards are kept once earned.
 import { sql } from "kysely";
 import type { EditionKey } from "@/config/editions";
+import { BOOSTS } from "@/lib/boosts/catalog";
 import type { Tx } from "@/lib/db";
 import { type AchievementKey, achievementsFor, levelFor, type XpKind, xpRules } from "./rules";
 
@@ -42,6 +43,13 @@ function awards(edition: EditionKey): Award[] {
     { kind: "test-ended", query: sql`select id::text as ref, name as label, ended_at as at from page_tests where status = 'ended' and end_reason in ('team', 'winner')` },
     { kind: "first-sale", query: sql`select 'first' as ref, 'Order #' || number as label, created_at as at from orders where status <> 'canceled' order by created_at limit 1` },
     { kind: "kiosk-paired", query: sql`select 'first' as ref, name as label, paired_at as at from kiosk_devices order by paired_at limit 1` },
+    {
+      kind: "boost-on",
+      query: sql`select key as ref, case key ${sql.join(
+        BOOSTS.map((b) => sql`when ${b.key} then ${b.name}`),
+        sql` `,
+      )} else key end as label, first_on_at as at from club_boosts where first_on_at is not null`,
+    },
     { kind: "agent-done", query: sql`select id::text as ref, title as label, decided_at as at from agent_tasks where status = 'done' and decided_by <> 'The agent'` },
   ];
   return list.filter((a) => points.has(a.kind)).map((a) => ({ ...a, points: points.get(a.kind)! }));
@@ -68,7 +76,8 @@ async function metNow(tx: Tx, edition: EditionKey, xp: number): Promise<Achievem
     exists (select 1 from xp_awards where kind = 'test-ended') as "test-and-learn",
     exists (select 1 from marketing_settings where jsonb_typeof(brand -> 'logo') = 'object' and coalesce(brand ->> 'address', '') <> '') as "brand-ready",
     exists (select 1 from xp_awards where kind = 'first-sale') as "first-sale",
-    exists (select 1 from xp_awards where kind = 'kiosk-paired') as "front-desk"`.execute(tx);
+    exists (select 1 from xp_awards where kind = 'kiosk-paired') as "front-desk",
+    (select count(*) from club_boosts where on_now) >= 3 as "power-up"`.execute(tx);
   const met = rows[0] ?? {};
   const level = levelFor(xp).level;
   const allowed = new Set(achievementsFor(edition).map((a) => a.key));

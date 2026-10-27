@@ -392,3 +392,16 @@ test("agents show made-up work in the demo, in a club's gym, and nothing sends",
   await task.getByTestId("agent-approve").click();
   await expect(task.getByTestId("agent-result")).toContainText("demo");
 });
+
+test("boosts show a sample club's setup in the demo, and the kiosk preview uses them", async ({ page }) => {
+  await page.goto("/sign-in?edition=fit");
+  await page.getByTestId("sign-in-dev_maya").click();
+  await page.waitForURL(/\/(analyze|marketing|sales)/);
+  await page.goto("/boosts");
+  await expect(page.getByTestId("boost-on-count").filter({ visible: true })).toContainText("5");
+  await expect(page.getByTestId("boost-switch-bring-a-friend").filter({ visible: true })).toBeChecked();
+  await expect(page.getByTestId("boost-switch-bring-a-friend").filter({ visible: true })).toBeDisabled();
+  await expect(page.getByTestId("boost-why").filter({ visible: true })).toContainText("demo");
+  await page.goto("/kiosk/preview");
+  await expect(page.getByTestId("kiosk-tile-friend")).toBeVisible();
+});

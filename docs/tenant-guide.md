@@ -108,6 +108,21 @@ Marketing, Campaigns keeps everything for one push together, like a launch, a sa
 
 Agents find the work that's waiting and draft it for you: replies to new leads, nudges for people who didn't finish buying or joining, follow-ups on quiet estimates or quotes, a campaign plan when nothing's running, a newsletter when it's been a while, pages with spots to fill in, and a weekly read of your numbers. Open Agents, read each draft, change anything you like, then send or approve it. Nothing goes to a customer until you do. Clubs see their team at work in a little 8-bit gym that fills up when marketing is going well.
 
+## Boosts (clubs)
+
+Boosts are club tools you switch on, one switch each, in Boosts in the sidebar. Owners and admins can change them.
+
+- **We miss you.** When a regular (2 or more check-ins) hasn't been in for the days you pick (10, 14, 21 or 30), your front desk agent drafts a friendly note in Agents. It closes itself if they come back first.
+- **Free pass follow-through.** Someone claimed a free pass and hasn't checked in after the days you pick: a reminder draft.
+- **Milestone shout-outs.** The kiosk celebrates visit 10, 25, 50, 100, 250, 500 and 1,000 at check-in, and your agent drafts a congratulations email.
+- **Check-in streaks.** The kiosk shows how many weeks in a row someone has checked in, once it's 2 or more.
+- **Review requests.** After the visits you pick, a short ask with your review link. Each member is asked once. Add your link (it starts with https://) before switching it on.
+- **Bring a friend.** A button on the kiosk. A member gives their own phone or email and their friend's name and email; the friend lands in Leads marked "Sent by a friend", and your agent drafts a welcome that names who sent them.
+- **Waiver before the floor.** Anyone checking in without a signed waiver goes straight to signing it. Needs your waiver on in Settings, Kiosk.
+- **Instant lead alerts.** An email to your team for every free pass, tour, friend and funnel page form, sent to the alert emails in Membership sales, Checkout (or your owners and admins).
+
+Emails from boosts still wait for you in Agents. Turning a boost off clears its waiting drafts. Each boost earns 2 XP the first time it goes on, and 3 on at once earns Powered up.
+
 ## Progress
 
 Your team earns XP for running campaigns and working on your business: making and filling campaigns, publishing pages, sending newsletters, turning on series, getting leads, finishing tests and more. Every 10 XP is a new level. Your level is at the bottom of the sidebar (on a phone, in Menu); Progress shows how to earn more, your achievements and the latest XP. XP is never taken away.

@@ -6,6 +6,7 @@ import { appUrl } from "@/lib/env";
 import type { PortalContext } from "@/lib/portal";
 import { formatMoney } from "@/lib/sales/money";
 import { demoItems } from "@/lib/sales/shop-demo";
+import { sampleBoosts } from "@/lib/boosts/demo";
 import { qrFor } from "./qr";
 import { DEFAULT_CONFIG, starterWaiver, TOUR_TIMES, welcomeLine } from "./settings";
 import { type KioskView, stamped } from "./store";
@@ -24,6 +25,7 @@ export function demoWaiver(club: string) {
 export function demoKioskView(ctx: PortalContext): KioskView {
   const club = ctx.tenant.name;
   const c = DEFAULT_CONFIG;
+  const boosts = sampleBoosts();
   const join = can(ctx.tenant, "sales.checkout")
     ? demoItems({ tenantId: ctx.tenant.id })
         .filter((p) => p.variants.every((v) => v.priceCents > 0) && ["Memberships", "Class packs", "Passes", "Intro"].includes(p.category))
@@ -46,5 +48,9 @@ export function demoKioskView(ctx: PortalContext): KioskView {
     waiver: demoWaiver(club),
     emailOptIn: can(ctx.tenant, "marketing.subscribers"),
     deviceName: "Preview",
+    friend: boosts["bring-a-friend"].on,
+    milestones: boosts.milestones.on,
+    streaks: boosts.streaks.on,
+    waiverFirst: boosts["waiver-first"].on,
   });
 }

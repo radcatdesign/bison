@@ -791,6 +791,17 @@ export interface AgentTasksTable {
   updated_at: Timestamp;
 }
 
+export interface ClubBoostsTable {
+  tenant_id: TenantId;
+  key: string;
+  on_now: Generated<boolean>;
+  settings: Json<unknown>;
+  first_on_at: TimestampNullable;
+  changed_by: Generated<string>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
 export interface DB {
   tenants: TenantsTable;
   sites: SitesTable;
@@ -846,6 +857,7 @@ export interface DB {
   xp_awards: XpAwardsTable;
   achievements: AchievementsTable;
   agent_tasks: AgentTasksTable;
+  club_boosts: ClubBoostsTable;
 }
 
 export type Tenant = Selectable<TenantsTable>;

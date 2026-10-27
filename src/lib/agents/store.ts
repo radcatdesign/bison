@@ -18,7 +18,9 @@ import { findPlaceholders, pageDocSchema } from "@/lib/pages/schema";
 import { estimateUrl } from "@/lib/sales/estimates";
 import { type Delivery } from "@/lib/sales/types";
 import { NO_SENDER, plainEmail, salesSender, type Sender, sendOne } from "@/lib/sales/emails";
-import { type CampaignDraft, campaignPlan, cartNudge, type EmailDraft, estimateNudge, leadReply, type LinkDraft, type NewsletterDraft, type ReadDraft, weeklyRead } from "./drafts";
+import type { BoostKey } from "@/lib/boosts/catalog";
+import { readBoosts } from "@/lib/boosts/store";
+import { type CampaignDraft, campaignPlan, cartNudge, type EmailDraft, estimateNudge, leadReply, type LinkDraft, milestoneNote, missYou, type NewsletterDraft, passFollowUp, type ReadDraft, reviewAsk, weeklyRead } from "./drafts";
 import { isTaskKind, KINDS, type TaskKind, type WeekNumbers } from "./roster";
 
 export class AgentError extends Error {}
@@ -96,7 +98,7 @@ export async function runAgents(tx: Tx, edition: EditionKey, now = new Date()): 
       order by c.first_seen_at desc limit 25`.execute(tx);
     for (const l of leads.rows) {
       const draft = leadReply(edition, club, { name: l.name, email: l.email, formType: l.form_type, fields: l.fields ?? {} });
-      if (await add(tx, { kind: "lead-reply", ref: l.id, title: `Write back to ${l.name || l.email}`, summary: l.form_type === "kiosk-pass" ? "Claimed a free pass at the front desk." : l.form_type === "kiosk-tour" ? "Asked for a tour at the front desk." : "Sent a form and hasn't heard back yet.", draft: { ...draft, contactId: l.id } })) added++;
+      if (await add(tx, { kind: "lead-reply", ref: l.id, title: `Write back to ${l.name || l.email}`, summary: l.form_type === "kiosk-pass" ? "Claimed a free pass at the front desk." : l.form_type === "kiosk-tour" ? "Asked for a tour at the front desk." : l.form_type === "kiosk-referral" ? `Sent by ${l.fields?.referredBy || "a member"} at the front desk.` : "Sent a form and hasn't heard back yet.", draft: { ...draft, contactId: l.id } })) added++;
     }
     const open = await tx.selectFrom("contacts").select("id").where("status", "=", "new").execute();
     await close(tx, "lead-reply", open.map((o) => o.id), "Someone already got back to them.");
@@ -167,6 +169,9 @@ export async function runAgents(tx: Tx, edition: EditionKey, now = new Date()): 
     if (active) await close(tx, "campaign-plan", [], "A campaign is running.");
   }
 
+  // ---- Work from boosts the club switched on ----
+  if (edition === "fit" && can(access, "kiosk")) added += await boostWork(tx, club, now);
+
   if (on("weekly-read")) {
     const ref = weekRef(now);
     const exists = await tx.selectFrom("agent_tasks").select("id").where("kind", "=", "weekly-read").where("ref", "=", ref).executeTakeFirst();
@@ -180,6 +185,77 @@ export async function runAgents(tx: Tx, edition: EditionKey, now = new Date()): 
     }
   }
 
+  return added;
+}
+
+/** Drafts for the boosts that make work: we miss you, free pass follow-through, milestones and review requests. */
+async function boostWork(tx: Tx, club: string, now: Date): Promise<number> {
+  const boosts = await readBoosts(tx);
+  let added = 0;
+  // A boost switched off takes its waiting drafts with it.
+  const kindOf: [BoostKey, TaskKind][] = [["miss-you", "miss-you"], ["pass-follow-up", "pass-follow-up"], ["milestones", "milestone"], ["review-ask", "review-ask"]];
+  for (const [b, kind] of kindOf) if (!boosts[b].on) await close(tx, kind, [], "The boost was turned off.");
+
+  if (boosts["miss-you"].on) {
+    const days = boosts["miss-you"].settings.days ?? 14;
+    const gone = await sql<{ id: string; name: string; email: string; last: Date }>`
+      select c.id, c.name, c.email, max(k.checked_in_at) as last from contacts c join kiosk_check_ins k on k.contact_id = c.id and k.tenant_id = c.tenant_id
+      where c.status <> 'spam' group by c.id, c.name, c.email
+      having count(*) >= 2 and max(k.checked_in_at) < ${new Date(now.getTime() - days * DAY)} and max(k.checked_in_at) > ${new Date(now.getTime() - (days + 60) * DAY)}
+      order by max(k.checked_in_at) desc limit 25`.execute(tx);
+    for (const g of gone.rows) {
+      const away = Math.floor((now.getTime() - new Date(g.last).getTime()) / DAY);
+      // Once per absence: coming back and drifting again makes a new one.
+      if (await add(tx, { kind: "miss-you", ref: `${g.id}:${new Date(g.last).toISOString().slice(0, 10)}`, title: `Check in on ${g.name || g.email}`, summary: `Hasn't been in for ${away} days.`, draft: { ...missYou(club, { email: g.email, name: g.name, days: away }), contactId: g.id } })) added++;
+    }
+    // Close a note once they've been back in since it was drafted.
+    await sql`update agent_tasks t set status = 'dismissed', result = 'They came back in.', decided_by = 'The agent', decided_at = now()
+      where t.kind = 'miss-you' and t.status = 'open' and exists (select 1 from kiosk_check_ins k
+        where k.contact_id::text = split_part(t.ref, ':', 1) and k.checked_in_at >= (split_part(t.ref, ':', 2)::date + 1))`.execute(tx);
+  }
+
+  if (boosts["pass-follow-up"].on) {
+    const days = boosts["pass-follow-up"].settings.days ?? 3;
+    const passes = await sql<{ id: string; name: string; email: string }>`
+      select c.id, c.name, c.email from contacts c
+      where c.status <> 'spam'
+        and exists (select 1 from submissions s where s.contact_id = c.id and s.status = 'received'
+          and (s.form_type = 'kiosk-pass' or s.fields ->> 'pass' is not null or s.form_key like 'page:%pass%')
+          and s.created_at < ${new Date(now.getTime() - days * DAY)} and s.created_at > ${new Date(now.getTime() - 45 * DAY)})
+        and not exists (select 1 from kiosk_check_ins k where k.contact_id = c.id)
+      limit 25`.execute(tx);
+    for (const p of passes.rows) {
+      if (await add(tx, { kind: "pass-follow-up", ref: p.id, title: `Remind ${p.name || p.email} about their free pass`, summary: `Claimed a free pass ${days} or more days ago and hasn't come in yet.`, draft: { ...passFollowUp(club, { email: p.email, name: p.name }), contactId: p.id } })) added++;
+    }
+    const visited = await tx.selectFrom("agent_tasks").select("ref").where("kind", "=", "pass-follow-up").where("status", "=", "open").execute();
+    const came = visited.length ? await tx.selectFrom("kiosk_check_ins").select("contact_id").where("contact_id", "in", visited.map((v) => v.ref).filter(isUuid)).execute() : [];
+    if (came.length) await tx.updateTable("agent_tasks").set({ status: "dismissed", result: "They came in.", decided_by: "The agent", decided_at: new Date() }).where("kind", "=", "pass-follow-up").where("status", "=", "open").where("ref", "in", came.map((c) => c.contact_id)).execute();
+  }
+
+  if (boosts.milestones.on) {
+    const hit = await sql<{ id: string; name: string; email: string; n: string }>`
+      select c.id, c.name, c.email, count(*) as n from contacts c join kiosk_check_ins k on k.contact_id = c.id and k.tenant_id = c.tenant_id
+      where c.status <> 'spam' group by c.id, c.name, c.email
+      having count(*) in (10, 25, 50, 100, 250, 500, 1000) and max(k.checked_in_at) > ${new Date(now.getTime() - 7 * DAY)}
+      limit 25`.execute(tx);
+    for (const h of hit.rows) {
+      const n = Number(h.n);
+      if (await add(tx, { kind: "milestone", ref: `${h.id}:${n}`, title: `Congratulate ${h.name || h.email} on visit ${n}`, summary: `Just hit ${n} visits.`, draft: { ...milestoneNote(club, { email: h.email, name: h.name, visits: n }), contactId: h.id } })) added++;
+    }
+  }
+
+  if (boosts["review-ask"].on && boosts["review-ask"].settings.link) {
+    const visits = boosts["review-ask"].settings.visits ?? 5;
+    const ready = await sql<{ id: string; name: string; email: string }>`
+      select c.id, c.name, c.email from contacts c join kiosk_check_ins k on k.contact_id = c.id and k.tenant_id = c.tenant_id
+      where c.status <> 'spam' group by c.id, c.name, c.email
+      having count(*) >= ${visits} and max(k.checked_in_at) > ${new Date(now.getTime() - 14 * DAY)}
+      limit 25`.execute(tx);
+    for (const r of ready.rows) {
+      // Each member is asked once, ever.
+      if (await add(tx, { kind: "review-ask", ref: r.id, title: `Ask ${r.name || r.email} for a review`, summary: `${visits} visits or more, and in recently.`, draft: { ...reviewAsk(club, { email: r.email, name: r.name, link: boosts["review-ask"].settings.link! }), contactId: r.id } })) added++;
+    }
+  }
   return added;
 }
 

@@ -4,17 +4,17 @@
 // The kiosk on the tablet at the front desk. One screen at a time, big
 // buttons, and back to the welcome screen on its own when nobody's touched it
 // for a while, with whatever was typed cleared. In preview, nothing is sent.
-import { ArrowLeft, CalendarCheck, Check, CreditCard, Delete, Lock, PenLine, ScanLine, Ticket, UserCheck } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Check, CreditCard, Delete, Flame, Lock, PenLine, ScanLine, Ticket, Trophy, UserCheck, UserPlus } from "lucide-react";
 import { type CSSProperties, type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { accentInk } from "@/lib/color";
 import type { JoinOption, KioskView } from "@/lib/kiosk/store";
 import { SignaturePad, type Strokes } from "./signature-pad";
 import s from "./kiosk.module.css";
 
-type Screen = "home" | "pass" | "tour" | "join" | "checkin" | "waiver" | "done" | "staff";
-type Answer = { ok: boolean; status?: number; message: string; name?: string; visits?: number; needsWaiver?: boolean };
+type Screen = "home" | "pass" | "tour" | "join" | "checkin" | "friend" | "waiver" | "done" | "staff";
+type Answer = { ok: boolean; status?: number; message: string; name?: string; visits?: number; needsWaiver?: boolean; milestone?: number | null; streak?: number | null };
 type Person = { name: string; email: string; phone: string };
-type Done = { title: string; body: string; waiver?: boolean };
+type Done = { title: string; body: string; waiver?: boolean; milestone?: number | null; streak?: number | null };
 
 const EMPTY: Person = { name: "", email: "", phone: "" };
 const DONE_SECONDS = 10;
@@ -28,9 +28,9 @@ function closePreview(e: { preventDefault(): void } | null, fallback: string) {
 }
 
 /** In preview, answers come from here and nothing leaves the browser. */
-function previewAnswer(action: string, body: Record<string, unknown>): Answer {
+function previewAnswer(action: string, body: Record<string, unknown>, view: { milestones: boolean; streaks: boolean }): Answer {
   const first = typeof body.name === "string" ? body.name.trim().split(/\s+/)[0] : "";
-  if (action === "checkin") return { ok: true, message: "You're checked in.", name: "Alex", visits: 4 };
+  if (action === "checkin") return { ok: true, message: "You're checked in.", name: "Alex", visits: 4, milestone: view.milestones ? 25 : null, streak: view.streaks ? 6 : null };
   if (action === "leave") return body.pin ? { ok: true, message: "" } : { ok: false, message: "That PIN isn't right." };
   return { ok: true, message: "Done.", name: first };
 }
@@ -42,6 +42,8 @@ export function Kiosk({ view, preview = false, previewExit }: { view: KioskView;
   const [join, setJoin] = useState<JoinOption | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Waiver before the floor: who just checked in and still needs to sign.
+  const [signFirst, setSignFirst] = useState<string | null>(null);
   const last = useRef(0);
   // Each person at the tablet is a new session; an answer from an earlier one is dropped.
   const session = useRef(0);
@@ -56,6 +58,7 @@ export function Kiosk({ view, preview = false, previewExit }: { view: KioskView;
     setDone(null);
     setJoin(null);
     setError(null);
+    setSignFirst(null);
   }, [preview]);
 
   const screenRef = useRef<Screen>("home");
@@ -104,7 +107,7 @@ export function Kiosk({ view, preview = false, previewExit }: { view: KioskView;
   }, [preview, view.stamp]);
 
   async function send(action: string, body: Record<string, unknown>): Promise<Answer> {
-    if (preview) return previewAnswer(action, body);
+    if (preview) return previewAnswer(action, body, view);
     try {
       const r = await fetch("/kiosk/act", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, ...body }) });
       if (r.status === 401) {
@@ -138,6 +141,7 @@ export function Kiosk({ view, preview = false, previewExit }: { view: KioskView;
     { key: "pass", label: view.pass?.label ?? "", note: "New here? Try us first", icon: <Ticket aria-hidden="true" />, on: Boolean(view.pass) },
     { key: "tour", label: "Book a tour", note: "We'll show you around", icon: <CalendarCheck aria-hidden="true" />, on: Boolean(view.tour) },
     { key: "join", label: "Join today", note: "Pay on your own phone", icon: <CreditCard aria-hidden="true" />, on: Boolean(view.join) },
+    { key: "friend", label: "Bring a friend", note: "Send a friend our way", icon: <UserPlus aria-hidden="true" />, on: view.friend },
     { key: "waiver", label: "Sign the waiver", note: "Takes a minute", icon: <PenLine aria-hidden="true" />, on: Boolean(view.waiver) },
   ];
   const shown = tiles.filter((t) => t.on);
@@ -196,7 +200,31 @@ export function Kiosk({ view, preview = false, previewExit }: { view: KioskView;
           </div>
         )}
 
-        {screen === "checkin" && <CheckIn busy={busy} error={error} onSubmit={(lookup) => run("checkin", { lookup }, (a) => finish({ title: `Welcome back, ${a.name || "friend"}.`, body: a.message === "You're already checked in." ? "You're already checked in. Have a great workout." : a.visits && a.visits > 1 ? `You're checked in. That's visit ${a.visits} this month.` : "You're checked in. Have a great workout.", waiver: a.needsWaiver }))} />}
+        {screen === "checkin" && (
+          <CheckIn
+            busy={busy}
+            error={error}
+            onSubmit={(lookup) =>
+              run("checkin", { lookup }, (a) => {
+                const again = a.message === "You're already checked in.";
+                // Waiver before the floor (a boost): no waiver on file means signing it now.
+                if (a.needsWaiver && view.waiverFirst && view.waiver) {
+                  setSignFirst(a.name || "there");
+                  return go("waiver");
+                }
+                finish({
+                  title: `Welcome back, ${a.name || "friend"}.`,
+                  body: again ? "You're already checked in. Have a great workout." : a.visits && a.visits > 1 ? `You're checked in. That's visit ${a.visits} this month.` : "You're checked in. Have a great workout.",
+                  waiver: a.needsWaiver,
+                  milestone: a.milestone,
+                  streak: a.streak,
+                });
+              })
+            }
+          />
+        )}
+
+        {screen === "friend" && view.friend && <FriendForm busy={busy} error={error} onSubmit={(body) => run("friend", body, (a) => finish({ title: `Thanks, ${a.name || "friend"}.`, body: `We'll reach out to ${body.friendName.trim().split(/\s+/)[0]} and say you sent them. Bring them by any time.` }))} />}
 
         {screen === "pass" && view.pass && (
           <PersonForm
@@ -221,12 +249,13 @@ export function Kiosk({ view, preview = false, previewExit }: { view: KioskView;
 
         {screen === "waiver" && view.waiver && (
           <WaiverForm
+            note={signFirst ? `Welcome back, ${signFirst}. Before you head in, please read and sign the club's waiver.` : null}
             waiver={view.waiver}
             person={person}
             setPerson={setPerson}
             busy={busy}
             error={error}
-            onSubmit={(signature, agree) => run("waiver", { ...person, signature, agree, version: view.waiver!.version }, (a) => finish({ title: `Thanks, ${a.name || person.name.split(" ")[0]}.`, body: "Your waiver is signed. You're good to go." }))}
+            onSubmit={(signature, agree) => run("waiver", { ...person, signature, agree, version: view.waiver!.version }, (a) => finish({ title: `Thanks, ${a.name || person.name.split(" ")[0]}.`, body: signFirst ? "Your waiver is signed and you're checked in. Have a great workout." : "Your waiver is signed. You're good to go." }))}
           />
         )}
 
@@ -237,6 +266,22 @@ export function Kiosk({ view, preview = false, previewExit }: { view: KioskView;
             </span>
             <h1 className={s.doneTitle}>{done.title}</h1>
             <p className={s.lead}>{done.body}</p>
+            {(done.milestone || done.streak) && (
+              <div className={s.badges} data-testid="kiosk-badges">
+                {done.milestone ? (
+                  <span className={s.badge} data-testid="kiosk-milestone">
+                    <Trophy aria-hidden="true" />
+                    Visit {done.milestone.toLocaleString("en-US")}. Nice work!
+                  </span>
+                ) : null}
+                {done.streak ? (
+                  <span className={s.badge} data-testid="kiosk-streak">
+                    <Flame aria-hidden="true" />
+                    {done.streak} weeks in a row
+                  </span>
+                ) : null}
+              </div>
+            )}
             {done.waiver && view.waiver && (
               <div className={s.doneMore}>
                 <p>Before you head in, please sign the club&apos;s waiver.</p>
@@ -417,6 +462,41 @@ function CheckIn({ busy, error, onSubmit }: { busy: boolean; error: string | nul
   );
 }
 
+function FriendForm({ busy, error, onSubmit }: { busy: boolean; error: string | null; onSubmit: (body: { lookup: string; friendName: string; friendEmail: string; friendPhone: string }) => void }) {
+  const [lookup, setLookup] = useState("");
+  const [friend, setFriend] = useState<Person>(EMPTY);
+  return (
+    <form
+      className={s.form}
+      data-testid="kiosk-friend-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit({ lookup, friendName: friend.name, friendEmail: friend.email, friendPhone: friend.phone });
+      }}
+    >
+      <h1 className={s.title}>Bring a friend</h1>
+      <p className={s.lead}>Know someone who&apos;d like it here? Tell us who, and we&apos;ll reach out and say you sent them.</p>
+      <Field label="Your phone number or email">
+        <input className={s.input} name="lookup" autoComplete="off" autoCapitalize="none" required value={lookup} onChange={(e) => setLookup(e.target.value)} />
+      </Field>
+      <Field label="Your friend's name">
+        <input className={s.input} name="friendName" autoComplete="off" autoCapitalize="words" required value={friend.name} onChange={(e) => setFriend({ ...friend, name: e.target.value })} />
+      </Field>
+      <Field label="Their email">
+        <input className={s.input} name="friendEmail" type="email" inputMode="email" autoComplete="off" autoCapitalize="none" required value={friend.email} onChange={(e) => setFriend({ ...friend, email: e.target.value })} />
+      </Field>
+      <Field label="Their phone" hint="(optional)">
+        <input className={s.input} name="friendPhone" type="tel" inputMode="tel" autoComplete="off" value={friend.phone} onChange={(e) => setFriend({ ...friend, phone: e.target.value })} />
+      </Field>
+      <p className="muted">Only add someone who&apos;s happy to hear from us.</p>
+      <Problem error={error} />
+      <button type="submit" className={s.primary} disabled={busy}>
+        {busy ? "Sending" : "Send my friend"}
+      </button>
+    </form>
+  );
+}
+
 function JoinList({ items, onPick }: { items: JoinOption[]; onPick: (o: JoinOption) => void }) {
   return (
     <div className={s.form}>
@@ -456,7 +536,7 @@ function JoinItem({ item, onBack }: { item: JoinOption; onBack: () => void }) {
   );
 }
 
-function WaiverForm({ waiver, person, setPerson, busy, error, onSubmit }: { waiver: { title: string; body: string }; person: Person; setPerson: (p: Person) => void; busy: boolean; error: string | null; onSubmit: (signature: Strokes, agree: boolean) => void }) {
+function WaiverForm({ note, waiver, person, setPerson, busy, error, onSubmit }: { note: string | null; waiver: { title: string; body: string }; person: Person; setPerson: (p: Person) => void; busy: boolean; error: string | null; onSubmit: (signature: Strokes, agree: boolean) => void }) {
   const [strokes, setStrokes] = useState<Strokes>([]);
   const [agree, setAgree] = useState(false);
   return (
@@ -469,6 +549,11 @@ function WaiverForm({ waiver, person, setPerson, busy, error, onSubmit }: { waiv
       }}
     >
       <h1 className={s.title}>{waiver.title}</h1>
+      {note && (
+        <p className={s.lead} data-testid="kiosk-sign-first">
+          {note}
+        </p>
+      )}
       <div className={s.waiverText} tabIndex={0} aria-label="The waiver">
         {waiver.body.split(/\n{2,}/).map((p, i) => (
           <p key={i}>{p}</p>

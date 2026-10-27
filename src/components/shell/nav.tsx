@@ -20,6 +20,7 @@ import {
   ChartLine,
   FolderOpen,
   Bot,
+  Zap,
   Inbox,
   TabletSmartphone,
   Trophy,
@@ -244,6 +245,11 @@ export function GeneralNav({ onNavigate, kiosk = false, level }: { onNavigate?: 
       <NavLink href="/agents" icon={Bot} current={pathname.startsWith("/agents")} onClick={onNavigate}>
         Agents
       </NavLink>
+      {kiosk && (
+        <NavLink href="/boosts" icon={Zap} current={pathname.startsWith("/boosts")} onClick={onNavigate}>
+          Boosts
+        </NavLink>
+      )}
       {level && onNavigate && (
         <NavLink href="/progress" icon={Trophy} current={pathname.startsWith("/progress")} onClick={onNavigate}>
           Progress, level {level.level}

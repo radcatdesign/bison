@@ -1,0 +1,300 @@
+/* Boosts: club tools a club switches on, grouped by what they help with. */
+
+.stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--bo-s6);
+}
+
+.stack > * {
+  min-width: 0;
+}
+
+/* ---- Power meter ---- */
+
+.meter {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--bo-s5);
+  align-items: center;
+  padding: var(--bo-s5);
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-r-card);
+  background:
+    radial-gradient(120% 140% at 0% 0%, var(--bo-accent-soft), transparent 60%),
+    var(--bo-surface);
+  box-shadow: var(--bo-shadow);
+}
+
+.meterCount {
+  display: grid;
+  gap: 2px;
+}
+
+.meterBig {
+  font-size: var(--bo-text-3xl);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.meterLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--bo-text-sm);
+  color: var(--bo-ink-2);
+}
+
+.meterRight {
+  display: grid;
+  gap: var(--bo-s3);
+  min-width: 0;
+}
+
+.cells {
+  display: grid;
+  grid-template-columns: repeat(var(--cells, 8), minmax(0, 1fr));
+  gap: 6px;
+}
+
+.cell {
+  height: 14px;
+  border-radius: 4px;
+  background: var(--bo-sunken);
+  border: 1px solid var(--bo-line);
+}
+
+.cell[data-on] {
+  background: var(--bo-accent);
+  border-color: var(--bo-accent);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--bo-accent) 45%, transparent);
+}
+
+.meterNote {
+  margin: 0;
+  font-size: var(--bo-text-md);
+  color: var(--bo-ink-2);
+}
+
+/* ---- Categories ---- */
+
+.group {
+  display: grid;
+  gap: var(--bo-s4);
+}
+
+.groupHead {
+  display: grid;
+  gap: 2px;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: var(--bo-text-xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.groupNote {
+  margin: 0;
+  color: var(--bo-ink-2);
+  font-size: var(--bo-text-md);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--bo-s4);
+  align-items: start;
+}
+
+/* ---- A boost ---- */
+
+.card {
+  display: grid;
+  gap: var(--bo-s3);
+  min-width: 0;
+  padding: var(--bo-s5);
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-r-card);
+  background: var(--bo-surface);
+  box-shadow: var(--bo-shadow);
+  transition: border-color var(--bo-slow) var(--bo-ease), box-shadow var(--bo-slow) var(--bo-ease);
+}
+
+.card[data-on] {
+  border-color: var(--bo-accent-line);
+  box-shadow: var(--bo-shadow), inset 0 3px 0 var(--bo-accent);
+}
+
+.cardHead {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--bo-s3);
+  align-items: center;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--bo-r-control);
+  background: var(--bo-sunken);
+  color: var(--bo-ink-2);
+  transition: background var(--bo-slow) var(--bo-ease), color var(--bo-slow) var(--bo-ease);
+}
+
+.card[data-on] .icon {
+  background: var(--bo-accent);
+  color: var(--bo-accent-ink);
+}
+
+.icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.cardTitleWrap {
+  display: grid;
+  min-width: 0;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--bo-text-lg);
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.by {
+  font-size: var(--bo-text-xs);
+  color: var(--bo-ink-3);
+}
+
+.switchWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--bo-s2);
+  cursor: pointer;
+}
+
+.state {
+  font-size: var(--bo-text-sm);
+  font-weight: 600;
+  color: var(--bo-ink-3);
+  min-width: 2ch;
+  text-align: right;
+}
+
+.card[data-on] .state {
+  color: var(--bo-accent-text);
+}
+
+.pitch {
+  margin: 0;
+  font-size: var(--bo-text-md);
+  color: var(--bo-ink);
+}
+
+.how {
+  margin: 0;
+  padding-left: 1.1em;
+  display: grid;
+  gap: 4px;
+  font-size: var(--bo-text-sm);
+  color: var(--bo-ink-2);
+}
+
+.settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bo-s3);
+  align-items: end;
+}
+
+.settings[data-empty] {
+  display: none;
+}
+
+.setting {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--bo-text-xs);
+  color: var(--bo-ink-2);
+}
+
+.linkRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bo-s2);
+  align-items: end;
+  width: 100%;
+}
+
+.linkRow .setting {
+  flex: 1 1 220px;
+}
+
+.linkRow input {
+  width: 100%;
+}
+
+.extra {
+  margin: 0;
+  font-size: var(--bo-text-sm);
+  color: var(--bo-ink-2);
+  overflow-wrap: anywhere;
+}
+
+.cardFoot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bo-s2) var(--bo-s4);
+  align-items: baseline;
+  padding-top: var(--bo-s3);
+  border-top: 1px solid var(--bo-line);
+}
+
+.statValue {
+  font-size: var(--bo-text-xl);
+  font-weight: 700;
+}
+
+.statLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--bo-text-sm);
+  color: var(--bo-ink-2);
+}
+
+.waiting {
+  margin-left: auto;
+}
+
+.why {
+  margin: 0;
+  font-size: var(--bo-text-sm);
+  color: var(--bo-ink-3);
+}
+
+@media (max-width: 860px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .meter {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--bo-s3);
+    padding: var(--bo-s4);
+  }
+
+  .card {
+    padding: var(--bo-s4);
+  }
+}

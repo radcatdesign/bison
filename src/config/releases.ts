@@ -4,6 +4,17 @@ export type Release = { version: string; date: string; title: string; changes: s
 
 export const RELEASES: Release[] = [
   {
+    version: "0.11.0",
+    date: "2026-10-26",
+    title: "Boosts",
+    changes: [
+      "Clubs get Boosts: 8 club tools you switch on, like We miss you notes for regulars who stop coming in, free pass reminders, milestone shout-outs and review requests.",
+      "The kiosk can celebrate milestone visits and weeks in a row, add a Bring a friend button, and send anyone without a signed waiver straight to it.",
+      "Instant lead alerts email your team the moment someone claims a pass, books a tour, is sent by a friend or fills in a funnel page.",
+      "Each boost shows what it's done in the last 30 days, and earns 2 XP the first time it goes on.",
+    ],
+  },
+  {
     version: "0.10.0",
     date: "2026-10-24",
     title: "Agents",

@@ -283,6 +283,12 @@ textarea {
   color: var(--bo-ink);
 }
 
+.notice-warn {
+  border-color: color-mix(in oklab, var(--bo-warn) 40%, var(--bo-line));
+  background: color-mix(in oklab, var(--bo-warn) 9%, var(--bo-surface));
+  color: var(--bo-ink);
+}
+
 /* Cards */
 .card {
   border: 1px solid var(--bo-line);
