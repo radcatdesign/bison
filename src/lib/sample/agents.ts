@@ -1,7 +1,7 @@
 // Made-up agent work for the public demo and sample data, in each edition's
 // words, so the Agents screen shows the team at work.
 import type { EditionKey } from "@/config/editions";
-import { campaignPlan, cartNudge, leadReply, weeklyRead } from "@/lib/agents/drafts";
+import { campaignPlan, cartNudge, leadReply, milestoneNote, missYou, weeklyRead } from "@/lib/agents/drafts";
 import type { WeekNumbers } from "@/lib/agents/roster";
 import type { Task } from "@/lib/agents/store";
 import { sampleUuid } from "./sales";
@@ -41,5 +41,14 @@ export function sampleTasks(tenant: { id: string; name: string; edition: Edition
     { ...base, id: id("plan"), agent: "marketing", kind: "campaign-plan", title: `Plan: ${plan.name}`, summary: "Nothing's running right now. Here's a campaign to get going, with what to make for it.", draft: plan as unknown as Record<string, unknown>, createdAt: at(26) },
     { ...base, id: id("read"), agent: "coach", kind: "weekly-read", title: "Your week in numbers", summary: read.lines[0], draft: read as unknown as Record<string, unknown>, createdAt: at(30) },
   ];
+  // From the boosts a sample club has on.
+  if (e === "fit") {
+    tasks.splice(
+      2,
+      0,
+      { ...base, id: id("miss-you"), agent: "frontdesk", kind: "miss-you", title: "Check in on Dana Ortiz", summary: "Came in 31 times, but not for 16 days.", draft: missYou(club, { email: "dana.ortiz@gmail.com", name: "Dana Ortiz", days: 16 }) as unknown as Record<string, unknown>, createdAt: at(6) },
+      { ...base, id: id("milestone"), agent: "frontdesk", kind: "milestone", title: "Congratulate Leo Park on visit 50", summary: "Hit 50 visits this week.", draft: milestoneNote(club, { email: "leo.park@icloud.com", name: "Leo Park", visits: 50 }) as unknown as Record<string, unknown>, createdAt: at(9) },
+    );
+  }
   return tasks;
 }

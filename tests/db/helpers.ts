@@ -59,6 +59,7 @@ export const TENANT_TABLES = [
   "xp_awards",
   "achievements",
   "agent_tasks",
+  "club_boosts",
 ] as const;
 
 let appDb: Database | null = null;

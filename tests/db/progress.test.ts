@@ -25,7 +25,8 @@ describe("progress", () => {
     await as(A, (tx) => fileItem(tx, "page", page.id, id));
     const g = await as(A, (tx) => syncProgress(tx, "bison"));
     expect(g.xp).toBe(3);
-    expect(g.achievements).toContain("first-campaign");
+    // Another test file may make Brightwater's first campaign first, so check it's earned, not that it's new.
+    expect((await as(A, (tx) => readProgress(tx))).earned.has("first-campaign")).toBe(true);
     // Again: nothing new.
     expect(await as(A, (tx) => syncProgress(tx, "bison"))).toEqual({ xp: 0, achievements: [], levelUp: null });
     const p = await as(A, (tx) => readProgress(tx));

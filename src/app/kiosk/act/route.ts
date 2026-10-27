@@ -1,7 +1,8 @@
 import { after } from "next/server";
 import { demoMode } from "@/lib/env";
 import { currentTablet, json, readJson, tabletCookie } from "@/lib/kiosk/http";
-import { bookTour, checkIn, claimPass, type KioskResult, leaveKiosk, ping, signWaiver } from "@/lib/kiosk/store";
+import { sendLeadAlert } from "@/lib/boosts/alerts";
+import { bookTour, bringFriend, checkIn, claimPass, type KioskResult, leaveKiosk, ping, signWaiver } from "@/lib/kiosk/store";
 import { runEmailWork } from "@/lib/marketing/worker";
 import { allow } from "@/lib/rate-limit";
 import { sameOrigin } from "@/lib/sales/shop-http";
@@ -11,7 +12,7 @@ import { sameOrigin } from "@/lib/sales/shop-http";
 const MAX_BYTES = 64_000;
 
 /** Per tablet, per minute and per hour. A busy desk at 6 am stays well under these. */
-const LIMITS: Record<string, [number, number]> = { pass: [12, 120], tour: [12, 120], checkin: [40, 600], waiver: [12, 120], leave: [10, 30], ping: [10, 200] };
+const LIMITS: Record<string, [number, number]> = { pass: [12, 120], tour: [12, 120], checkin: [40, 600], waiver: [12, 120], friend: [6, 60], leave: [10, 30], ping: [10, 200] };
 
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return json({ ok: false, message: "Not allowed." }, 403);
@@ -38,11 +39,24 @@ export async function POST(req: Request) {
       return r.ok ? json({ ok: true, message: "" }, 200, { "set-cookie": tabletCookie(null) }) : json({ ok: false, message: r.message }, 403);
     }
     const r: KioskResult =
-      action === "pass" ? await claimPass(tablet.scope, body) : action === "tour" ? await bookTour(tablet.scope, body) : action === "checkin" ? await checkIn(tablet.scope, body) : await signWaiver(tablet.scope, body);
+      action === "pass"
+        ? await claimPass(tablet.scope, body)
+        : action === "tour"
+          ? await bookTour(tablet.scope, body)
+          : action === "checkin"
+            ? await checkIn(tablet.scope, body)
+            : action === "friend"
+              ? await bringFriend(tablet.scope, body)
+              : await signWaiver(tablet.scope, body);
     // Day 0 of a follow-up goes right away, not whenever the job next runs.
     if (r.ok && r.queued) after(() => runEmailWork({ tenantId: tablet.scope.tenantId, budgetMs: 30_000 }).then(() => undefined));
+    // Instant lead alerts, when the club has that boost on.
+    if (r.ok && r.lead) {
+      const lead = r.lead;
+      after(() => sendLeadAlert(tablet.scope.tenantId, lead).then(() => undefined));
+    }
     if (!r.ok) return json({ ok: false, status: r.status, message: r.message }, r.status);
-    return json({ ok: true, message: r.message, name: r.name, visits: r.visits, needsWaiver: r.needsWaiver });
+    return json({ ok: true, message: r.message, name: r.name, visits: r.visits, needsWaiver: r.needsWaiver, milestone: r.milestone ?? null, streak: r.streak ?? null });
   } catch (err) {
     console.error(`kiosk ${action} failed`, err);
     return json({ ok: false, message: "Something went wrong on our side, so this wasn't saved. Try again, or ask at the desk." }, 500);

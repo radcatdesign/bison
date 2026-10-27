@@ -2,6 +2,7 @@ import "server-only";
 // Form sends from published landing pages. They land in Contacts like any other
 // form: one contact per email address, one submission per send.
 import { sql } from "kysely";
+import type { LeadNote } from "@/lib/boosts/catalog";
 import { type Database, db, isUuid, withTenant } from "@/lib/db";
 import { signUp, startSeries } from "@/lib/marketing/people";
 import { getMarketingSettings, tenantInfo } from "@/lib/marketing/store";
@@ -11,7 +12,7 @@ import { type PageDoc, pageDocSchema } from "./schema";
 
 export type SubmitInput = { formId?: unknown; fields?: unknown; trap?: unknown; token?: unknown; version?: unknown };
 /** `spam` sends get the same answer as real ones; `pageId` lets the caller count an A/B test goal. */
-export type SubmitResult = { ok: true; message: string; tenantId?: string; pageId?: string; queued?: boolean; spam?: boolean } | { ok: false; status: number; message: string };
+export type SubmitResult = { ok: true; message: string; tenantId?: string; pageId?: string; queued?: boolean; spam?: boolean; lead?: LeadNote } | { ok: false; status: number; message: string };
 
 /** The page as this visitor saw it: a version of a running A/B test, or the published page. */
 async function versionDoc(tenantId: string, pageId: string, versionId: unknown, database: Database): Promise<PageDoc | null> {
@@ -106,5 +107,6 @@ export async function submitPageForm(tenantSlug: string, pageSlug: string, input
     },
     database,
   );
-  return { ok: true, message: form.success, tenantId: page.tenantId, pageId: page.pageId, queued, spam: Boolean(spamReason) };
+  const lead: LeadNote | undefined = spamReason ? undefined : { kind: "page", name: fields.name ?? "", email, phone: fields.phone ?? "", detail: [`Page: ${page.slug}`, fields.message ? `"${fields.message.slice(0, 500)}"` : ""].filter(Boolean).join("\n") };
+  return { ok: true, message: form.success, tenantId: page.tenantId, pageId: page.pageId, queued, spam: Boolean(spamReason), lead };
 }

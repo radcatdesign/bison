@@ -136,7 +136,7 @@ describe("form sends from a published page", () => {
     const email = `visitor-${Date.now()}@example.com`;
 
     const ok = await submitPageForm(aSlug, slug, { formId: "form", fields: { name: "Vi Sitor", email: email.toUpperCase(), message: "Pricing for 600 sq ft?", company: "not on this form" }, token: formToken(id, Date.now() - 5000) }, app());
-    expect(ok).toEqual({ ok: true, message: "Thanks. We'll email your quote within one business day.", tenantId: A, pageId: id, queued: false, spam: false });
+    expect(ok).toEqual({ ok: true, message: "Thanks. We'll email your quote within one business day.", tenantId: A, pageId: id, queued: false, spam: false, lead: { kind: "page", name: "Vi Sitor", email, phone: "", detail: `Page: ${slug}\n"Pricing for 600 sq ft?"` } });
 
     const mine = await withTenant({ tenantId: A }, (tx) => tx.selectFrom("contacts").selectAll().where("email", "=", email).executeTakeFirst(), app());
     expect(mine).toMatchObject({ name: "Vi Sitor", is_new: true });

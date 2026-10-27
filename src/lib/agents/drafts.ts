@@ -25,6 +25,21 @@ export function leadReply(edition: EditionKey, club: string, lead: { name: strin
       body: `${hi}\n\nThanks for stopping by ${club}. Your free pass is ready. Next time you come in, give your name at the front desk and we'll get you started.\n\nIf you have any questions before then, just reply to this email.\n\n${sign}`,
     };
   }
+  if (lead.formType === "kiosk-referral") {
+    const by = lead.fields.referredBy?.trim() ? first(lead.fields.referredBy) : "A friend of yours";
+    return {
+      to: lead.email,
+      name: lead.name,
+      subject: `${by} thinks you'd like ${club}`,
+      body: `${hi}
+
+${by} trains with us at ${club} and asked us to say hello. Come in with them any time, or on your own, and we'll show you around.
+
+Reply with a good day to come by, or any questions, and we'll have someone ready to show you around.
+
+${sign}`,
+    };
+  }
   if (lead.formType === "kiosk-tour") {
     const when = lead.fields.when ? ` You said ${lead.fields.when.toLowerCase()} works best.` : "";
     return {
@@ -129,4 +144,45 @@ export function weeklyRead(edition: EditionKey, week: WeekNumbers, before: WeekN
   if (week.leads < before.leads && !next.length) next.push(say("Leads are down. Try a fresh offer on your best landing page.", "Leads are down. Try a free pass or intro offer on your best funnel page."));
   if (!next.length) next.push("Keep it going. Nothing urgent this week.");
   return { lines, next: next.slice(0, 4) };
+}
+
+// ---- From boosts --------------------------------------------------------------------
+
+type Who = { email: string; name: string };
+
+export function missYou(club: string, p: Who & { days: number }): EmailDraft {
+  return {
+    to: p.email,
+    name: p.name,
+    subject: `We miss you at ${club}`,
+    body: `Hi ${first(p.name)},\n\nWe haven't seen you in a little while and wanted to check in. Life gets busy, and that's fine. Whenever you're ready, we'd love to see you back.\n\nIf something's keeping you away, like your schedule or a class you'd like to try, just reply and tell us. We're happy to help.\n\nThe team at ${club}`,
+  };
+}
+
+export function passFollowUp(club: string, p: Who): EmailDraft {
+  return {
+    to: p.email,
+    name: p.name,
+    subject: `Your free pass at ${club} is waiting`,
+    body: `Hi ${first(p.name)},\n\nYou claimed a free pass but haven't come in yet. It's still yours. Stop by any time we're open and give your name at the front desk.\n\nNot sure where to start? Reply with what you'd like to work on and we'll point you to the right class or session.\n\nThe team at ${club}`,
+  };
+}
+
+export function milestoneNote(club: string, p: Who & { visits: number }): EmailDraft {
+  return {
+    to: p.email,
+    name: p.name,
+    subject: `${p.visits} visits. Nice work, ${first(p.name)}.`,
+    body: `Hi ${first(p.name)},\n\nYou just checked in for visit ${p.visits} at ${club}. That takes real consistency, and the whole team noticed.\n\nKeep it going. We'll see you next time.\n\nThe team at ${club}`,
+  };
+}
+
+export function reviewAsk(club: string, p: Who & { link: string }): EmailDraft {
+  return {
+    to: p.email,
+    name: p.name,
+    subject: `How's ${club} going so far?`,
+    body: `Hi ${first(p.name)},\n\nYou've been coming in for a bit now, and we hope it's going well. If you have a minute, a quick review would mean a lot to us and helps other people find the club.\n\nThanks for training with us.\n\nThe team at ${club}`,
+    button: { label: "Leave a review", href: p.link },
+  };
 }

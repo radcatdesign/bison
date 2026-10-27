@@ -34,7 +34,7 @@ const statusFor = (say: Say): Record<ContactStatus, { label: string; tone: strin
 
 /** Where a form came from, in words. Unknown types show as they're stored. */
 const formLabel = (type: string, say: Say) =>
-  ({ "landing-page": say("Landing page", "Funnel page"), "kiosk-pass": "Free pass at the desk", "kiosk-tour": "Tour at the desk" })[type] ?? type;
+  ({ "landing-page": say("Landing page", "Funnel page"), "kiosk-pass": "Free pass at the desk", "kiosk-tour": "Tour at the desk", "kiosk-referral": "Sent by a friend" })[type] ?? type;
 
 function initials(name: string, email: string) {
   const parts = (name || email.split("@")[0]).split(/[\s._-]+/).filter(Boolean);

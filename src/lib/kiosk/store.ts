@@ -16,6 +16,8 @@ import { formatMoney } from "@/lib/sales/money";
 import { publicProducts } from "@/lib/sales/products";
 import { getSalesSettings, readPayments } from "@/lib/sales/store";
 import { qrFor } from "./qr";
+import { type LeadNote, milestoneAt, streakWeeks } from "@/lib/boosts/catalog";
+import { boostOn, readBoosts } from "@/lib/boosts/store";
 import { checkPin, codeHash, hashPin, newDeviceToken, newPairCode, tokenHash } from "./secrets";
 import { firstName, type KioskConfig, lookupFrom, PAIR_CODE_MINUTES, PIN_PATTERN, readKioskConfig, signaturePath, signatureTooLong, TOUR_TIMES, waiverReady, type WaiverText, welcomeLine } from "./settings";
 
@@ -180,6 +182,11 @@ export type KioskView = {
   waiver: { title: string; body: string; version: number } | null;
   emailOptIn: boolean;
   deviceName: string;
+  /** Boosts that change the kiosk. */
+  friend: boolean;
+  waiverFirst: boolean;
+  milestones: boolean;
+  streaks: boolean;
   /** Changes whenever anything above does, so a tablet knows to reload. */
   stamp: string;
 };
@@ -204,6 +211,7 @@ async function buildView(tx: Tx, deviceName: string): Promise<KioskView | null> 
   const c = setup.config;
   const brand = (await getMarketingSettings(tx, info)).brand;
   const club = brand.businessName || info.name;
+  const boosts = await readBoosts(tx);
   let join: JoinOption[] | null = null;
   if (c.join.on && can(access, "sales.checkout")) {
     const [sales, pay] = [await getSalesSettings(tx), await readPayments(tx)];
@@ -225,6 +233,10 @@ async function buildView(tx: Tx, deviceName: string): Promise<KioskView | null> 
     waiver: c.waiver.on && waiverReady(setup.waiver) ? setup.waiver : null,
     emailOptIn: c.emailOptIn && can(access, "marketing.subscribers"),
     deviceName,
+    friend: boosts["bring-a-friend"].on,
+    milestones: boosts.milestones.on,
+    streaks: boosts.streaks.on,
+    waiverFirst: boosts["waiver-first"].on && c.waiver.on && waiverReady(setup.waiver),
   });
 }
 
@@ -253,7 +265,10 @@ export async function previewView(tx: Tx): Promise<KioskView | null> {
 
 // ---- What people do at the tablet ------------------------------------------------
 
-export type KioskResult = { ok: true; message: string; name?: string; visits?: number; needsWaiver?: boolean; queued?: boolean } | { ok: false; status: number; message: string };
+export type KioskResult =
+  | { ok: true; message: string; name?: string; visits?: number; needsWaiver?: boolean; queued?: boolean; milestone?: number | null; streak?: number | null; lead?: LeadNote }
+  | { ok: false; status: number; message: string };
+
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
 
@@ -321,7 +336,7 @@ export async function claimPass(k: KioskScope, input: Record<string, unknown>, d
       const contactId = await upsertContact(tx, p);
       await tx.insertInto("submissions").values({ contact_id: contactId, form_key: "kiosk", form_type: "kiosk-pass", fields: JSON.stringify({ name: p.name, email: p.email, ...(p.phone ? { phone: p.phone } : {}), pass: setup.config.pass.label }), alert: "{}" }).execute();
       const queued = await followUp(tx, p, input.optIn === true && setup.config.emailOptIn, "kiosk:pass");
-      return { ok: true, message: "You're all set.", name: firstName(p.name), needsWaiver: await needsWaiver(tx, contactId, setup), queued };
+      return { ok: true, message: "You're all set.", name: firstName(p.name), needsWaiver: await needsWaiver(tx, contactId, setup), queued, lead: { kind: "pass", name: p.name, email: p.email, phone: p.phone, detail: setup.config.pass.label } };
     },
     database,
   );
@@ -343,10 +358,31 @@ export async function bookTour(k: KioskScope, input: Record<string, unknown>, da
       await tx.updateTable("contacts").set({ status: "qualified" }).where("id", "=", contactId).where("status", "=", "new").execute();
       await tx.insertInto("submissions").values({ contact_id: contactId, form_key: "kiosk", form_type: "kiosk-tour", fields: JSON.stringify({ name: p.name, email: p.email, ...(p.phone ? { phone: p.phone } : {}), when, ...(note ? { message: note } : {}) }), alert: "{}" }).execute();
       const queued = await followUp(tx, p, input.optIn === true && setup.config.emailOptIn, "kiosk:tour");
-      return { ok: true, message: "Your tour request is in.", name: firstName(p.name), queued };
+      return { ok: true, message: "Your tour request is in.", name: firstName(p.name), queued, lead: { kind: "tour", name: p.name, email: p.email, phone: p.phone, detail: `Best time: ${when.toLowerCase()}${note ? `. "${note}"` : ""}` } };
     },
     database,
   );
+}
+
+/**
+ * People the kiosk can look up: anyone who's joined, or been to the desk before
+ * (a pass, a tour, a waiver or a check-in). Anyone else on the club's list gets
+ * the same answer as a stranger, so the tablet can't be used to find out who's on it.
+ */
+function eligible(tx: Tx, lookup: NonNullable<ReturnType<typeof lookupFrom>>) {
+  const q = tx
+    .selectFrom("contacts as c")
+    .select(["c.id", "c.name"])
+    .where("c.status", "<>", "spam")
+    .where((eb) =>
+      eb.or([
+        eb("c.status", "=", "won"),
+        eb.exists(eb.selectFrom("kiosk_check_ins as k").select("k.id").whereRef("k.contact_id", "=", "c.id")),
+        eb.exists(eb.selectFrom("kiosk_waivers as w").select("w.id").whereRef("w.contact_id", "=", "c.id")),
+        eb.exists(eb.selectFrom("submissions as s").select("s.id").whereRef("s.contact_id", "=", "c.id").where("s.form_type", "in", ["kiosk-pass", "kiosk-tour"])),
+      ]),
+    );
+  return lookup.kind === "email" ? q.where("c.email", "=", lookup.value) : q.where(sql<boolean>`right(regexp_replace(c.phone, '\\D', '', 'g'), 10) = ${lookup.value}`);
 }
 
 const NOT_FOUND = "We couldn't find you. Try the other one, phone or email, or ask at the desk.";
@@ -365,19 +401,7 @@ export async function checkIn(k: KioskScope, input: Record<string, unknown>, dat
       // Only people who've joined, or been to the desk before (a pass, a tour, a waiver or a check-in).
       // Anyone else on the club's list gets the same answer as a stranger, so the tablet can't be used
       // to find out who's on it.
-      let q = tx
-        .selectFrom("contacts as c")
-        .select(["c.id", "c.name"])
-        .where("c.status", "<>", "spam")
-        .where((eb) =>
-          eb.or([
-            eb("c.status", "=", "won"),
-            eb.exists(eb.selectFrom("kiosk_check_ins as k").select("k.id").whereRef("k.contact_id", "=", "c.id")),
-            eb.exists(eb.selectFrom("kiosk_waivers as w").select("w.id").whereRef("w.contact_id", "=", "c.id")),
-            eb.exists(eb.selectFrom("submissions as s").select("s.id").whereRef("s.contact_id", "=", "c.id").where("s.form_type", "in", ["kiosk-pass", "kiosk-tour"])),
-          ]),
-        );
-      q = lookup.kind === "email" ? q.where("c.email", "=", lookup.value) : q.where(sql<boolean>`right(regexp_replace(c.phone, '\\D', '', 'g'), 10) = ${lookup.value}`);
+      const q = eligible(tx, lookup);
       const found = await q.limit(2).execute();
       if (found.length === 0) return { ok: false, status: 404, message: NOT_FOUND };
       if (found.length > 1) return { ok: false, status: 409, message: "More than one person uses that number. Try your email instead." };
@@ -392,7 +416,46 @@ export async function checkIn(k: KioskScope, input: Record<string, unknown>, dat
       }
       const tz = (await tx.selectFrom("settings").select("timezone").executeTakeFirstOrThrow()).timezone;
       const month = await sql<{ n: string }>`select count(*) as n from kiosk_check_ins where contact_id = ${contact.id} and checked_in_at >= (date_trunc('month', now() at time zone ${tz}) at time zone ${tz})`.execute(tx);
-      return { ok: true, message: again ? "You're already checked in." : "You're checked in.", name: firstName(contact.name), visits: Number(month.rows[0]?.n ?? 0), needsWaiver: await needsWaiver(tx, contact.id, setup) };
+      // Boosts: a milestone to celebrate, and weeks in a row.
+      const boosts = await readBoosts(tx);
+      let milestone: number | null = null;
+      let streak: number | null = null;
+      if (boosts.milestones.on && !again) {
+        const all = await tx.selectFrom("kiosk_check_ins").select(sql<string>`count(*)`.as("n")).where("contact_id", "=", contact.id).executeTakeFirstOrThrow();
+        milestone = milestoneAt(Number(all.n));
+      }
+      if (boosts.streaks.on) {
+        const weeks = await sql<{ w: string }>`select distinct to_char(date_trunc('week', checked_in_at at time zone ${tz}), 'YYYY-MM-DD') as w from kiosk_check_ins where contact_id = ${contact.id} and checked_in_at > now() - interval '2 years'`.execute(tx);
+        const thisWeek = await sql<{ w: string }>`select to_char(date_trunc('week', now() at time zone ${tz}), 'YYYY-MM-DD') as w`.execute(tx);
+        const n = streakWeeks(weeks.rows.map((r) => r.w), thisWeek.rows[0].w);
+        streak = n >= 2 ? n : null;
+      }
+      return { ok: true, message: again ? "You're already checked in." : "You're checked in.", name: firstName(contact.name), visits: Number(month.rows[0]?.n ?? 0), needsWaiver: await needsWaiver(tx, contact.id, setup), milestone, streak };
+    },
+    database,
+  );
+}
+
+/** Bring a friend (a boost): a member names a friend, who lands in Leads with a note saying who sent them. */
+export async function bringFriend(k: KioskScope, input: Record<string, unknown>, database: Database = db()): Promise<KioskResult> {
+  const lookup = lookupFrom(input.lookup);
+  if (!lookup) return { ok: false, status: 400, message: "First, enter your own phone number or email." };
+  const friend = readPerson({ name: input.friendName, email: input.friendEmail, phone: input.friendPhone });
+  if (typeof friend === "string") return { ok: false, status: 400, message: friend.replace("your name", "your friend's name").replace("your email", "your friend's email") };
+  return withTenant(
+    scopeFor(k),
+    async (tx) => {
+      if (!(await boostOn(tx, "bring-a-friend"))) return { ok: false, status: 409, message: "Bring a friend isn't on here right now. Ask at the desk." };
+      const found = await eligible(tx, lookup).limit(2).execute();
+      if (found.length !== 1) return { ok: false, status: found.length ? 409 : 404, message: found.length ? "More than one person uses that number. Try your email instead." : NOT_FOUND };
+      const member = found[0];
+      const friendId = await upsertContact(tx, friend);
+      if (friendId === member.id) return { ok: false, status: 400, message: "That's you. Enter your friend's details instead." };
+      await tx
+        .insertInto("submissions")
+        .values({ contact_id: friendId, form_key: "kiosk", form_type: "kiosk-referral", fields: JSON.stringify({ name: friend.name, email: friend.email, ...(friend.phone ? { phone: friend.phone } : {}), referredBy: member.name }), alert: "{}" })
+        .execute();
+      return { ok: true, message: "Thanks for sending a friend.", name: firstName(member.name), lead: { kind: "friend", name: friend.name, email: friend.email, phone: friend.phone, detail: `Sent by ${member.name || "a member"}` } };
     },
     database,
   );
